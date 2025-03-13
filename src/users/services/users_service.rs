@@ -1,14 +1,14 @@
+use crate::common::error::error::AppError;
+use crate::i18n::setup::translate;
+use crate::users::dto::create_user::CreateUserDto;
+use crate::users::dto::update_user::UpdateUserDto;
+use crate::users::entities::user::User;
+use crate::users::repositories::users_repository::UsersRepository;
 use argon2::{
 	Argon2,
 	password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use sqlx::PgPool;
-
-use crate::common::error::AppError;
-use crate::users::dto::create_user::CreateUserDto;
-use crate::users::dto::update_user::UpdateUserDto;
-use crate::users::entities::user::User;
-use crate::users::repositories::users_repository::UsersRepository;
 
 #[derive(Clone)]
 pub struct UsersService {
@@ -31,6 +31,21 @@ impl UsersService {
 	}
 
 	pub async fn create(&self, dto: CreateUserDto) -> Result<User, AppError> {
+		let user_email = dto.email.clone();
+
+		let existing_user = self.repository.find_by_email(&user_email).await?;
+		if existing_user.email == user_email {
+			return Err(AppError::ValidationError({
+				let mut errors = validator::ValidationErrors::new();
+				errors.add(
+					"email",
+					validator::ValidationError::new("already_exists")
+						.with_message(translate("users.errors.user_already_exists").into()),
+				);
+				errors
+			}));
+		}
+
 		let password_hash = hash_password(&dto.password)?;
 
 		self.repository.create(dto, password_hash).await

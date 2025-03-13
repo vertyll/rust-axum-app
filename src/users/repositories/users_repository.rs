@@ -1,9 +1,8 @@
-use sqlx::PgPool;
-
-use crate::common::error::AppError;
+use crate::common::error::error::AppError;
 use crate::users::dto::create_user::CreateUserDto;
 use crate::users::dto::update_user::UpdateUserDto;
 use crate::users::entities::user::User;
+use sqlx::PgPool;
 
 #[derive(Clone)]
 pub struct UsersRepository {
@@ -78,5 +77,15 @@ impl UsersRepository {
 			.await?;
 
 		Ok(())
+	}
+
+	pub async fn find_by_email(&self, email: &str) -> Result<User, AppError> {
+		let user = sqlx::query_as::<_, User>("SELECT * FROM users WHERE email = $1")
+			.bind(email)
+			.fetch_optional(&self.db_pool)
+			.await?
+			.ok_or(AppError::NotFound)?;
+
+		Ok(user)
 	}
 }

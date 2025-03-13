@@ -1,0 +1,22 @@
+errors:
+  validation: "Validation error"
+  database: "Database error"
+  config: "Configuration error"
+  not_found: "Resource not found"
+  internal: "Internal server error"
+  authentication: "Authentication failed: %{message}"
+auth:
+  errors:
+    missing_token: "Missing or invalid authorization token"
+    invalid_token: "Invalid token"
+users:
+  validators:
+    username:
+      too_short: "Username must be at least 3 characters long."
+    password:
+      too_short: "Password must be at least 8 characters long."
+      no_digit: "Password must contain at least one digit."
+    email:
+      invalid_format: "Email address has an invalid format."
+  errors:
+      user_already_exists: "User with this email address already exists."

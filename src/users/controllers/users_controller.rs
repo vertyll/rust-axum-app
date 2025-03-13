@@ -1,4 +1,4 @@
-use crate::common::error::AppError;
+use crate::common::error::error::AppError;
 use crate::users::dto::create_user::CreateUserDto;
 use crate::users::dto::update_user::UpdateUserDto;
 use crate::users::entities::user::User;

@@ -6,10 +6,11 @@ use axum::{
 use jsonwebtoken::{DecodingKey, Validation, decode};
 
 use crate::auth::services::auth_service::Claims;
-use crate::common::error::AppError;
+use crate::common::error::error::AppError;
+use crate::i18n::setup::translate;
 
 pub async fn auth_middleware(
-	State(jwt_secret): State<String>,
+	State(jwt_access_token_secret): State<String>,
 	mut request: Request,
 	next: Next,
 ) -> Result<Response, AppError> {
@@ -24,16 +25,14 @@ pub async fn auth_middleware(
 				None
 			}
 		})
-		.ok_or(AppError::AuthenticationError(
-			"Missing or invalid authorization token".to_string(),
-		))?;
+		.ok_or(AppError::AuthenticationError(translate("auth.errors.missing_token")))?;
 
 	let token_data = decode::<Claims>(
 		&token,
-		&DecodingKey::from_secret(jwt_secret.as_bytes()),
+		&DecodingKey::from_secret(jwt_access_token_secret.as_bytes()),
 		&Validation::default(),
 	)
-	.map_err(|_| AppError::AuthenticationError("Invalid token".to_string()))?;
+	.map_err(|_| AppError::AuthenticationError(translate("auth.errors.invalid_token")))?;
 
 	request.extensions_mut().insert(token_data.claims);
 

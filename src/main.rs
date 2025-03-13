@@ -1,3 +1,5 @@
+rust_i18n::i18n!("translations");
+
 use crate::auth::middleware::jwt_auth::auth_middleware;
 use axum::middleware::from_fn_with_state;
 use std::net::SocketAddr;
@@ -8,6 +10,7 @@ mod auth;
 mod common;
 mod config;
 mod database;
+mod i18n;
 mod users;
 
 #[tokio::main]
@@ -33,11 +36,8 @@ async fn main() {
 		.await
 		.expect("Could not run the database migrations");
 
-	// JWT secret for auth middleware
-	let jwt_secret = app_config.security.jwt_secret.clone();
-
 	// App configuration
-	let app = app_module::configure(db_pool.clone(), jwt_secret.clone()).await;
+	let app = app_module::configure(db_pool.clone()).await;
 
 	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.port));
 	tracing::info!("Server is running on: http://{}", addr);

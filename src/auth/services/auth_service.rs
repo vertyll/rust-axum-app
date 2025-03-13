@@ -5,14 +5,13 @@ use sqlx::PgPool;
 
 use crate::auth::dto::login::LoginDto;
 use crate::auth::dto::register::RegisterDto;
-use crate::common::error::AppError;
+use crate::common::error::error::AppError;
 use crate::users::entities::user::User;
 use crate::users::services::users_service::UsersService;
 
 #[derive(Clone)]
 pub struct AuthService {
 	users_service: UsersService,
-	jwt_secret: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -31,10 +30,9 @@ pub struct AuthResponse {
 }
 
 impl AuthService {
-	pub fn new(db_pool: PgPool, jwt_secret: String) -> Self {
+	pub fn new(db_pool: PgPool) -> Self {
 		Self {
 			users_service: UsersService::new(db_pool),
-			jwt_secret,
 		}
 	}
 
@@ -60,7 +58,9 @@ impl AuthService {
 
 	fn generate_token(&self, user: &User) -> Result<String, AppError> {
 		let now = Utc::now();
-		let expires_at = now + Duration::hours(24);
+		let app_config =
+			crate::config::app_config::AppConfig::init().expect("Could not initialize the application configuration");
+		let expires_at = now + Duration::seconds(app_config.security.jwt_access_token_expires_in);
 
 		let claims = Claims {
 			sub: user.id,
@@ -73,7 +73,7 @@ impl AuthService {
 		let token = encode(
 			&Header::default(),
 			&claims,
-			&EncodingKey::from_secret(self.jwt_secret.as_bytes()),
+			&EncodingKey::from_secret(app_config.security.jwt_access_token_secret.as_bytes()),
 		)
 		.map_err(|_| AppError::InternalError)?;
 

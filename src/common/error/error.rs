@@ -1,3 +1,4 @@
+use crate::i18n::setup::translate;
 use axum::{
 	Json,
 	http::StatusCode,
@@ -18,24 +19,33 @@ pub enum AppError {
 impl IntoResponse for AppError {
 	fn into_response(self) -> Response {
 		let (status, error_body) = match self {
-			AppError::ValidationError(errors) => (StatusCode::BAD_REQUEST, json!({ "errors": errors })),
+			AppError::ValidationError(errors) => (
+				StatusCode::BAD_REQUEST,
+				json!({ "error": translate("errors.validation"), "details": errors }),
+			),
 			AppError::DatabaseError(err) => {
 				tracing::error!("Database error: {:?}", err);
-				(StatusCode::INTERNAL_SERVER_ERROR, json!({"error": "Database error"}))
+				(
+					StatusCode::INTERNAL_SERVER_ERROR,
+					json!({"error": translate("errors.database")}),
+				)
 			}
 			AppError::ConfigError(msg) => {
 				tracing::error!("Configuration error: {}", msg);
 				(
 					StatusCode::INTERNAL_SERVER_ERROR,
-					json!({"error": "Configuration error"}),
+					json!({"error": translate("errors.config")}),
 				)
 			}
-			AppError::NotFound => (StatusCode::NOT_FOUND, json!({"error": "Resource not found"})),
+			AppError::NotFound => (StatusCode::NOT_FOUND, json!({"error": translate("errors.not_found")})),
 			AppError::InternalError => (
 				StatusCode::INTERNAL_SERVER_ERROR,
-				json!({"error": "Internal server error"}),
+				json!({"error": translate("errors.internal")}),
 			),
-			AppError::AuthenticationError(message) => (StatusCode::UNAUTHORIZED, json!({"error": message})),
+			AppError::AuthenticationError(message) => {
+				let translated = rust_i18n::t!("errors.authentication", message = message);
+				(StatusCode::UNAUTHORIZED, json!({"error": translated}))
+			}
 		};
 
 		(status, Json(error_body)).into_response()

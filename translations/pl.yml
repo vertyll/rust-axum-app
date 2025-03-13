@@ -1,0 +1,22 @@
+errors:
+  validation: "Błąd walidacji"
+  database: "Błąd bazy danych"
+  config: "Błąd konfiguracji"
+  not_found: "Nie znaleziono zasobu"
+  internal: "Wewnętrzny błąd serwera"
+  authentication: "Błąd uwierzytelniania: %{message}"
+auth:
+  errors:
+    missing_token: "Missing or invalid authorization token"
+    invalid_token: "Invalid token"
+users:
+  validators:
+    username:
+      too_short: "Nazwa użytkownika musi mieć co najmniej 3 znaki."
+    password:
+      too_short: "Hasło musi mieć co najmniej 8 znaków."
+      no_digit: "Hasło musi zawierać co najmniej jedną cyfrę."
+    email:
+      invalid_format: "Adres e-mail ma nieprawidłowy format."
+  errors:
+    user_already_exists: "Użytkownik o podanym adresie e-mail już istnieje."

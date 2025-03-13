@@ -9,7 +9,8 @@ pub struct ServerConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct SecurityConfig {
-	pub jwt_secret: String,
+	pub jwt_access_token_secret: String,
+	pub jwt_access_token_expires_in: i64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -34,7 +35,8 @@ impl AppConfig {
 			.set_default("database.max_connections", 5)?
 			.set_default("database.min_connections", 1)?
 			// Security
-			.set_default("security.jwt_secret", "default_secret")?
+			.set_default("security.jwt_access_token_secret", "default_secret")?
+			.set_default("security.jwt_access_token_expires_in", "60000")?
 			// Config file (optional)
 			.add_source(config::File::with_name("config").required(false))
 			// Environment variables
