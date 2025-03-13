@@ -1,14 +1,50 @@
+use crate::auth::middleware::jwt_auth::auth_middleware;
+use axum::middleware::from_fn_with_state;
 use std::net::SocketAddr;
-use axum::Router;
-use axum::routing::get;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+mod app_module;
+mod auth;
+mod common;
+mod config;
+mod database;
+mod users;
 
 #[tokio::main]
 async fn main() {
-    let routes_hello = Router::new().route("/hello", get(|| async { "Hello, World!" }));
+	dotenv::dotenv().ok();
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!("listening on {}", addr);
+	// Initialize logger
+	tracing_subscriber::registry()
+		.with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+		.with(tracing_subscriber::fmt::layer())
+		.init();
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, routes_hello).await.unwrap();
+	// App configuration
+	let app_config = config::app_config::AppConfig::init().expect("Could not initialize the application configuration");
+
+	// Database connection pool
+	let db_pool = database::connection::create_pool(&app_config.database)
+		.await
+		.expect("Could not create the database connection pool");
+
+	// Run database migrations
+	database::migrations::runner::run_migrations(&db_pool)
+		.await
+		.expect("Could not run the database migrations");
+
+	// JWT secret for auth middleware
+	let jwt_secret = app_config.security.jwt_secret.clone();
+
+	// App configuration
+	let app = app_module::configure(db_pool.clone(), jwt_secret.clone()).await;
+
+	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.port));
+	tracing::info!("Server is running on: http://{}", addr);
+
+	let listener = tokio::net::TcpListener::bind(addr)
+		.await
+		.expect("Could not bind to the address");
+
+	axum::serve(listener, app).await.expect("Server failed to start");
 }
