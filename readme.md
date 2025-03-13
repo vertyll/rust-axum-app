@@ -26,3 +26,30 @@ git clone <repository-url>
 cd rust-axum-app
 cargo build
 ```
+
+## Development
+
+### Dev (REPL)
+
+First, install cargo-watch to REPL.
+
+```bash
+# Install cargo-watch
+cargo install cargo-watch
+```
+
+Second, run the server in REPL mode.
+
+````bash
+# To run the server.
+cargo watch -q -c -w src/ -x "run"
+````
+
+### Dev
+
+Run the server.
+
+```bash
+# To run the server.
+cargo run
+```
