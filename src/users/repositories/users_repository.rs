@@ -43,8 +43,8 @@ impl UsersRepository {
 			username: Set(dto.username),
 			email: Set(dto.email),
 			password_hash: Set(password_hash),
-			created_at: Set(now),
-			updated_at: Set(now),
+			created_at: Set(now.into()),
+			updated_at: Set(now.into()),
 			..Default::default()
 		};
 
@@ -67,7 +67,7 @@ impl UsersRepository {
 			user_active_model.email = Set(email);
 		}
 
-		user_active_model.updated_at = Set(now);
+		user_active_model.updated_at = Set(now.into());
 
 		let updated_user = user_active_model.update(&self.db).await?;
 

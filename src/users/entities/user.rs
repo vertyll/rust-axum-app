@@ -1,21 +1,19 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
-use chrono::Utc;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
 	#[sea_orm(primary_key)]
 	pub id: i32,
+	#[sea_orm(unique)]
 	pub username: String,
+	#[sea_orm(unique)]
 	pub email: String,
-	#[sea_orm(column_name = "password_hash")]
 	#[serde(skip_serializing)]
 	pub password_hash: String,
-	#[sea_orm(column_type = "Timestamp", default_value = "CURRENT_TIMESTAMP")]
-	pub created_at: chrono::DateTime<Utc>,
-	#[sea_orm(column_type = "Timestamp", default_value = "CURRENT_TIMESTAMP")]
-	pub updated_at: chrono::DateTime<Utc>,
+	pub created_at: DateTimeWithTimeZone,
+	pub updated_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
