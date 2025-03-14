@@ -30,23 +30,32 @@ cd rust-axum-app
 cargo build
 ```
 
-## Development
+## Development (without Docker/Podman)
+
+### Configuration environment:
+
+1. Install PostgreSQL and create a database: `rust_axum_app`
+2. Copy the `.env.example` file to `.env` and set the database connection string.
+
+```bash
+cp .env.example .env
+```
 
 ### Dev (REPL)
 
-First, install the sea-orm-cli with cargo.
+Install the sea-orm-cli with cargo.
 
 ```bash
 cargo install sea-orm-cli@1.1.0
 ```
 
-Second, install cargo-watch to REPL.
+Install cargo-watch to REPL.
 
 ```bash
 cargo install cargo-watch
 ```
 
-Third, run the server in REPL mode.
+Run the server in REPL mode.
 
 ````bash
 cargo watch -q -c -w src/ -x "run"
@@ -54,15 +63,13 @@ cargo watch -q -c -w src/ -x "run"
 
 ### Dev
 
-Run the server.
-
-First, install the sea-orm-cli with cargo.
+Install the sea-orm-cli with cargo.
 
 ```bash
 cargo install sea-orm-cli@1.1.0
 ```
 
-Second, run the server.
+Run the server.
 
 ```bash
 cargo run
