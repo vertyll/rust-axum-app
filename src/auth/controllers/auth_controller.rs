@@ -3,11 +3,11 @@ use crate::auth::dto::register::RegisterDto;
 use crate::auth::services::auth_service::{AuthResponse, AuthService};
 use crate::common::error::error::AppError;
 use axum::{Json, Router, extract::State, routing::post};
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 use validator::Validate;
 
-pub fn routes(db_pool: PgPool) -> Router {
-	let auth_service = AuthService::new(db_pool);
+pub fn routes(db: DatabaseConnection) -> Router {
+	let auth_service = AuthService::new(db);
 
 	Router::new()
 		.route("/register", post(register))

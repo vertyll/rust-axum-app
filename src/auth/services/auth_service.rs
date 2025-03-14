@@ -1,12 +1,12 @@
 use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
+use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 
 use crate::auth::dto::login::LoginDto;
 use crate::auth::dto::register::RegisterDto;
 use crate::common::error::error::AppError;
-use crate::users::entities::user::User;
+use crate::users::entities::user::Model as User;
 use crate::users::services::users_service::UsersService;
 
 #[derive(Clone)]
@@ -30,9 +30,9 @@ pub struct AuthResponse {
 }
 
 impl AuthService {
-	pub fn new(db_pool: PgPool) -> Self {
+	pub fn new(db: DatabaseConnection) -> Self {
 		Self {
-			users_service: UsersService::new(db_pool),
+			users_service: UsersService::new(db),
 		}
 	}
 

@@ -26,18 +26,16 @@ async fn main() {
 	// App configuration
 	let app_config = config::app_config::AppConfig::init().expect("Could not initialize the application configuration");
 
-	// Database connection pool
-	let db_pool = database::connection::create_pool(&app_config.database)
+	// Database connection
+	let db = database::connection::connect(&app_config.database)
 		.await
-		.expect("Could not create the database connection pool");
+		.expect("Could not connect to the database");
 
 	// Run database migrations
-	database::migrations::runner::run_migrations(&db_pool)
-		.await
-		.expect("Could not run the database migrations");
+	// --
 
 	// App configuration
-	let app = app_module::configure(db_pool.clone()).await;
+	let app = app_module::configure(db.clone()).await;
 
 	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.port));
 	tracing::info!("Server is running on: http://{}", addr);

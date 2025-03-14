@@ -1,13 +1,10 @@
 use crate::config::database_config::DatabaseConfig;
-use sqlx::PgPool;
-use sqlx::postgres::PgPoolOptions;
+use sea_orm::{Database, DatabaseConnection};
 
-pub async fn create_pool(config: &DatabaseConfig) -> Result<PgPool, sqlx::Error> {
-	let pool = PgPoolOptions::new()
-		.max_connections(config.max_connections)
-		.min_connections(config.min_connections.unwrap_or(1))
-		.connect(&config.connection_string())
-		.await?;
+pub async fn connect(config: &DatabaseConfig) -> Result<DatabaseConnection, sea_orm::DbErr> {
+	let connection_string = config.connection_string();
 
-	Ok(pool)
+	let db = Database::connect(connection_string).await?;
+
+	Ok(db)
 }

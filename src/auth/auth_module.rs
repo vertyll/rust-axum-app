@@ -1,8 +1,8 @@
 use axum::Router;
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 
 use crate::auth::controllers::auth_controller;
 
-pub fn configure(db_pool: PgPool) -> Router {
-	Router::new().nest("/api/auth", auth_controller::routes(db_pool))
+pub fn configure(db: DatabaseConnection) -> Router {
+	Router::new().nest("/api/auth", auth_controller::routes(db))
 }

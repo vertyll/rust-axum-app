@@ -4,12 +4,13 @@ use axum::{
 	http::StatusCode,
 	response::{IntoResponse, Response},
 };
+use sea_orm::DbErr;
 use serde_json::json;
 
 #[derive(Debug)]
 pub enum AppError {
 	ValidationError(validator::ValidationErrors),
-	DatabaseError(sqlx::Error),
+	DatabaseError(String),
 	ConfigError(String),
 	NotFound,
 	InternalError,
@@ -24,7 +25,7 @@ impl IntoResponse for AppError {
 				json!({ "error": translate("errors.validation"), "details": errors }),
 			),
 			AppError::DatabaseError(err) => {
-				tracing::error!("Database error: {:?}", err);
+				tracing::error!("Database error: {}", err);
 				(
 					StatusCode::INTERNAL_SERVER_ERROR,
 					json!({"error": translate("errors.database")}),
@@ -58,12 +59,12 @@ impl From<validator::ValidationErrors> for AppError {
 	}
 }
 
-impl From<sqlx::Error> for AppError {
-	fn from(err: sqlx::Error) -> Self {
-		if let sqlx::Error::RowNotFound = err {
-			return AppError::NotFound;
+impl From<DbErr> for AppError {
+	fn from(err: DbErr) -> Self {
+		match err {
+			DbErr::RecordNotFound(_) => AppError::NotFound,
+			_ => AppError::DatabaseError(err.to_string()),
 		}
-		AppError::DatabaseError(err)
 	}
 }
 

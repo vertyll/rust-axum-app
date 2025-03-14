@@ -2,13 +2,13 @@ use crate::common::error::error::AppError;
 use crate::i18n::setup::translate;
 use crate::users::dto::create_user::CreateUserDto;
 use crate::users::dto::update_user::UpdateUserDto;
-use crate::users::entities::user::User;
+use crate::users::entities::user::{self, Entity as User, Model as UserModel};
 use crate::users::repositories::users_repository::UsersRepository;
 use argon2::{
 	Argon2,
 	password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use sqlx::PgPool;
+use sea_orm::DatabaseConnection;
 
 #[derive(Clone)]
 pub struct UsersService {
@@ -16,25 +16,25 @@ pub struct UsersService {
 }
 
 impl UsersService {
-	pub fn new(db_pool: PgPool) -> Self {
+	pub fn new(db: DatabaseConnection) -> Self {
 		Self {
-			repository: UsersRepository::new(db_pool),
+			repository: UsersRepository::new(db),
 		}
 	}
 
-	pub async fn find_all(&self) -> Result<Vec<User>, AppError> {
+	pub async fn find_all(&self) -> Result<Vec<UserModel>, AppError> {
 		self.repository.find_all().await
 	}
 
-	pub async fn find_by_id(&self, id: i32) -> Result<User, AppError> {
+	pub async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError> {
 		self.repository.find_by_id(id).await
 	}
 
-	pub async fn create(&self, dto: CreateUserDto) -> Result<User, AppError> {
+	pub async fn create(&self, dto: CreateUserDto) -> Result<UserModel, AppError> {
 		let user_email = dto.email.clone();
 
-		let existing_user = self.repository.find_by_email(&user_email).await?;
-		if existing_user.email == user_email {
+		let existing_user = self.repository.find_by_email(&user_email).await;
+		if let Ok(user) = existing_user {
 			return Err(AppError::ValidationError({
 				let mut errors = validator::ValidationErrors::new();
 				errors.add(
@@ -51,7 +51,7 @@ impl UsersService {
 		self.repository.create(dto, password_hash).await
 	}
 
-	pub async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<User, AppError> {
+	pub async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError> {
 		let _existing_user = self.repository.find_by_id(id).await?;
 
 		self.repository.update(id, dto).await
@@ -63,7 +63,7 @@ impl UsersService {
 		self.repository.delete(id).await
 	}
 
-	pub async fn login(&self, username: &str, password: &str) -> Result<User, AppError> {
+	pub async fn login(&self, username: &str, password: &str) -> Result<UserModel, AppError> {
 		let user = self.repository.find_by_username(username).await?;
 
 		if verify_password(password, &user.password_hash)? {
