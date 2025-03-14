@@ -1,11 +1,10 @@
 rust_i18n::i18n!("translations");
 
-use crate::auth::middleware::jwt_auth::auth_middleware;
+use crate::common::r#struct::app_state::AppState;
 use axum::middleware::from_fn_with_state;
-use std::net::SocketAddr;
 use migration::{Migrator, MigratorTrait};
+use std::net::SocketAddr;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use crate::common::r#struct::state::AppState;
 
 mod app_module;
 mod auth;
@@ -37,10 +36,7 @@ async fn main() {
 	Migrator::up(&db, None).await.unwrap();
 
 	// Create AppState
-	let app_state = AppState::new(
-		db.clone(),
-		app_config.security.jwt_access_token_secret
-	);
+	let app_state = AppState::new(db.clone(), app_config.security.jwt_access_token_secret);
 
 	// App configuration
 	let app = app_module::configure(app_state, app_config.security.jwt_access_token_expires_in).await;

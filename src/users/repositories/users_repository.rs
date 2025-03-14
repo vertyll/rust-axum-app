@@ -1,6 +1,6 @@
-use crate::common::error::error::AppError;
-use crate::users::dto::create_user::CreateUserDto;
-use crate::users::dto::update_user::UpdateUserDto;
+use crate::common::error::app_error::AppError;
+use crate::users::dto::create_user_dto::CreateUserDto;
+use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::user::{self, ActiveModel as UserActiveModel, Entity as User, Model as UserModel};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 

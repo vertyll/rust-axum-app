@@ -1,10 +1,10 @@
-use crate::auth::dto::login::LoginDto;
-use crate::auth::dto::register::RegisterDto;
+use crate::auth::dto::login_dto::LoginDto;
+use crate::auth::dto::register_dto::RegisterDto;
 use crate::auth::services::auth_service::{AuthResponse, AuthService};
-use crate::common::error::error::AppError;
+use crate::common::error::app_error::AppError;
+use crate::common::r#struct::app_state::AppState;
 use axum::{Json, Router, extract::State, routing::post};
 use validator::Validate;
-use crate::common::r#struct::state::AppState;
 
 pub fn routes(app_state: AppState, jwt_access_token_expires_in: i64) -> Router {
 	let auth_service = AuthService::new(app_state, jwt_access_token_expires_in);

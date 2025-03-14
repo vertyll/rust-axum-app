@@ -1,18 +1,26 @@
-use crate::common::error::error::AppError;
+use crate::common::error::app_error::AppError;
 use crate::i18n::setup::translate;
-use crate::users::dto::create_user::CreateUserDto;
-use crate::users::dto::update_user::UpdateUserDto;
+use crate::users::dto::create_user_dto::CreateUserDto;
+use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::user::{self, Entity as User, Model as UserModel};
 use crate::users::repositories::users_repository::UsersRepository;
 use argon2::{
 	Argon2,
 	password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
+use axum::extract::FromRef;
 use sea_orm::DatabaseConnection;
+use crate::common::r#struct::app_state::AppState;
 
 #[derive(Clone)]
 pub struct UsersService {
 	repository: UsersRepository,
+}
+
+impl FromRef<AppState> for UsersService {
+	fn from_ref(app_state: &AppState) -> Self {
+		UsersService::new(app_state.db.clone())
+	}
 }
 
 impl UsersService {

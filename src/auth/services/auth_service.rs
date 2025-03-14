@@ -2,10 +2,10 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
 
-use crate::auth::dto::login::LoginDto;
-use crate::auth::dto::register::RegisterDto;
-use crate::common::error::error::AppError;
-use crate::common::r#struct::state::AppState;
+use crate::auth::dto::login_dto::LoginDto;
+use crate::auth::dto::register_dto::RegisterDto;
+use crate::common::error::app_error::AppError;
+use crate::common::r#struct::app_state::AppState;
 use crate::users::entities::user::Model as User;
 use crate::users::services::users_service::UsersService;
 
@@ -41,7 +41,7 @@ impl AuthService {
 	}
 
 	pub async fn register(&self, dto: RegisterDto) -> Result<AuthResponse, AppError> {
-		let create_user_dto = crate::users::dto::create_user::CreateUserDto {
+		let create_user_dto = crate::users::dto::create_user_dto::CreateUserDto {
 			username: dto.username,
 			email: dto.email,
 			password: dto.password,
