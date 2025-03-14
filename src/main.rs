@@ -5,6 +5,7 @@ use axum::middleware::from_fn_with_state;
 use std::net::SocketAddr;
 use migration::{Migrator, MigratorTrait};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use crate::common::r#struct::state::AppState;
 
 mod app_module;
 mod auth;
@@ -35,8 +36,14 @@ async fn main() {
 	// Run database migrations
 	Migrator::up(&db, None).await.unwrap();
 
+	// Create AppState
+	let app_state = AppState::new(
+		db.clone(),
+		app_config.security.jwt_access_token_secret
+	);
+
 	// App configuration
-	let app = app_module::configure(db.clone(), app_config.security.jwt_access_token_secret, app_config.security.jwt_access_token_expires_in).await;
+	let app = app_module::configure(app_state, app_config.security.jwt_access_token_expires_in).await;
 
 	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.port));
 	tracing::info!("Server is running on: http://{}", addr);

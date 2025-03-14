@@ -1,11 +1,11 @@
 use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
-use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
 
 use crate::auth::dto::login::LoginDto;
 use crate::auth::dto::register::RegisterDto;
 use crate::common::error::error::AppError;
+use crate::common::r#struct::state::AppState;
 use crate::users::entities::user::Model as User;
 use crate::users::services::users_service::UsersService;
 
@@ -32,10 +32,10 @@ pub struct AuthResponse {
 }
 
 impl AuthService {
-	pub fn new(db: DatabaseConnection, jwt_access_token_secret: String, jwt_access_token_expires_in: i64) -> Self {
+	pub fn new(app_state: AppState, jwt_access_token_expires_in: i64) -> Self {
 		Self {
-			users_service: UsersService::new(db),
-			jwt_access_token_secret,
+			users_service: UsersService::new(app_state.db),
+			jwt_access_token_secret: app_state.jwt_access_token_secret,
 			jwt_access_token_expires_in,
 		}
 	}
