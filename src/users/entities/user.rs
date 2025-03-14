@@ -1,5 +1,6 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
@@ -12,9 +13,9 @@ pub struct Model {
 	#[serde(skip_serializing)]
 	pub password_hash: String,
 	#[sea_orm(column_type = "Timestamp", default_value = "CURRENT_TIMESTAMP")]
-	pub created_at: chrono::DateTime<chrono::Utc>,
+	pub created_at: chrono::DateTime<Utc>,
 	#[sea_orm(column_type = "Timestamp", default_value = "CURRENT_TIMESTAMP")]
-	pub updated_at: chrono::DateTime<chrono::Utc>,
+	pub updated_at: chrono::DateTime<Utc>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

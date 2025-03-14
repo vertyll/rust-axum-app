@@ -3,6 +3,7 @@ rust_i18n::i18n!("translations");
 use crate::auth::middleware::jwt_auth::auth_middleware;
 use axum::middleware::from_fn_with_state;
 use std::net::SocketAddr;
+use migration::{Migrator, MigratorTrait};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod app_module;
@@ -32,7 +33,7 @@ async fn main() {
 		.expect("Could not connect to the database");
 
 	// Run database migrations
-	// --
+	Migrator::up(&db, None).await.unwrap();
 
 	// App configuration
 	let app = app_module::configure(db.clone()).await;
