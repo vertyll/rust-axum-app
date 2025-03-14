@@ -12,6 +12,8 @@ use crate::users::services::users_service::UsersService;
 #[derive(Clone)]
 pub struct AuthService {
 	users_service: UsersService,
+	jwt_access_token_secret: String,
+	jwt_access_token_expires_in: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -30,9 +32,11 @@ pub struct AuthResponse {
 }
 
 impl AuthService {
-	pub fn new(db: DatabaseConnection) -> Self {
+	pub fn new(db: DatabaseConnection, jwt_access_token_secret: String, jwt_access_token_expires_in: i64) -> Self {
 		Self {
 			users_service: UsersService::new(db),
+			jwt_access_token_secret,
+			jwt_access_token_expires_in,
 		}
 	}
 
@@ -58,9 +62,8 @@ impl AuthService {
 
 	fn generate_token(&self, user: &User) -> Result<String, AppError> {
 		let now = Utc::now();
-		let app_config =
-			crate::config::app_config::AppConfig::init().expect("Could not initialize the application configuration");
-		let expires_at = now + Duration::seconds(app_config.security.jwt_access_token_expires_in);
+
+		let expires_at = now + Duration::seconds(self.jwt_access_token_expires_in);
 
 		let claims = Claims {
 			sub: user.id,
@@ -73,7 +76,7 @@ impl AuthService {
 		let token = encode(
 			&Header::default(),
 			&claims,
-			&EncodingKey::from_secret(app_config.security.jwt_access_token_secret.as_bytes()),
+			&EncodingKey::from_secret(self.jwt_access_token_secret.as_bytes()),
 		)
 		.map_err(|_| AppError::InternalError)?;
 

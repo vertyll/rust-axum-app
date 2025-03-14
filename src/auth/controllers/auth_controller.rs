@@ -6,8 +6,8 @@ use axum::{Json, Router, extract::State, routing::post};
 use sea_orm::DatabaseConnection;
 use validator::Validate;
 
-pub fn routes(db: DatabaseConnection) -> Router {
-	let auth_service = AuthService::new(db);
+pub fn routes(db: DatabaseConnection, jwt_access_token_secret: String, jwt_access_token_expires_in: i64) -> Router {
+	let auth_service = AuthService::new(db, jwt_access_token_secret, jwt_access_token_expires_in);
 
 	Router::new()
 		.route("/register", post(register))

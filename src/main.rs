@@ -36,7 +36,7 @@ async fn main() {
 	Migrator::up(&db, None).await.unwrap();
 
 	// App configuration
-	let app = app_module::configure(db.clone()).await;
+	let app = app_module::configure(db.clone(), app_config.security.jwt_access_token_secret, app_config.security.jwt_access_token_expires_in).await;
 
 	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.port));
 	tracing::info!("Server is running on: http://{}", addr);

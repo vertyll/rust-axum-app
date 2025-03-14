@@ -7,8 +7,8 @@ errors:
   authentication: "Błąd uwierzytelniania: %{message}"
 auth:
   errors:
-    missing_token: "Missing or invalid authorization token"
-    invalid_token: "Invalid token"
+    missing_token: "Brak lub nieprawidłowy token autoryzacyjny"
+    invalid_token: "Nieprawidłowy token"
 users:
   validators:
     username:
