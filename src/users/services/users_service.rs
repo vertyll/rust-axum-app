@@ -42,7 +42,7 @@ impl UsersService {
 		let user_email = dto.email.clone();
 
 		let existing_user = self.repository.find_by_email(&user_email).await;
-		if let Ok(user) = existing_user {
+		if let Ok(_user) = existing_user {
 			return Err(AppError::ValidationError({
 				let mut errors = validator::ValidationErrors::new();
 				errors.add(
