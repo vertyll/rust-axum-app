@@ -14,7 +14,7 @@ This project implements a simple HTTP server using the Axum web framework for Ru
 - SeaORM - Async ORM for Rust
 - cargo-watch for REPL
 - rust-i18n for internationalization
-- postgresql for database
+- PostgreSQL for database
 
 ## Prerequisites
 
