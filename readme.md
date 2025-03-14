@@ -11,6 +11,7 @@ This project implements a simple HTTP server using the Axum web framework for Ru
 - REST API with Axum
 - Asynchronous runtime with Tokio
 - JSON serialization with Serde
+- SeaORM - Async ORM for Rust
 
 ## Prerequisites
 
@@ -31,17 +32,21 @@ cargo build
 
 ### Dev (REPL)
 
-First, install cargo-watch to REPL.
+First, install the sea-orm-cli with cargo.
 
 ```bash
-# Install cargo-watch
+cargo install sea-orm-cli@1.1.0
+```
+
+Second, install cargo-watch to REPL.
+
+```bash
 cargo install cargo-watch
 ```
 
-Second, run the server in REPL mode.
+Third, run the server in REPL mode.
 
 ````bash
-# To run the server.
 cargo watch -q -c -w src/ -x "run"
 ````
 
@@ -49,7 +54,14 @@ cargo watch -q -c -w src/ -x "run"
 
 Run the server.
 
+First, install the sea-orm-cli with cargo.
+
 ```bash
-# To run the server.
+cargo install sea-orm-cli@1.1.0
+```
+
+Second, run the server.
+
+```bash
 cargo run
 ```
