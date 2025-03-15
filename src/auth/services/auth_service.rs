@@ -1,5 +1,6 @@
 use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
+use sea_orm::{DatabaseTransaction, TransactionTrait};
 use serde::{Deserialize, Serialize};
 
 use crate::auth::dto::login_dto::LoginDto;
@@ -46,15 +47,42 @@ impl AuthService {
 	}
 
 	pub async fn register(&self, dto: RegisterDto) -> Result<AuthResponse, AppError> {
+		let db = &self.users_service.repository.db;
+		let transaction = db.begin().await?;
+
+		let result = self.register_in_transaction(&transaction, dto).await;
+
+		match result {
+			Ok(response) => {
+				transaction.commit().await?;
+				Ok(response)
+			}
+			Err(e) => {
+				transaction.rollback().await?;
+				Err(e)
+			}
+		}
+	}
+
+	async fn register_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: RegisterDto,
+	) -> Result<AuthResponse, AppError> {
 		let create_user_dto = crate::users::dto::create_user_dto::CreateUserDto {
 			username: dto.username,
 			email: dto.email,
 			password: dto.password,
 		};
 
-		let user = self.users_service.create(create_user_dto).await?;
+		let user = self
+			.users_service
+			.create_in_transaction(transaction, create_user_dto)
+			.await?;
 
-		self.user_roles_service.assign_user_role(user.id).await?;
+		self.user_roles_service
+			.assign_user_role_in_transaction(transaction, user.id)
+			.await?;
 
 		let token = self.generate_token(&user).await?;
 

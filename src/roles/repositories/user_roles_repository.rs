@@ -4,7 +4,9 @@ use crate::roles::entities::role;
 use crate::roles::entities::role::{self as role_entity, Entity as Role};
 use crate::roles::entities::user_role::{self, Entity as UserRole, Model as UserRoleModel};
 use chrono::Utc;
-use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{
+	ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set,
+};
 
 #[derive(Clone)]
 pub struct UserRolesRepository {
@@ -28,12 +30,16 @@ impl UserRolesRepository {
 		Ok(roles)
 	}
 
-	pub async fn assign_user_role(&self, user_id: i32) -> Result<UserRoleModel, AppError> {
+	pub async fn assign_user_role_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		user_id: i32,
+	) -> Result<UserRoleModel, AppError> {
 		use sea_orm::{EntityTrait, QueryFilter};
 
 		let user_role = role::Entity::find()
 			.filter(role::Column::Name.eq(RoleEnum::User.as_str()))
-			.one(&self.db)
+			.one(transaction)
 			.await
 			.map_err(|_| AppError::InternalError)?
 			.ok_or(AppError::InternalError)?;
@@ -47,7 +53,7 @@ impl UserRolesRepository {
 		};
 
 		user_role_model
-			.insert(&self.db)
+			.insert(transaction)
 			.await
 			.map_err(|_| AppError::InternalError)
 	}

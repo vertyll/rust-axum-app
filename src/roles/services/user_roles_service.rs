@@ -3,7 +3,7 @@ use crate::common::error::app_error::AppError;
 use crate::roles::entities::role::Model as RoleModel;
 use crate::roles::entities::user_role::Model as UserRoleModel;
 use crate::roles::repositories::user_roles_repository::UserRolesRepository;
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, DatabaseTransaction};
 
 #[derive(Clone)]
 pub struct UserRolesService {
@@ -21,8 +21,14 @@ impl UserRolesService {
 		self.repository.find_user_roles(user_id).await
 	}
 
-	pub async fn assign_user_role(&self, user_id: i32) -> Result<UserRoleModel, AppError> {
-		self.repository.assign_user_role(user_id).await
+	pub async fn assign_user_role_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		user_id: i32,
+	) -> Result<UserRoleModel, AppError> {
+		self.repository
+			.assign_user_role_in_transaction(transaction, user_id)
+			.await
 	}
 
 	pub async fn remove_role(&self, user_id: i32, role_id: i32) -> Result<(), AppError> {

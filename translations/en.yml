@@ -25,3 +25,4 @@ users:
       invalid_format: "Email address has an invalid format."
   errors:
       user_already_exists: "User with this email address already exists."
+      username_already_exists: "User with this username already exists."

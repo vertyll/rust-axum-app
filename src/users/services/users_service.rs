@@ -1,6 +1,9 @@
+use crate::auth::dto::register_dto::RegisterDto;
+use crate::auth::services::auth_service::AuthResponse;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::i18n::setup::translate;
+use crate::roles::services::user_roles_service::UserRolesService;
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::user::{self, Entity as User, Model as UserModel};
@@ -9,17 +12,19 @@ use argon2::{
 	Argon2,
 	password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 
 #[derive(Clone)]
 pub struct UsersService {
-	repository: UsersRepository,
+	pub repository: UsersRepository,
+	user_roles_service: UserRolesService,
 }
 
 impl UsersService {
 	pub fn new(db: DatabaseConnection) -> Self {
 		Self {
-			repository: UsersRepository::new(db),
+			repository: UsersRepository::new(db.clone()),
+			user_roles_service: UserRolesService::new(db.clone()),
 		}
 	}
 
@@ -32,24 +37,65 @@ impl UsersService {
 	}
 
 	pub async fn create(&self, dto: CreateUserDto) -> Result<UserModel, AppError> {
-		let user_email = dto.email.clone();
+		let db = &self.repository.db;
+		let transaction = db.begin().await?;
 
-		let existing_user = self.repository.find_by_email(&user_email).await;
-		if let Ok(_user) = existing_user {
-			return Err(AppError::ValidationError({
-				let mut errors = validator::ValidationErrors::new();
-				errors.add(
-					"email",
-					validator::ValidationError::new("already_exists")
-						.with_message(translate("users.errors.user_already_exists").into()),
-				);
-				errors
-			}));
+		let result = self.create_in_transaction(&transaction, dto).await;
+
+		if let Ok(user) = &result {
+			self.user_roles_service
+				.assign_user_role_in_transaction(&transaction, user.id)
+				.await?;
+		}
+
+		match result {
+			Ok(response) => {
+				transaction.commit().await?;
+				Ok(response)
+			}
+			Err(e) => {
+				transaction.rollback().await?;
+				Err(e)
+			}
+		}
+	}
+
+	pub async fn create_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: CreateUserDto,
+	) -> Result<UserModel, AppError> {
+		let mut validation_errors = validator::ValidationErrors::new();
+		let mut has_errors = false;
+
+		let user_email = dto.email.clone();
+		if let Ok(_) = self.repository.find_by_email(&user_email).await {
+			has_errors = true;
+			validation_errors.add(
+				"email",
+				validator::ValidationError::new("already_exists")
+					.with_message(translate("users.errors.user_already_exists").into()),
+			);
+		}
+
+		let username = dto.username.clone();
+		if let Ok(_) = self.repository.find_by_username(&username).await {
+			has_errors = true;
+			validation_errors.add(
+				"username",
+				validator::ValidationError::new("already_exists")
+					.with_message(translate("users.errors.username_already_exists").into()),
+			);
+		}
+
+		if has_errors {
+			return Err(AppError::ValidationError(validation_errors));
 		}
 
 		let password_hash = hash_password(&dto.password)?;
-
-		self.repository.create(dto, password_hash).await
+		self.repository
+			.create_in_transaction(transaction, dto, password_hash)
+			.await
 	}
 
 	pub async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError> {

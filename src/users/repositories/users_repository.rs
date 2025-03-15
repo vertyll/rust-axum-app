@@ -2,11 +2,11 @@ use crate::common::error::app_error::AppError;
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::user::{self, ActiveModel as UserActiveModel, Entity as User, Model as UserModel};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set};
 
 #[derive(Clone)]
 pub struct UsersRepository {
-	db: DatabaseConnection,
+	pub db: DatabaseConnection,
 }
 
 impl UsersRepository {
@@ -36,7 +36,12 @@ impl UsersRepository {
 		Ok(user)
 	}
 
-	pub async fn create(&self, dto: CreateUserDto, password_hash: String) -> Result<UserModel, AppError> {
+	pub async fn create_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: CreateUserDto,
+		password_hash: String,
+	) -> Result<UserModel, AppError> {
 		let now = chrono::Utc::now();
 
 		let user_active_model = UserActiveModel {
@@ -48,7 +53,7 @@ impl UsersRepository {
 			..Default::default()
 		};
 
-		let user = user_active_model.insert(&self.db).await?;
+		let user = user_active_model.insert(transaction).await?;
 
 		Ok(user)
 	}

@@ -25,3 +25,4 @@ users:
       invalid_format: "Adres e-mail ma nieprawidłowy format."
   errors:
     user_already_exists: "Użytkownik o podanym adresie e-mail już istnieje."
+    username_already_exists: "Użytkownik o podanej nazwie użytkownika już istnieje."
