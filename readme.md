@@ -6,7 +6,7 @@ A web server application built with Rust and Axum framework.
 
 This project implements a simple HTTP server using the Axum web framework for Rust.
 
-## Features
+## Technologies
 
 - REST API with Axum
 - Asynchronous runtime with Tokio
@@ -15,6 +15,24 @@ This project implements a simple HTTP server using the Axum web framework for Ru
 - cargo-watch for REPL
 - rust-i18n for internationalization
 - PostgreSQL for database
+
+## Features
+
+- JWT authentication
+- RBAC (Role-Based Access Control)
+- internationalization
+- modularity architecture
+- CRUD operations
+- repository pattern
+- error handling
+- JWT extractor / JWT middleware (Guard)
+- role extractor (Guard)
+- request validation with DTO
+- migration with SeaORM
+- database seeding
+- configuration module
+- database module
+- app state struct with connection pool and JWT secret
 
 ## Prerequisites
 
