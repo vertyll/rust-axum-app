@@ -1,23 +1,24 @@
-
+use crate::auth::extractor::jwt_auth_extractor::JwtAuth;
+use crate::common::error::app_error::AppError;
+use crate::common::r#struct::app_state::AppState;
+use crate::users::dto::create_user_dto::CreateUserDto;
+use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::user;
 use crate::users::services::users_service::UsersService;
 use axum::{
 	Json, Router,
 	extract::{Path, State},
-	routing::{get},
+	routing::get,
 };
 use validator::Validate;
-use crate::auth::extractor::jwt_auth::JwtAuth;
-use crate::common::error::app_error::AppError;
-use crate::common::r#struct::app_state::AppState;
-use crate::users::dto::create_user_dto::CreateUserDto;
-use crate::users::dto::update_user_dto::UpdateUserDto;
 
 pub fn routes(app_state: AppState) -> Router {
+	let users_service = UsersService::new(app_state.db.clone());
+
 	Router::new()
 		.route("/", get(get_all_users).post(create_user))
 		.route("/{:id}", get(get_user_by_id).put(update_user).delete(delete_user))
-		.with_state(app_state)
+		.with_state(users_service)
 }
 
 async fn get_all_users(

@@ -1,29 +1,28 @@
-use axum::{
-	extract::{FromRequestParts, FromRef},
-	http::request::Parts,
-};
-use jsonwebtoken::{decode, DecodingKey, Validation};
 use crate::auth::services::auth_service::Claims;
-use crate::i18n::setup::translate;
-use std::future::Future;
 use crate::common::error::app_error::AppError;
-use crate::common::r#struct::app_state::AppState;
+use crate::i18n::setup::translate;
+use axum::{extract::FromRequestParts, http::request::Parts};
+use jsonwebtoken::{DecodingKey, Validation, decode};
+use std::future::Future;
+
+#[derive(Clone)]
+pub struct JwtSecret(pub String);
 
 pub struct JwtAuth(pub Claims);
 
 impl<S> FromRequestParts<S> for JwtAuth
 where
-	AppState: FromRef<S>,
 	S: Send + Sync,
 {
 	type Rejection = AppError;
 
-	fn from_request_parts(
-		parts: &mut Parts,
-		state: &S,
-	) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
+	fn from_request_parts(parts: &mut Parts, _state: &S) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
 		async move {
-			let app_state = AppState::from_ref(state);
+			// Get JWT secret from extensions (added by middleware)
+			let jwt_secret = parts
+				.extensions
+				.get::<JwtSecret>()
+				.ok_or_else(|| AppError::InternalError)?;
 
 			let token = parts
 				.headers
@@ -40,10 +39,10 @@ where
 
 			let token_data = decode::<Claims>(
 				&token,
-				&DecodingKey::from_secret(app_state.jwt_access_token_secret.as_bytes()),
+				&DecodingKey::from_secret(jwt_secret.0.as_bytes()),
 				&Validation::default(),
 			)
-				.map_err(|_| AppError::AuthenticationError(translate("auth.errors.invalid_token")))?;
+			.map_err(|_| AppError::AuthenticationError(translate("auth.errors.invalid_token")))?;
 
 			Ok(JwtAuth(token_data.claims))
 		}
