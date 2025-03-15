@@ -1,4 +1,5 @@
 use crate::auth::extractor::jwt_auth_extractor::JwtAuth;
+use crate::auth::extractor::role_extractor::AdminRole;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::users::dto::create_user_dto::CreateUserDto;
@@ -40,6 +41,7 @@ async fn get_user_by_id(
 
 async fn create_user(
 	JwtAuth(_claims): JwtAuth,
+	_admin_role: AdminRole,
 	State(service): State<UsersService>,
 	Json(dto): Json<CreateUserDto>,
 ) -> Result<Json<user::Model>, AppError> {
@@ -51,6 +53,7 @@ async fn create_user(
 
 async fn update_user(
 	JwtAuth(_claims): JwtAuth,
+	_admin_role: AdminRole,
 	State(service): State<UsersService>,
 	Path(id): Path<i32>,
 	Json(dto): Json<UpdateUserDto>,
@@ -63,6 +66,7 @@ async fn update_user(
 
 async fn delete_user(
 	JwtAuth(_claims): JwtAuth,
+	_admin_role: AdminRole,
 	State(service): State<UsersService>,
 	Path(id): Path<i32>,
 ) -> Result<(), AppError> {

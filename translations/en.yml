@@ -5,10 +5,15 @@ errors:
   not_found: "Resource not found"
   internal: "Internal server error"
   authentication: "Authentication failed: %{message}"
+  authorization: "Authorization failed: %{message}"
 auth:
   errors:
     missing_token: "Missing or invalid authorization token"
     invalid_token: "Invalid token"
+    user_role_required: "User role required"
+    manager_role_required: "Manager role required"
+    admin_role_required: "Admin role required"
+    insufficient_permissions: "Insufficient permissions"
 users:
   validators:
     username:

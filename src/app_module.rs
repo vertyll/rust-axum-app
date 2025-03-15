@@ -20,7 +20,7 @@ pub async fn configure(app_state: AppState, jwt_access_token_expires_in: i64) ->
 		.layer(from_fn(i18n_middleware))
 		// Add JWT secret middleware
 		.layer(from_fn(move |req, next| {
-			let secret = jwt_access_token_secret.clone();
-			jwt_secret_middleware(secret, req, next)
+			let jwt_secret = jwt_access_token_secret.clone();
+			jwt_secret_middleware(jwt_secret, req, next)
 		}))
 }

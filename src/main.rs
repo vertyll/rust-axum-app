@@ -1,7 +1,9 @@
 rust_i18n::i18n!("translations");
 
 use crate::common::r#struct::app_state::AppState;
+
 use axum::middleware::from_fn_with_state;
+use database::seeders;
 use migration::{Migrator, MigratorTrait};
 use std::net::SocketAddr;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -12,6 +14,7 @@ mod common;
 mod config;
 mod database;
 mod i18n;
+mod roles;
 mod users;
 
 #[tokio::main]
@@ -33,7 +36,10 @@ async fn main() {
 		.expect("Could not connect to the database");
 
 	// Run database migrations
-	Migrator::up(&db, None).await.unwrap();
+	Migrator::up(&db, None).await.expect("Could not upgrade the database");
+
+	// Run seeders
+	seeders::run_seeders(&db).await.expect("Could not run seeders");
 
 	// Create AppState
 	let app_state = AppState::new(db.clone(), app_config.security.jwt_access_token_secret);

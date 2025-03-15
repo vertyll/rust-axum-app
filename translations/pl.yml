@@ -5,10 +5,15 @@ errors:
   not_found: "Nie znaleziono zasobu"
   internal: "Wewnętrzny błąd serwera"
   authentication: "Błąd uwierzytelniania: %{message}"
+  authorization: "Błąd autoryzacji: %{message}"
 auth:
   errors:
     missing_token: "Brak lub nieprawidłowy token autoryzacyjny"
     invalid_token: "Nieprawidłowy token"
+    user_role_required: "Wymagana rola użytkownika"
+    manager_role_required: "Wymagana rola menedżera"
+    admin_role_required: "Wymagana rola administratora"
+    insufficient_permissions: "Niewystarczające uprawnienia"
 users:
   validators:
     username:
