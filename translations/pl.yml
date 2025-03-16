@@ -14,6 +14,9 @@ auth:
     manager_role_required: "Wymagana rola menedżera"
     admin_role_required: "Wymagana rola administratora"
     insufficient_permissions: "Niewystarczające uprawnienia"
+    missing_refresh_token: "Brak tokena odświeżania"
+    invalid_refresh_token: "Nieprawidłowy token odświeżania"
+    expired_refresh_token: "Token odświeżania wygasł"
 users:
   validators:
     username:

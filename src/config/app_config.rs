@@ -11,6 +11,8 @@ pub struct ServerConfig {
 pub struct SecurityConfig {
 	pub jwt_access_token_secret: String,
 	pub jwt_access_token_expires_in: i64,
+	pub jwt_refresh_token_secret: String,
+	pub jwt_refresh_token_expires_in: i64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -37,6 +39,8 @@ impl AppConfig {
 			// Security
 			.set_default("security.jwt_access_token_secret", "default_secret")?
 			.set_default("security.jwt_access_token_expires_in", "60000")?
+			.set_default("security.jwt_refresh_token_secret", "default_secret")?
+			.set_default("security.jwt_refresh_token_expires_in", "86400000")?
 			// Config file (optional)
 			.add_source(config::File::with_name("config").required(false))
 			// Environment variables
