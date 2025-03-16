@@ -1,5 +1,6 @@
 use crate::common::error::app_error::AppError;
 use crate::roles::entities::role::{self, ActiveModel as RoleActiveModel, Entity as Role, Model as RoleModel};
+use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 #[derive(Clone)]
@@ -11,18 +12,31 @@ impl RolesRepository {
 	pub fn new(db: DatabaseConnection) -> Self {
 		Self { db }
 	}
+}
 
-	pub async fn find_all(&self) -> Result<Vec<RoleModel>, AppError> {
+#[async_trait]
+pub trait RolesRepositoryTrait: Send + Sync {
+	async fn find_all(&self) -> Result<Vec<RoleModel>, AppError>;
+	async fn find_by_id(&self, id: i32) -> Result<RoleModel, AppError>;
+	async fn find_by_name(&self, name: &str) -> Result<RoleModel, AppError>;
+	async fn create(&self, name: String, description: Option<String>) -> Result<RoleModel, AppError>;
+	async fn update(&self, id: i32, name: Option<String>, description: Option<String>) -> Result<RoleModel, AppError>;
+	async fn delete(&self, id: i32) -> Result<(), AppError>;
+}
+
+#[async_trait]
+impl RolesRepositoryTrait for RolesRepository {
+	async fn find_all(&self) -> Result<Vec<RoleModel>, AppError> {
 		let roles = Role::find().all(&self.db).await?;
 		Ok(roles)
 	}
 
-	pub async fn find_by_id(&self, id: i32) -> Result<RoleModel, AppError> {
+	async fn find_by_id(&self, id: i32) -> Result<RoleModel, AppError> {
 		let role = Role::find_by_id(id).one(&self.db).await?.ok_or(AppError::NotFound)?;
 		Ok(role)
 	}
 
-	pub async fn find_by_name(&self, name: &str) -> Result<RoleModel, AppError> {
+	async fn find_by_name(&self, name: &str) -> Result<RoleModel, AppError> {
 		let role = Role::find()
 			.filter(role::Column::Name.eq(name))
 			.one(&self.db)
@@ -31,7 +45,7 @@ impl RolesRepository {
 		Ok(role)
 	}
 
-	pub async fn create(&self, name: String, description: Option<String>) -> Result<RoleModel, AppError> {
+	async fn create(&self, name: String, description: Option<String>) -> Result<RoleModel, AppError> {
 		let now = chrono::Utc::now();
 
 		let role_active_model = RoleActiveModel {
@@ -46,12 +60,7 @@ impl RolesRepository {
 		Ok(role)
 	}
 
-	pub async fn update(
-		&self,
-		id: i32,
-		name: Option<String>,
-		description: Option<String>,
-	) -> Result<RoleModel, AppError> {
+	async fn update(&self, id: i32, name: Option<String>, description: Option<String>) -> Result<RoleModel, AppError> {
 		let role = self.find_by_id(id).await?;
 		let now = chrono::Utc::now();
 
@@ -71,7 +80,7 @@ impl RolesRepository {
 		Ok(updated_role)
 	}
 
-	pub async fn delete(&self, id: i32) -> Result<(), AppError> {
+	async fn delete(&self, id: i32) -> Result<(), AppError> {
 		let role = self.find_by_id(id).await?;
 		let role_active_model: RoleActiveModel = role.into();
 		role_active_model.delete(&self.db).await?;

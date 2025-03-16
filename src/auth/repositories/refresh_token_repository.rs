@@ -2,6 +2,8 @@ use crate::auth::entities::refresh_token::{
 	self, ActiveModel as RefreshTokenActiveModel, Entity as RefreshToken, Model as RefreshTokenModel,
 };
 use crate::common::error::app_error::AppError;
+use crate::users::entities::user::{Entity as User, Model as UserModel};
+use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use sea_orm::{
 	ActiveModelTrait, ActiveValue, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set,
@@ -17,8 +19,32 @@ impl RefreshTokenRepository {
 	pub fn new(db: DatabaseConnection) -> Self {
 		Self { db }
 	}
+}
 
-	pub async fn create(&self, user_id: i32, expires_in: i64) -> Result<(RefreshTokenModel, String), AppError> {
+#[async_trait]
+pub trait RefreshTokenRepositoryTrait: Send + Sync {
+	fn get_db(&self) -> &DatabaseConnection;
+	async fn create(&self, user_id: i32, expires_in: i64) -> Result<(RefreshTokenModel, String), AppError>;
+	async fn create_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		user_id: i32,
+		expires_in: i64,
+	) -> Result<(RefreshTokenModel, String), AppError>;
+	async fn find_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<RefreshTokenModel, AppError>;
+	async fn delete_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<(), AppError>;
+	async fn delete_all_by_user_id(&self, user_id: i32) -> Result<(), AppError>;
+	async fn delete_expired(&self) -> Result<(), AppError>;
+	async fn is_token_valid(&self, token_model: &RefreshTokenModel) -> bool;
+	async fn find_user_by_id(&self, user_id: i32) -> Result<UserModel, AppError>;
+}
+
+#[async_trait]
+impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
+	fn get_db(&self) -> &DatabaseConnection {
+		&self.db
+	}
+	async fn create(&self, user_id: i32, expires_in: i64) -> Result<(RefreshTokenModel, String), AppError> {
 		let token = Uuid::new_v4().to_string();
 		let now = Utc::now();
 		let expires_at = now + Duration::seconds(expires_in);
@@ -43,7 +69,7 @@ impl RefreshTokenRepository {
 		Ok((model, token))
 	}
 
-	pub async fn create_in_transaction(
+	async fn create_in_transaction(
 		&self,
 		transaction: &DatabaseTransaction,
 		user_id: i32,
@@ -73,7 +99,7 @@ impl RefreshTokenRepository {
 		Ok((model, token))
 	}
 
-	pub async fn find_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<RefreshTokenModel, AppError> {
+	async fn find_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<RefreshTokenModel, AppError> {
 		let refresh_token = RefreshToken::find()
 			.filter(refresh_token::Column::Token.eq(token))
 			.filter(refresh_token::Column::UserId.eq(user_id))
@@ -85,7 +111,7 @@ impl RefreshTokenRepository {
 		Ok(refresh_token)
 	}
 
-	pub async fn delete_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<(), AppError> {
+	async fn delete_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<(), AppError> {
 		RefreshToken::delete_many()
 			.filter(refresh_token::Column::Token.eq(token))
 			.filter(refresh_token::Column::UserId.eq(user_id))
@@ -96,7 +122,7 @@ impl RefreshTokenRepository {
 		Ok(())
 	}
 
-	pub async fn delete_all_by_user_id(&self, user_id: i32) -> Result<(), AppError> {
+	async fn delete_all_by_user_id(&self, user_id: i32) -> Result<(), AppError> {
 		RefreshToken::delete_many()
 			.filter(refresh_token::Column::UserId.eq(user_id))
 			.exec(&self.db)
@@ -106,7 +132,7 @@ impl RefreshTokenRepository {
 		Ok(())
 	}
 
-	pub async fn delete_expired(&self) -> Result<(), AppError> {
+	async fn delete_expired(&self) -> Result<(), AppError> {
 		let now = Utc::now();
 		let now_db: sea_orm::prelude::DateTimeWithTimeZone = now.into();
 
@@ -119,14 +145,12 @@ impl RefreshTokenRepository {
 		Ok(())
 	}
 
-	pub async fn is_token_valid(&self, token_model: &RefreshTokenModel) -> bool {
+	async fn is_token_valid(&self, token_model: &RefreshTokenModel) -> bool {
 		let now: sea_orm::prelude::DateTimeWithTimeZone = Utc::now().into();
 		token_model.expires_at >= now
 	}
 
-	pub async fn find_user_by_id(&self, user_id: i32) -> Result<crate::users::entities::user::Model, AppError> {
-		use crate::users::entities::user::Entity as User;
-
+	async fn find_user_by_id(&self, user_id: i32) -> Result<UserModel, AppError> {
 		User::find_by_id(user_id)
 			.one(&self.db)
 			.await

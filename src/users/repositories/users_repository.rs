@@ -2,6 +2,7 @@ use crate::common::error::app_error::AppError;
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::user::{self, ActiveModel as UserActiveModel, Entity as User, Model as UserModel};
+use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set};
 
 #[derive(Clone)]
@@ -13,20 +14,43 @@ impl UsersRepository {
 	pub fn new(db: DatabaseConnection) -> Self {
 		Self { db }
 	}
+}
 
-	pub async fn find_all(&self) -> Result<Vec<UserModel>, AppError> {
+#[async_trait]
+pub trait UsersRepositoryTrait: Send + Sync {
+	fn get_db(&self) -> &DatabaseConnection;
+	async fn find_all(&self) -> Result<Vec<UserModel>, AppError>;
+	async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError>;
+	async fn find_by_username(&self, username: &str) -> Result<UserModel, AppError>;
+	async fn create_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: CreateUserDto,
+		password_hash: String,
+	) -> Result<UserModel, AppError>;
+	async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError>;
+	async fn delete(&self, id: i32) -> Result<(), AppError>;
+	async fn find_by_email(&self, email: &str) -> Result<UserModel, AppError>;
+}
+
+#[async_trait]
+impl UsersRepositoryTrait for UsersRepository {
+	fn get_db(&self) -> &DatabaseConnection {
+		&self.db
+	}
+	async fn find_all(&self) -> Result<Vec<UserModel>, AppError> {
 		let users = User::find().all(&self.db).await?;
 
 		Ok(users)
 	}
 
-	pub async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError> {
+	async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError> {
 		let user = User::find_by_id(id).one(&self.db).await?.ok_or(AppError::NotFound)?;
 
 		Ok(user)
 	}
 
-	pub async fn find_by_username(&self, username: &str) -> Result<UserModel, AppError> {
+	async fn find_by_username(&self, username: &str) -> Result<UserModel, AppError> {
 		let user = User::find()
 			.filter(user::Column::Username.eq(username))
 			.one(&self.db)
@@ -36,7 +60,7 @@ impl UsersRepository {
 		Ok(user)
 	}
 
-	pub async fn create_in_transaction(
+	async fn create_in_transaction(
 		&self,
 		transaction: &DatabaseTransaction,
 		dto: CreateUserDto,
@@ -58,7 +82,7 @@ impl UsersRepository {
 		Ok(user)
 	}
 
-	pub async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError> {
+	async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError> {
 		let user = self.find_by_id(id).await?;
 		let now = chrono::Utc::now();
 
@@ -79,7 +103,7 @@ impl UsersRepository {
 		Ok(updated_user)
 	}
 
-	pub async fn delete(&self, id: i32) -> Result<(), AppError> {
+	async fn delete(&self, id: i32) -> Result<(), AppError> {
 		let user = self.find_by_id(id).await?;
 		let user_active_model: UserActiveModel = user.into();
 
@@ -88,7 +112,7 @@ impl UsersRepository {
 		Ok(())
 	}
 
-	pub async fn find_by_email(&self, email: &str) -> Result<UserModel, AppError> {
+	async fn find_by_email(&self, email: &str) -> Result<UserModel, AppError> {
 		let user = User::find()
 			.filter(user::Column::Email.eq(email))
 			.one(&self.db)

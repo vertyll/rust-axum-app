@@ -3,6 +3,7 @@ use crate::common::error::app_error::AppError;
 use crate::roles::entities::role;
 use crate::roles::entities::role::{self as role_entity, Entity as Role};
 use crate::roles::entities::user_role::{self, Entity as UserRole, Model as UserRoleModel};
+use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{
 	ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set,
@@ -17,8 +18,23 @@ impl UserRolesRepository {
 	pub fn new(db: DatabaseConnection) -> Self {
 		Self { db }
 	}
+}
 
-	pub async fn find_user_roles(&self, user_id: i32) -> Result<Vec<role_entity::Model>, AppError> {
+#[async_trait]
+pub trait UserRolesRepositoryTrait: Send + Sync {
+	async fn find_user_roles(&self, user_id: i32) -> Result<Vec<role_entity::Model>, AppError>;
+	async fn assign_user_role_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		user_id: i32,
+	) -> Result<UserRoleModel, AppError>;
+	async fn remove_role(&self, user_id: i32, role_id: i32) -> Result<(), AppError>;
+	async fn has_role(&self, user_id: i32, role: RoleEnum) -> Result<bool, AppError>;
+}
+
+#[async_trait]
+impl UserRolesRepositoryTrait for UserRolesRepository {
+	async fn find_user_roles(&self, user_id: i32) -> Result<Vec<role_entity::Model>, AppError> {
 		let user_roles = UserRole::find()
 			.filter(user_role::Column::UserId.eq(user_id))
 			.find_with_related(Role)
@@ -30,7 +46,7 @@ impl UserRolesRepository {
 		Ok(roles)
 	}
 
-	pub async fn assign_user_role_in_transaction(
+	async fn assign_user_role_in_transaction(
 		&self,
 		transaction: &DatabaseTransaction,
 		user_id: i32,
@@ -58,7 +74,7 @@ impl UserRolesRepository {
 			.map_err(|_| AppError::InternalError)
 	}
 
-	pub async fn remove_role(&self, user_id: i32, role_id: i32) -> Result<(), AppError> {
+	async fn remove_role(&self, user_id: i32, role_id: i32) -> Result<(), AppError> {
 		let result = UserRole::delete_many()
 			.filter(
 				Condition::all()
@@ -75,7 +91,7 @@ impl UserRolesRepository {
 		Ok(())
 	}
 
-	pub async fn has_role(&self, user_id: i32, role: RoleEnum) -> Result<bool, AppError> {
+	async fn has_role(&self, user_id: i32, role: RoleEnum) -> Result<bool, AppError> {
 		let roles = self.find_user_roles(user_id).await?;
 		let has_role = roles.iter().any(|r| r.name == role.as_str());
 		Ok(has_role)

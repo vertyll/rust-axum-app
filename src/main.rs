@@ -3,11 +3,12 @@ rust_i18n::i18n!("translations");
 use crate::common::r#struct::app_state::AppState;
 use crate::common::r#struct::token_state::TokenState;
 
-use crate::auth::services::refresh_token_service::RefreshTokenService;
+use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
 use axum::middleware::from_fn_with_state;
 use database::seeders;
 use migration::{Migrator, MigratorTrait};
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod app_module;
@@ -59,8 +60,7 @@ async fn main() {
 	let token_state_clone = token_state.clone();
 	let app_state_clone = app_state.clone();
 	tokio::spawn(async move {
-		let refresh_token_service = RefreshTokenService::new(app_state_clone, token_state_clone);
-
+		let refresh_token_service = Arc::new(RefreshTokenService::new(app_state_clone, token_state_clone));
 		let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(86400)); // 24 hours
 		loop {
 			interval.tick().await;

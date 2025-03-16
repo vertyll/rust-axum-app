@@ -3,41 +3,92 @@ use crate::auth::services::auth_service::AuthResponse;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::i18n::setup::translate;
-use crate::roles::services::user_roles_service::UserRolesService;
+use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::user::{self, Entity as User, Model as UserModel};
-use crate::users::repositories::users_repository::UsersRepository;
+use crate::users::repositories::users_repository::{UsersRepository, UsersRepositoryTrait};
 use argon2::{
 	Argon2,
 	password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
+use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct UsersService {
-	pub repository: UsersRepository,
-	user_roles_service: UserRolesService,
+	pub users_repository: Arc<dyn UsersRepositoryTrait>,
+	user_roles_service: Arc<dyn UserRolesServiceTrait>,
 }
 
 impl UsersService {
 	pub fn new(db: DatabaseConnection) -> Self {
 		Self {
-			repository: UsersRepository::new(db.clone()),
-			user_roles_service: UserRolesService::new(db.clone()),
+			users_repository: Arc::new(UsersRepository::new(db.clone())),
+			user_roles_service: Arc::new(UserRolesService::new(db)),
 		}
 	}
 
-	pub async fn find_all(&self) -> Result<Vec<UserModel>, AppError> {
-		self.repository.find_all().await
+	fn hash_password(&self, password: &str) -> Result<String, AppError> {
+		let salt = SaltString::generate(&mut OsRng);
+		let argon2 = Argon2::default();
+
+		let password_hash = argon2
+			.hash_password(password.as_bytes(), &salt)
+			.map_err(|e| {
+				tracing::error!("Error hashing password: {}", e);
+				AppError::InternalError
+			})?
+			.to_string();
+
+		Ok(password_hash)
 	}
 
-	pub async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError> {
-		self.repository.find_by_id(id).await
+	fn verify_password(&self, password: &str, hash: &str) -> Result<bool, AppError> {
+		let parsed_hash = PasswordHash::new(hash).map_err(|e| {
+			tracing::error!("Error parsing password hash: {}", e);
+			AppError::InternalError
+		})?;
+
+		Ok(Argon2::default()
+			.verify_password(password.as_bytes(), &parsed_hash)
+			.is_ok())
+	}
+}
+
+#[async_trait]
+pub trait UsersServiceTrait: Send + Sync {
+	async fn begin_transaction(&self) -> Result<DatabaseTransaction, AppError>;
+	async fn find_all(&self) -> Result<Vec<UserModel>, AppError>;
+	async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError>;
+	async fn create(&self, dto: CreateUserDto) -> Result<UserModel, AppError>;
+	async fn create_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: CreateUserDto,
+	) -> Result<UserModel, AppError>;
+	async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError>;
+	async fn delete(&self, id: i32) -> Result<(), AppError>;
+	async fn login(&self, username: &str, password: &str) -> Result<UserModel, AppError>;
+}
+
+#[async_trait]
+impl UsersServiceTrait for UsersService {
+	async fn begin_transaction(&self) -> Result<DatabaseTransaction, AppError> {
+		Ok(self.users_repository.get_db().begin().await?)
 	}
 
-	pub async fn create(&self, dto: CreateUserDto) -> Result<UserModel, AppError> {
-		let db = &self.repository.db;
+	async fn find_all(&self) -> Result<Vec<UserModel>, AppError> {
+		self.users_repository.find_all().await
+	}
+
+	async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError> {
+		self.users_repository.find_by_id(id).await
+	}
+
+	async fn create(&self, dto: CreateUserDto) -> Result<UserModel, AppError> {
+		let db = self.users_repository.get_db();
 		let transaction = db.begin().await?;
 
 		let result = self.create_in_transaction(&transaction, dto).await;
@@ -60,7 +111,7 @@ impl UsersService {
 		}
 	}
 
-	pub async fn create_in_transaction(
+	async fn create_in_transaction(
 		&self,
 		transaction: &DatabaseTransaction,
 		dto: CreateUserDto,
@@ -69,7 +120,7 @@ impl UsersService {
 		let mut has_errors = false;
 
 		let user_email = dto.email.clone();
-		if let Ok(_) = self.repository.find_by_email(&user_email).await {
+		if let Ok(_) = self.users_repository.find_by_email(&user_email).await {
 			has_errors = true;
 			validation_errors.add(
 				"email",
@@ -79,7 +130,7 @@ impl UsersService {
 		}
 
 		let username = dto.username.clone();
-		if let Ok(_) = self.repository.find_by_username(&username).await {
+		if let Ok(_) = self.users_repository.find_by_username(&username).await {
 			has_errors = true;
 			validation_errors.add(
 				"username",
@@ -92,57 +143,31 @@ impl UsersService {
 			return Err(AppError::ValidationError(validation_errors));
 		}
 
-		let password_hash = hash_password(&dto.password)?;
-		self.repository
+		let password_hash = self.hash_password(&dto.password)?;
+		self.users_repository
 			.create_in_transaction(transaction, dto, password_hash)
 			.await
 	}
 
-	pub async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError> {
-		let _existing_user = self.repository.find_by_id(id).await?;
+	async fn update(&self, id: i32, dto: UpdateUserDto) -> Result<UserModel, AppError> {
+		let _existing_user = self.users_repository.find_by_id(id).await?;
 
-		self.repository.update(id, dto).await
+		self.users_repository.update(id, dto).await
 	}
 
-	pub async fn delete(&self, id: i32) -> Result<(), AppError> {
-		let _existing_user = self.repository.find_by_id(id).await?;
+	async fn delete(&self, id: i32) -> Result<(), AppError> {
+		let _existing_user = self.users_repository.find_by_id(id).await?;
 
-		self.repository.delete(id).await
+		self.users_repository.delete(id).await
 	}
 
-	pub async fn login(&self, username: &str, password: &str) -> Result<UserModel, AppError> {
-		let user = self.repository.find_by_username(username).await?;
+	async fn login(&self, username: &str, password: &str) -> Result<UserModel, AppError> {
+		let user = self.users_repository.find_by_username(username).await?;
 
-		if verify_password(password, &user.password_hash)? {
+		if self.verify_password(password, &user.password_hash)? {
 			Ok(user)
 		} else {
 			Err(AppError::AuthenticationError("Invalid credentials".to_string()))
 		}
 	}
-}
-
-fn hash_password(password: &str) -> Result<String, AppError> {
-	let salt = SaltString::generate(&mut OsRng);
-	let argon2 = Argon2::default();
-
-	let password_hash = argon2
-		.hash_password(password.as_bytes(), &salt)
-		.map_err(|e| {
-			tracing::error!("Error hashing password: {}", e);
-			AppError::InternalError
-		})?
-		.to_string();
-
-	Ok(password_hash)
-}
-
-fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
-	let parsed_hash = PasswordHash::new(hash).map_err(|e| {
-		tracing::error!("Error parsing password hash: {}", e);
-		AppError::InternalError
-	})?;
-
-	Ok(Argon2::default()
-		.verify_password(password.as_bytes(), &parsed_hash)
-		.is_ok())
 }

@@ -1,23 +1,24 @@
-use chrono::{Duration, Utc};
-use jsonwebtoken::{EncodingKey, Header, encode};
-use sea_orm::{DatabaseTransaction, TransactionTrait};
-use serde::{Deserialize, Serialize};
-
 use crate::auth::dto::login_dto::LoginDto;
 use crate::auth::dto::register_dto::RegisterDto;
-use crate::auth::services::refresh_token_service::RefreshTokenService;
+use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::common::r#struct::token_state::TokenState;
-use crate::roles::services::user_roles_service::UserRolesService;
+use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use crate::users::entities::user::Model as User;
-use crate::users::services::users_service::UsersService;
+use crate::users::services::users_service::{UsersService, UsersServiceTrait};
+use async_trait::async_trait;
+use chrono::{Duration, Utc};
+use jsonwebtoken::{EncodingKey, Header, encode};
+use sea_orm::DatabaseTransaction;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AuthService {
-	users_service: UsersService,
-	user_roles_service: UserRolesService,
+	users_service: Arc<dyn UsersServiceTrait>,
+	user_roles_service: Arc<dyn UserRolesServiceTrait>,
 	jwt_access_token_secret: String,
 	jwt_access_token_expires_in: i64,
 }
@@ -40,77 +41,14 @@ pub struct AuthResponse {
 
 impl AuthService {
 	pub fn new(app_state: AppState, token_state: TokenState) -> Self {
+		let users_service = Arc::new(UsersService::new(app_state.db.clone()));
+		let user_roles_service = Arc::new(UserRolesService::new(app_state.db.clone()));
 		Self {
-			users_service: UsersService::new(app_state.db.clone()),
-			user_roles_service: UserRolesService::new(app_state.db.clone()),
+			users_service,
+			user_roles_service,
 			jwt_access_token_secret: token_state.jwt_access_token_secret,
 			jwt_access_token_expires_in: token_state.jwt_access_token_expires_in,
 		}
-	}
-
-	pub async fn register(
-		&self,
-		dto: RegisterDto,
-		refresh_token_service: &RefreshTokenService,
-	) -> Result<(User, String, String), AppError> {
-		let db = &self.users_service.repository.db;
-		let transaction = db.begin().await?;
-
-		let result = self
-			.register_in_transaction(&transaction, dto, refresh_token_service)
-			.await;
-
-		match result {
-			Ok(response) => {
-				transaction.commit().await?;
-				Ok(response)
-			}
-			Err(e) => {
-				transaction.rollback().await?;
-				Err(e)
-			}
-		}
-	}
-
-	async fn register_in_transaction(
-		&self,
-		transaction: &DatabaseTransaction,
-		dto: RegisterDto,
-		refresh_token_service: &RefreshTokenService,
-	) -> Result<(User, String, String), AppError> {
-		let create_user_dto = crate::users::dto::create_user_dto::CreateUserDto {
-			username: dto.username,
-			email: dto.email,
-			password: dto.password,
-		};
-
-		let user = self
-			.users_service
-			.create_in_transaction(transaction, create_user_dto)
-			.await?;
-
-		self.user_roles_service
-			.assign_user_role_in_transaction(transaction, user.id)
-			.await?;
-
-		let access_token = self.generate_token(&user).await?;
-		let refresh_token = refresh_token_service
-			.generate_refresh_token_in_transaction(transaction, user.id)
-			.await?;
-
-		Ok((user, access_token, refresh_token))
-	}
-
-	pub async fn login(
-		&self,
-		dto: LoginDto,
-		refresh_token_service: &RefreshTokenService,
-	) -> Result<(User, String, String), AppError> {
-		let user = self.users_service.login(&dto.username, &dto.password).await?;
-		let access_token = self.generate_token(&user).await?;
-		let refresh_token = refresh_token_service.generate_refresh_token(user.id).await?;
-
-		Ok((user, access_token, refresh_token))
 	}
 
 	async fn generate_token(&self, user: &User) -> Result<String, AppError> {
@@ -140,5 +78,86 @@ impl AuthService {
 		.map_err(|_| AppError::InternalError)?;
 
 		Ok(token)
+	}
+
+	async fn register_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: RegisterDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError> {
+		let create_user_dto = crate::users::dto::create_user_dto::CreateUserDto {
+			username: dto.username,
+			email: dto.email,
+			password: dto.password,
+		};
+
+		let user = self
+			.users_service
+			.create_in_transaction(transaction, create_user_dto)
+			.await?;
+
+		self.user_roles_service
+			.assign_user_role_in_transaction(transaction, user.id)
+			.await?;
+
+		let access_token = self.generate_token(&user).await?;
+		let refresh_token = refresh_token_service
+			.generate_refresh_token_in_transaction(transaction, user.id)
+			.await?;
+
+		Ok((user, access_token, refresh_token))
+	}
+}
+
+#[async_trait]
+pub trait AuthServiceTrait: Send + Sync {
+	async fn register(
+		&self,
+		dto: RegisterDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError>;
+	async fn login(
+		&self,
+		dto: LoginDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError>;
+}
+
+#[async_trait]
+impl AuthServiceTrait for AuthService {
+	async fn register(
+		&self,
+		dto: RegisterDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError> {
+		let transaction = self.users_service.begin_transaction().await?;
+
+		let result = self
+			.register_in_transaction(&transaction, dto, refresh_token_service)
+			.await;
+
+		match result {
+			Ok(response) => {
+				transaction.commit().await?;
+				Ok(response)
+			}
+			Err(e) => {
+				transaction.rollback().await?;
+				Err(e)
+			}
+		}
+	}
+
+	async fn login(
+		&self,
+		dto: LoginDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError> {
+		let user = self.users_service.login(&dto.username, &dto.password).await?;
+		let access_token = self.generate_token(&user).await?;
+		let refresh_token = refresh_token_service.generate_refresh_token(user.id).await?;
+
+		Ok((user, access_token, refresh_token))
 	}
 }
