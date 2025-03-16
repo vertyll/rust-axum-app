@@ -1,5 +1,5 @@
 use crate::common::error::app_error::AppError;
-use crate::roles::entities::role::Model as RoleModel;
+use crate::roles::entities::roles::Model as RoleModel;
 use crate::roles::repositories::roles_repository::{RolesRepository, RolesRepositoryTrait};
 use async_trait::async_trait;
 use sea_orm::DatabaseConnection;

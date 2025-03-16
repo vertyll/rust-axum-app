@@ -19,6 +19,7 @@ mod database;
 mod i18n;
 mod roles;
 mod users;
+mod files;
 
 #[tokio::main]
 async fn main() {

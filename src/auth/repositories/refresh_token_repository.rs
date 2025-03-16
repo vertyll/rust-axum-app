@@ -1,8 +1,8 @@
-use crate::auth::entities::refresh_token::{
+use crate::auth::entities::refresh_tokens::{
 	self, ActiveModel as RefreshTokenActiveModel, Entity as RefreshToken, Model as RefreshTokenModel,
 };
 use crate::common::error::app_error::AppError;
-use crate::users::entities::user::{Entity as User, Model as UserModel};
+use crate::users::entities::users::{Entity as User, Model as UserModel};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use sea_orm::{
@@ -101,8 +101,8 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 
 	async fn find_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<RefreshTokenModel, AppError> {
 		let refresh_token = RefreshToken::find()
-			.filter(refresh_token::Column::Token.eq(token))
-			.filter(refresh_token::Column::UserId.eq(user_id))
+			.filter(refresh_tokens::Column::Token.eq(token))
+			.filter(refresh_tokens::Column::UserId.eq(user_id))
 			.one(&self.db)
 			.await
 			.map_err(|_| AppError::InternalError)?
@@ -113,8 +113,8 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 
 	async fn delete_by_token_and_user_id(&self, token: &str, user_id: i32) -> Result<(), AppError> {
 		RefreshToken::delete_many()
-			.filter(refresh_token::Column::Token.eq(token))
-			.filter(refresh_token::Column::UserId.eq(user_id))
+			.filter(refresh_tokens::Column::Token.eq(token))
+			.filter(refresh_tokens::Column::UserId.eq(user_id))
 			.exec(&self.db)
 			.await
 			.map_err(|_| AppError::InternalError)?;
@@ -124,7 +124,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 
 	async fn delete_all_by_user_id(&self, user_id: i32) -> Result<(), AppError> {
 		RefreshToken::delete_many()
-			.filter(refresh_token::Column::UserId.eq(user_id))
+			.filter(refresh_tokens::Column::UserId.eq(user_id))
 			.exec(&self.db)
 			.await
 			.map_err(|_| AppError::InternalError)?;
@@ -137,7 +137,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 		let now_db: sea_orm::prelude::DateTimeWithTimeZone = now.into();
 
 		RefreshToken::delete_many()
-			.filter(refresh_token::Column::ExpiresAt.lt(now_db))
+			.filter(refresh_tokens::Column::ExpiresAt.lt(now_db))
 			.exec(&self.db)
 			.await
 			.map_err(|_| AppError::InternalError)?;

@@ -1,5 +1,5 @@
 use crate::common::error::app_error::AppError;
-use crate::roles::entities::role::{self, ActiveModel as RoleActiveModel, Entity as Role, Model as RoleModel};
+use crate::roles::entities::roles::{self, ActiveModel as RoleActiveModel, Entity as Role, Model as RoleModel};
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
@@ -38,7 +38,7 @@ impl RolesRepositoryTrait for RolesRepository {
 
 	async fn find_by_name(&self, name: &str) -> Result<RoleModel, AppError> {
 		let role = Role::find()
-			.filter(role::Column::Name.eq(name))
+			.filter(roles::Column::Name.eq(name))
 			.one(&self.db)
 			.await?
 			.ok_or(AppError::NotFound)?;

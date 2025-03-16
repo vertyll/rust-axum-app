@@ -4,8 +4,8 @@ use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
 
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
-use crate::roles::entities::role;
-use crate::roles::entities::role::Entity as Role;
+use crate::roles::entities::roles;
+use crate::roles::entities::roles::Entity as Role;
 
 pub async fn seed_roles(db: &DatabaseConnection) -> Result<(), AppError> {
 	println!("Seeding roles...");
@@ -28,7 +28,7 @@ pub async fn seed_roles(db: &DatabaseConnection) -> Result<(), AppError> {
 	let now: DateTime<Utc> = Utc::now();
 
 	for (role_type, description) in roles {
-		let role_model = role::ActiveModel {
+		let role_model = roles::ActiveModel {
 			id: Default::default(),
 			name: Set(role_type.as_str().to_string()),
 			description: Set(Some(description.to_string())),

@@ -1,7 +1,7 @@
 use crate::common::error::app_error::AppError;
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
-use crate::users::entities::user::{self, ActiveModel as UserActiveModel, Entity as User, Model as UserModel};
+use crate::users::entities::users::{self, ActiveModel as UserActiveModel, Entity as User, Model as UserModel};
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set};
 
@@ -52,7 +52,7 @@ impl UsersRepositoryTrait for UsersRepository {
 
 	async fn find_by_username(&self, username: &str) -> Result<UserModel, AppError> {
 		let user = User::find()
-			.filter(user::Column::Username.eq(username))
+			.filter(users::Column::Username.eq(username))
 			.one(&self.db)
 			.await?
 			.ok_or(AppError::NotFound)?;
@@ -114,7 +114,7 @@ impl UsersRepositoryTrait for UsersRepository {
 
 	async fn find_by_email(&self, email: &str) -> Result<UserModel, AppError> {
 		let user = User::find()
-			.filter(user::Column::Email.eq(email))
+			.filter(users::Column::Email.eq(email))
 			.one(&self.db)
 			.await?
 			.ok_or(AppError::NotFound)?;

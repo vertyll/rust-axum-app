@@ -15,26 +15,26 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
 	#[sea_orm(
-		belongs_to = "crate::users::entities::user::Entity",
+		belongs_to = "crate::users::entities::users::Entity",
 		from = "Column::UserId",
-		to = "crate::users::entities::user::Column::Id"
+		to = "crate::users::entities::users::Column::Id"
 	)]
 	User,
 	#[sea_orm(
-		belongs_to = "super::role::Entity",
+		belongs_to = "super::roles::Entity",
 		from = "Column::RoleId",
-		to = "super::role::Column::Id"
+		to = "super::roles::Column::Id"
 	)]
 	Role,
 }
 
-impl Related<crate::users::entities::user::Entity> for Entity {
+impl Related<crate::users::entities::users::Entity> for Entity {
 	fn to() -> RelationDef {
 		Relation::User.def()
 	}
 }
 
-impl Related<super::role::Entity> for Entity {
+impl Related<super::roles::Entity> for Entity {
 	fn to() -> RelationDef {
 		Relation::Role.def()
 	}

@@ -1,7 +1,7 @@
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
-use crate::roles::entities::role::Model as RoleModel;
-use crate::roles::entities::user_role::Model as UserRoleModel;
+use crate::roles::entities::roles::Model as RoleModel;
+use crate::roles::entities::user_roles::Model as UserRoleModel;
 use crate::roles::repositories::user_roles_repository::{UserRolesRepository, UserRolesRepositoryTrait};
 use async_trait::async_trait;
 use sea_orm::{DatabaseConnection, DatabaseTransaction};

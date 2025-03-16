@@ -1,8 +1,8 @@
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
-use crate::roles::entities::role;
-use crate::roles::entities::role::{self as role_entity, Entity as Role};
-use crate::roles::entities::user_role::{self, Entity as UserRole, Model as UserRoleModel};
+use crate::roles::entities::roles;
+use crate::roles::entities::roles::{self as role_entity, Entity as Role};
+use crate::roles::entities::user_roles::{self, Entity as UserRole, Model as UserRoleModel};
 use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::{
@@ -36,7 +36,7 @@ pub trait UserRolesRepositoryTrait: Send + Sync {
 impl UserRolesRepositoryTrait for UserRolesRepository {
 	async fn find_user_roles(&self, user_id: i32) -> Result<Vec<role_entity::Model>, AppError> {
 		let user_roles = UserRole::find()
-			.filter(user_role::Column::UserId.eq(user_id))
+			.filter(user_roles::Column::UserId.eq(user_id))
 			.find_with_related(Role)
 			.all(&self.db)
 			.await?;
@@ -53,14 +53,14 @@ impl UserRolesRepositoryTrait for UserRolesRepository {
 	) -> Result<UserRoleModel, AppError> {
 		use sea_orm::{EntityTrait, QueryFilter};
 
-		let user_role = role::Entity::find()
-			.filter(role::Column::Name.eq(RoleEnum::User.as_str()))
+		let user_role = roles::Entity::find()
+			.filter(roles::Column::Name.eq(RoleEnum::User.as_str()))
 			.one(transaction)
 			.await
 			.map_err(|_| AppError::InternalError)?
 			.ok_or(AppError::InternalError)?;
 
-		let user_role_model = user_role::ActiveModel {
+		let user_role_model = user_roles::ActiveModel {
 			id: Default::default(),
 			user_id: Set(user_id),
 			role_id: Set(user_role.id),
@@ -78,8 +78,8 @@ impl UserRolesRepositoryTrait for UserRolesRepository {
 		let result = UserRole::delete_many()
 			.filter(
 				Condition::all()
-					.add(user_role::Column::UserId.eq(user_id))
-					.add(user_role::Column::RoleId.eq(role_id)),
+					.add(user_roles::Column::UserId.eq(user_id))
+					.add(user_roles::Column::RoleId.eq(role_id)),
 			)
 			.exec(&self.db)
 			.await?;

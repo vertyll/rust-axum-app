@@ -7,6 +7,7 @@ use crate::users::users_module;
 use axum::{Router, middleware::from_fn};
 use tower_cookies::CookieManagerLayer;
 use tower_http::trace::TraceLayer;
+use crate::files::files_module;
 
 pub async fn configure(app_state: AppState, token_state: TokenState) -> Router {
 	let jwt_access_token_secret = token_state.jwt_access_token_secret.clone();
@@ -16,6 +17,8 @@ pub async fn configure(app_state: AppState, token_state: TokenState) -> Router {
 		.merge(users_module::configure(app_state.clone()))
 		// Add the auth module
 		.merge(auth_module::configure(app_state.clone(), token_state.clone()))
+		// Add the files module
+		// .merge(files_module::configure(app_state.clone()))
 		// Add middleware for tracing HTTP requests
 		.layer(TraceLayer::new_for_http())
 		// Add cookie middleware

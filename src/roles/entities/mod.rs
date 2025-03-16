@@ -1,2 +1,2 @@
-pub mod role;
-pub mod user_role;
+pub mod roles;
+pub mod user_roles;

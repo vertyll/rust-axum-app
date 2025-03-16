@@ -2,26 +2,30 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "roles")]
+#[sea_orm(table_name = "refresh_tokens")]
 pub struct Model {
 	#[sea_orm(primary_key)]
 	pub id: i32,
-	#[sea_orm(unique)]
-	pub name: String,
-	pub description: Option<String>,
+	pub token: String,
+	pub expires_at: DateTimeWithTimeZone,
 	pub created_at: DateTimeWithTimeZone,
 	pub updated_at: DateTimeWithTimeZone,
+	pub user_id: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-	#[sea_orm(has_many = "super::user_role::Entity")]
-	UserRole,
+	#[sea_orm(
+		belongs_to = "crate::users::entities::users::Entity",
+		from = "Column::UserId",
+		to = "crate::users::entities::users::Column::Id"
+	)]
+	User,
 }
 
-impl Related<super::user_role::Entity> for Entity {
+impl Related<crate::users::entities::users::Entity> for Entity {
 	fn to() -> RelationDef {
-		Relation::UserRole.def()
+		Relation::User.def()
 	}
 }
 

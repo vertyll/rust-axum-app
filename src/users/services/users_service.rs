@@ -6,7 +6,7 @@ use crate::i18n::setup::translate;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
-use crate::users::entities::user::{self, Entity as User, Model as UserModel};
+use crate::users::entities::users::{self, Entity as User, Model as UserModel};
 use crate::users::repositories::users_repository::{UsersRepository, UsersRepositoryTrait};
 use argon2::{
 	Argon2,

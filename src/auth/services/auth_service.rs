@@ -6,7 +6,7 @@ use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::common::r#struct::token_state::TokenState;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
-use crate::users::entities::user::Model as User;
+use crate::users::entities::users::Model as User;
 use crate::users::services::users_service::{UsersService, UsersServiceTrait};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
