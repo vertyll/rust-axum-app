@@ -9,22 +9,15 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::trace::TraceLayer;
 
 pub async fn configure(app_state: AppState) -> Router {
-	let jwt_access_token_secret = app_state.config.security.jwt_access_token_secret.clone();
+	let jwt_access_token_secret = app_state.config.security.tokens.jwt_access_token.secret.clone();
 
 	Router::new()
-		// Add the users module
 		.merge(users_module::configure(app_state.clone()))
-		// Add the auth module
 		.merge(auth_module::configure(app_state.clone()))
-		// Add the files module
 		.merge(files_module::configure(app_state.clone()))
-		// Add middleware for tracing HTTP requests
 		.layer(TraceLayer::new_for_http())
-		// Add cookie middleware
 		.layer(CookieManagerLayer::new())
-		// Add i18n middleware
 		.layer(from_fn(i18n_middleware))
-		// Add JWT secret middleware
 		.layer(from_fn(move |req, next| {
 			let jwt_secret = jwt_access_token_secret.clone();
 			jwt_secret_middleware(jwt_secret, req, next)

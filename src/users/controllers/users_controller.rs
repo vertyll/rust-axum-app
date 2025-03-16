@@ -21,7 +21,7 @@ pub struct UsersControllerStateDyn {
 }
 
 pub fn routes(app_state: AppState) -> Router {
-	let users_service = Arc::new(UsersService::new(app_state.db.clone()));
+	let users_service = Arc::new(UsersService::new(app_state.clone()));
 
 	let dependencies_state = UsersControllerStateDyn {
 		users_service: users_service.clone(),

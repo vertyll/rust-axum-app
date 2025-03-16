@@ -16,6 +16,7 @@ mod auth;
 mod common;
 mod config;
 mod database;
+mod emails;
 mod files;
 mod i18n;
 mod roles;
@@ -32,7 +33,7 @@ async fn main() {
 		.init();
 
 	// App configuration
-	let app_config = config::app_config::AppConfig::init().expect("Could not initialize the application configuration");
+	let app_config = AppConfig::init().expect("Could not initialize the application configuration");
 	let app_config_arc = Arc::new(app_config.clone());
 
 	// Database connection

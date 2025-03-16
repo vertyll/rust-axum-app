@@ -33,6 +33,7 @@ This project implements a simple HTTP server using the Axum web framework for Ru
 - configuration module
 - database module
 - files module
+- emails module
 - app state struct with connection pool and configuration
 - dependency injection with Arc dyn Trait
 

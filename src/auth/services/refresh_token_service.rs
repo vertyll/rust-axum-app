@@ -36,9 +36,9 @@ impl RefreshTokenService {
 
 		Self {
 			refresh_token_repository,
-			jwt_access_token_secret: app_state.config.security.jwt_access_token_secret.clone(),
-			jwt_access_token_expires_in: app_state.config.security.jwt_access_token_expires_in,
-			jwt_refresh_token_expires_in: app_state.config.security.jwt_refresh_token_expires_in,
+			jwt_access_token_secret: app_state.config.security.tokens.jwt_access_token.secret.clone(),
+			jwt_access_token_expires_in: app_state.config.security.tokens.jwt_access_token.expires_in,
+			jwt_refresh_token_expires_in: app_state.config.security.tokens.jwt_refresh_token.expires_in,
 		}
 	}
 	async fn generate_access_token(&self, user_id: i32) -> Result<String, AppError> {

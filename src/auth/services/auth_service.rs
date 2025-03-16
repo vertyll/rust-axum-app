@@ -40,16 +40,40 @@ pub struct AuthResponse {
 
 impl AuthService {
 	pub fn new(app_state: AppState) -> Self {
-		let users_service = Arc::new(UsersService::new(app_state.db.clone()));
+		let users_service = Arc::new(UsersService::new(app_state.clone()));
 		let user_roles_service = Arc::new(UserRolesService::new(app_state.db.clone()));
 		Self {
 			users_service,
 			user_roles_service,
-			jwt_access_token_secret: app_state.config.security.jwt_access_token_secret.clone(),
-			jwt_access_token_expires_in: app_state.config.security.jwt_access_token_expires_in,
+			jwt_access_token_secret: app_state.config.security.tokens.jwt_access_token.secret.clone(),
+			jwt_access_token_expires_in: app_state.config.security.tokens.jwt_access_token.expires_in,
 		}
 	}
+}
 
+#[async_trait]
+pub trait AuthServiceTrait: Send + Sync {
+	async fn register(
+		&self,
+		dto: RegisterDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError>;
+	async fn login(
+		&self,
+		dto: LoginDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError>;
+	async fn generate_token(&self, user: &User) -> Result<String, AppError>;
+	async fn register_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: RegisterDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError>;
+}
+
+#[async_trait]
+impl AuthServiceTrait for AuthService {
 	async fn generate_token(&self, user: &User) -> Result<String, AppError> {
 		let now = Utc::now();
 		let expires_at = now + Duration::seconds(self.jwt_access_token_expires_in);
@@ -79,52 +103,6 @@ impl AuthService {
 		Ok(token)
 	}
 
-	async fn register_in_transaction(
-		&self,
-		transaction: &DatabaseTransaction,
-		dto: RegisterDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
-	) -> Result<(User, String, String), AppError> {
-		let create_user_dto = crate::users::dto::create_user_dto::CreateUserDto {
-			username: dto.username,
-			email: dto.email,
-			password: dto.password,
-		};
-
-		let user = self
-			.users_service
-			.create_in_transaction(transaction, create_user_dto)
-			.await?;
-
-		self.user_roles_service
-			.assign_user_role_in_transaction(transaction, user.id)
-			.await?;
-
-		let access_token = self.generate_token(&user).await?;
-		let refresh_token = refresh_token_service
-			.generate_refresh_token_in_transaction(transaction, user.id)
-			.await?;
-
-		Ok((user, access_token, refresh_token))
-	}
-}
-
-#[async_trait]
-pub trait AuthServiceTrait: Send + Sync {
-	async fn register(
-		&self,
-		dto: RegisterDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
-	) -> Result<(User, String, String), AppError>;
-	async fn login(
-		&self,
-		dto: LoginDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
-	) -> Result<(User, String, String), AppError>;
-}
-
-#[async_trait]
-impl AuthServiceTrait for AuthService {
 	async fn register(
 		&self,
 		dto: RegisterDto,
@@ -146,6 +124,43 @@ impl AuthServiceTrait for AuthService {
 				Err(e)
 			}
 		}
+	}
+
+	async fn register_in_transaction(
+		&self,
+		transaction: &DatabaseTransaction,
+		dto: RegisterDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError> {
+		let create_user_dto = crate::users::dto::create_user_dto::CreateUserDto {
+			username: dto.username.clone(),
+			email: dto.email.clone(),
+			password: dto.password,
+		};
+
+		let user = self
+			.users_service
+			.create_in_transaction(transaction, create_user_dto)
+			.await?;
+
+		self.user_roles_service
+			.assign_user_role_in_transaction(transaction, user.id)
+			.await?;
+
+		self.users_service
+			.send_confirmation_email(transaction, user.id, &user.email, &user.username)
+			.await
+			.map_err(|e| {
+				tracing::error!("Failed to send confirmation email: {:?}", e);
+				AppError::InternalError
+			})?;
+
+		let access_token = self.generate_token(&user).await?;
+		let refresh_token = refresh_token_service
+			.generate_refresh_token_in_transaction(transaction, user.id)
+			.await?;
+
+		Ok((user, access_token, refresh_token))
 	}
 
 	async fn login(
