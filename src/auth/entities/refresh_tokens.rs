@@ -9,7 +9,7 @@ pub struct Model {
 	pub token: String,
 	pub expires_at: DateTimeWithTimeZone,
 	pub created_at: DateTimeWithTimeZone,
-	pub updated_at: DateTimeWithTimeZone,
+	pub updated_at: Option<DateTimeWithTimeZone>,
 	pub user_id: i32,
 }
 

@@ -16,6 +16,7 @@ pub enum AppError {
 	InternalError,
 	AuthenticationError(String),
 	AuthorizationError(String),
+	BadRequest(String),
 }
 
 impl IntoResponse for AppError {
@@ -51,6 +52,10 @@ impl IntoResponse for AppError {
 			AppError::AuthorizationError(message) => {
 				let translated = rust_i18n::t!("errors.authorization", message = message);
 				(StatusCode::FORBIDDEN, json!({"error": translated}))
+			}
+			AppError::BadRequest(message) => {
+				let translated = rust_i18n::t!("errors.bad_request", message = message);
+				(StatusCode::BAD_REQUEST, json!({"error": translated}))
 			}
 		};
 

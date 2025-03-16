@@ -6,6 +6,7 @@ errors:
   internal: "Wewnętrzny błąd serwera"
   authentication: "Błąd uwierzytelniania: %{message}"
   authorization: "Błąd autoryzacji: %{message}"
+  bad_request: "Nieprawidłowe żądanie"
 auth:
   errors:
     missing_token: "Brak lub nieprawidłowy token autoryzacyjny"
@@ -29,3 +30,16 @@ users:
   errors:
     user_already_exists: "Użytkownik o podanym adresie e-mail już istnieje."
     username_already_exists: "Użytkownik o podanej nazwie użytkownika już istnieje."
+files:
+  errors:
+    upload: "Wystąpił błąd podczas przesyłania pliku"
+    no_file: "Nie przesłano pliku"
+  validators:
+    file:
+      too_large: "Plik jest zbyt duży (maksymalnie %{max_size} bajtów)"
+      storage_type:
+        invalid: "Nieprawidłowy typ przechowywania plików"
+      mime_type:
+        invalid_format: "Nieprawidłowy format pliku"
+      size:
+        must_be_positive: "Rozmiar pliku musi być dodatni"

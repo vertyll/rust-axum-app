@@ -1,7 +1,5 @@
-rust_i18n::i18n!("translations");
-
 use crate::common::r#struct::app_state::AppState;
-use crate::common::r#struct::token_state::TokenState;
+use crate::config::app_config::AppConfig;
 
 use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
 use axum::middleware::from_fn_with_state;
@@ -11,15 +9,17 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+rust_i18n::i18n!("translations");
+
 mod app_module;
 mod auth;
 mod common;
 mod config;
 mod database;
+mod files;
 mod i18n;
 mod roles;
 mod users;
-mod files;
 
 #[tokio::main]
 async fn main() {
@@ -33,6 +33,7 @@ async fn main() {
 
 	// App configuration
 	let app_config = config::app_config::AppConfig::init().expect("Could not initialize the application configuration");
+	let app_config_arc = Arc::new(app_config.clone());
 
 	// Database connection
 	let db = database::connection::connect(&app_config.database)
@@ -45,23 +46,14 @@ async fn main() {
 	// Run seeders
 	seeders::run_seeders(&db).await.expect("Could not run seeders");
 
-	// Create AppState
-	let app_state = AppState::new(db.clone());
-
-	// Create TokenState
-	let token_state = TokenState::new(
-		app_config.security.jwt_access_token_secret,
-		app_config.security.jwt_access_token_expires_in,
-		app_config.security.jwt_refresh_token_secret,
-		app_config.security.jwt_refresh_token_expires_in,
-	);
+	// Create AppState with app_config
+	let app_state = AppState::new(db.clone(), app_config_arc.clone());
 
 	// CRON jobs
 	// Run a job to clean expired tokens every 24 hours
-	let token_state_clone = token_state.clone();
 	let app_state_clone = app_state.clone();
 	tokio::spawn(async move {
-		let refresh_token_service = Arc::new(RefreshTokenService::new(app_state_clone, token_state_clone));
+		let refresh_token_service = Arc::new(RefreshTokenService::new(app_state_clone));
 		let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(86400)); // 24 hours
 		loop {
 			interval.tick().await;
@@ -74,7 +66,7 @@ async fn main() {
 	});
 
 	// App configuration
-	let app = app_module::configure(app_state, token_state).await;
+	let app = app_module::configure(app_state).await;
 
 	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.port));
 	tracing::info!("Server is running on: http://{}", addr);

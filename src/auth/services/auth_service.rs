@@ -1,10 +1,9 @@
 use crate::auth::dto::login_dto::LoginDto;
 use crate::auth::dto::register_dto::RegisterDto;
-use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
+use crate::auth::services::refresh_token_service::RefreshTokenServiceTrait;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
-use crate::common::r#struct::token_state::TokenState;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use crate::users::entities::users::Model as User;
 use crate::users::services::users_service::{UsersService, UsersServiceTrait};
@@ -40,14 +39,14 @@ pub struct AuthResponse {
 }
 
 impl AuthService {
-	pub fn new(app_state: AppState, token_state: TokenState) -> Self {
+	pub fn new(app_state: AppState) -> Self {
 		let users_service = Arc::new(UsersService::new(app_state.db.clone()));
 		let user_roles_service = Arc::new(UserRolesService::new(app_state.db.clone()));
 		Self {
 			users_service,
 			user_roles_service,
-			jwt_access_token_secret: token_state.jwt_access_token_secret,
-			jwt_access_token_expires_in: token_state.jwt_access_token_expires_in,
+			jwt_access_token_secret: app_state.config.security.jwt_access_token_secret.clone(),
+			jwt_access_token_expires_in: app_state.config.security.jwt_access_token_expires_in,
 		}
 	}
 

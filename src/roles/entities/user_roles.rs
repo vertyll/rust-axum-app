@@ -9,7 +9,7 @@ pub struct Model {
 	pub user_id: i32,
 	pub role_id: i32,
 	pub created_at: DateTimeWithTimeZone,
-	pub updated_at: DateTimeWithTimeZone,
+	pub updated_at: Option<DateTimeWithTimeZone>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -6,6 +6,7 @@ errors:
   internal: "Internal server error"
   authentication: "Authentication failed: %{message}"
   authorization: "Authorization failed: %{message}"
+  bad_request: "Bad request"
 auth:
   errors:
     missing_token: "Missing or invalid authorization token"
@@ -29,3 +30,16 @@ users:
   errors:
       user_already_exists: "User with this email address already exists."
       username_already_exists: "User with this username already exists."
+files:
+  errors:
+    upload: "File upload failed"
+    no_file: "No file uploaded"
+  validators:
+    file:
+      too_large: "File is too large (maximum %{max_size} bytes)"
+      storage_type:
+        invalid: "Invalid file storage type"
+      mime_type:
+        invalid_format: "Invalid file format"
+      size:
+        must_be_positive: "File size must be positive"

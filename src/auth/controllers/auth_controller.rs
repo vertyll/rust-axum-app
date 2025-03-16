@@ -1,12 +1,10 @@
 use crate::auth::dto::login_dto::LoginDto;
 use crate::auth::dto::register_dto::RegisterDto;
 use crate::auth::extractor::jwt_auth_extractor::JwtAuth;
-use crate::auth::repositories::refresh_token_repository::RefreshTokenRepositoryTrait;
 use crate::auth::services::auth_service::{AuthResponse, AuthService, AuthServiceTrait};
 use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
-use crate::common::r#struct::token_state::TokenState;
 use crate::i18n::setup::translate;
 use axum::response::IntoResponse;
 use axum::{Json, Router, extract::State, routing::post};
@@ -22,14 +20,14 @@ struct AuthControllerStateDyn {
 	jwt_refresh_token_expires_in: i64,
 }
 
-pub fn routes(app_state: AppState, token_state: TokenState) -> Router {
-	let auth_service = Arc::new(AuthService::new(app_state.clone(), token_state.clone()));
-	let refresh_token_service = Arc::new(RefreshTokenService::new(app_state.clone(), token_state.clone()));
+pub fn routes(app_state: AppState) -> Router {
+	let auth_service = Arc::new(AuthService::new(app_state.clone()));
+	let refresh_token_service = Arc::new(RefreshTokenService::new(app_state.clone()));
 
 	let dependencies_state = AuthControllerStateDyn {
 		auth_service: auth_service.clone(),
 		refresh_token_service: refresh_token_service.clone(),
-		jwt_refresh_token_expires_in: token_state.jwt_refresh_token_expires_in,
+		jwt_refresh_token_expires_in: app_state.config.security.jwt_refresh_token_expires_in,
 	};
 
 	Router::new()

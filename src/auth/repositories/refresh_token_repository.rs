@@ -57,7 +57,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 			token: Set(token.clone()),
 			expires_at: Set(expires_at_db),
 			created_at: Set(now_db),
-			updated_at: Set(now_db),
+			updated_at: Set(Some(now_db)),
 			user_id: Set(user_id),
 		};
 
@@ -87,7 +87,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 			token: Set(token.clone()),
 			expires_at: Set(expires_at_db),
 			created_at: Set(now_db),
-			updated_at: Set(now_db),
+			updated_at: Set(Some(now_db)),
 			user_id: Set(user_id),
 		};
 

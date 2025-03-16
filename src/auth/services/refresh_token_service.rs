@@ -3,7 +3,6 @@ use crate::auth::repositories::refresh_token_repository::{RefreshTokenRepository
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
-use crate::common::r#struct::token_state::TokenState;
 use crate::i18n::setup::translate;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use async_trait::async_trait;
@@ -32,14 +31,14 @@ pub struct RefreshTokenService {
 }
 
 impl RefreshTokenService {
-	pub fn new(app_state: AppState, token_state: TokenState) -> Self {
+	pub fn new(app_state: AppState) -> Self {
 		let refresh_token_repository = Arc::new(RefreshTokenRepository::new(app_state.db.clone()));
 
 		Self {
 			refresh_token_repository,
-			jwt_access_token_secret: token_state.jwt_access_token_secret,
-			jwt_access_token_expires_in: token_state.jwt_access_token_expires_in,
-			jwt_refresh_token_expires_in: token_state.jwt_refresh_token_expires_in,
+			jwt_access_token_secret: app_state.config.security.jwt_access_token_secret.clone(),
+			jwt_access_token_expires_in: app_state.config.security.jwt_access_token_expires_in,
+			jwt_refresh_token_expires_in: app_state.config.security.jwt_refresh_token_expires_in,
 		}
 	}
 	async fn generate_access_token(&self, user_id: i32) -> Result<String, AppError> {

@@ -73,7 +73,7 @@ impl UsersRepositoryTrait for UsersRepository {
 			email: Set(dto.email),
 			password_hash: Set(password_hash),
 			created_at: Set(now.into()),
-			updated_at: Set(now.into()),
+			updated_at: Set(Some(now.into())),
 			..Default::default()
 		};
 
@@ -96,7 +96,7 @@ impl UsersRepositoryTrait for UsersRepository {
 			user_active_model.email = Set(email);
 		}
 
-		user_active_model.updated_at = Set(now.into());
+		user_active_model.updated_at = Set(Some(now.into()));
 
 		let updated_user = user_active_model.update(&self.db).await?;
 

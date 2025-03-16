@@ -33,7 +33,7 @@ pub async fn seed_roles(db: &DatabaseConnection) -> Result<(), AppError> {
 			name: Set(role_type.as_str().to_string()),
 			description: Set(Some(description.to_string())),
 			created_at: Set(now.into()),
-			updated_at: Set(now.into()),
+			updated_at: Set(Some(now.into())),
 		};
 
 		role_model.save(&txn).await.map_err(|_| AppError::InternalError)?;

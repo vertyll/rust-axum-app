@@ -65,7 +65,7 @@ impl UserRolesRepositoryTrait for UserRolesRepository {
 			user_id: Set(user_id),
 			role_id: Set(user_role.id),
 			created_at: Set(Utc::now().into()),
-			updated_at: Set(Utc::now().into()),
+			updated_at: Set(Some(Utc::now().into())),
 		};
 
 		user_role_model

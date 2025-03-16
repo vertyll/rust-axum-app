@@ -16,10 +16,17 @@ pub struct SecurityConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct FilesConfig {
+	pub upload_dir: String,
+	pub base_url: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
 	pub server: ServerConfig,
 	pub database: DatabaseConfig,
 	pub security: SecurityConfig,
+	pub files: FilesConfig,
 }
 
 impl AppConfig {
@@ -41,12 +48,16 @@ impl AppConfig {
 			.set_default("security.jwt_access_token_expires_in", "60000")?
 			.set_default("security.jwt_refresh_token_secret", "default_secret")?
 			.set_default("security.jwt_refresh_token_expires_in", "86400000")?
+			// Files
+			.set_default("files.upload_dir", "uploads")?
+			.set_default("files.base_url", "/uploads")?
 			// Config file (optional)
 			.add_source(config::File::with_name("config").required(false))
 			// Environment variables
 			.add_source(config::Environment::with_prefix("APP").separator("_"))
 			.add_source(config::Environment::with_prefix("DB").separator("_"))
 			.add_source(config::Environment::with_prefix("JWT").separator("_"))
+			.add_source(config::Environment::with_prefix("FILES").separator("_"))
 			.build()?;
 
 		let app_config: AppConfig = config.try_deserialize()?;

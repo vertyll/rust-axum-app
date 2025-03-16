@@ -1,4 +1,4 @@
-use crate::users::validators::validators::validate_username;
+use crate::users::validators::users_validators::validate_username;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 

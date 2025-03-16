@@ -13,7 +13,7 @@ pub struct Model {
 	#[serde(skip_serializing)]
 	pub password_hash: String,
 	pub created_at: DateTimeWithTimeZone,
-	pub updated_at: DateTimeWithTimeZone,
+	pub updated_at: Option<DateTimeWithTimeZone>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

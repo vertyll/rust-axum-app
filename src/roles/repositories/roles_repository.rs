@@ -52,7 +52,7 @@ impl RolesRepositoryTrait for RolesRepository {
 			name: Set(name),
 			description: Set(description),
 			created_at: Set(now.into()),
-			updated_at: Set(now.into()),
+			updated_at: Set(Some(now.into())),
 			..Default::default()
 		};
 
@@ -74,7 +74,7 @@ impl RolesRepositoryTrait for RolesRepository {
 			role_active_model.description = Set(Some(description));
 		}
 
-		role_active_model.updated_at = Set(now.into());
+		role_active_model.updated_at = Set(Some(now.into()));
 		let updated_role = role_active_model.update(&self.db).await?;
 
 		Ok(updated_role)
