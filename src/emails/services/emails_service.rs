@@ -18,7 +18,7 @@ impl EmailService {
 	pub fn new(app_state: AppState) -> Self {
 		let app_url = app_state.config.server.app_url.clone();
 
-		let environment = app_state.config.server.environment.clone();
+		let environment = app_state.config.server.app_environment.clone();
 		let emails = app_state.config.emails.clone();
 
 		let email_strategy = crate::emails::strategies::emails_strategy::get_email_strategy(&environment, &emails);

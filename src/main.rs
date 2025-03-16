@@ -69,7 +69,7 @@ async fn main() {
 	// App configuration
 	let app = app_module::configure(app_state).await;
 
-	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.port));
+	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.app_port));
 	tracing::info!("Server is running on: http://{}", addr);
 
 	let listener = tokio::net::TcpListener::bind(addr)

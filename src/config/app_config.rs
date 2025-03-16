@@ -3,9 +3,9 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ServerConfig {
-	pub port: u16,
-	pub host: String,
-	pub environment: String,
+	pub app_port: u16,
+	pub app_host: String,
+	pub app_environment: String,
 	pub app_url: String,
 }
 
@@ -66,20 +66,22 @@ pub struct AppConfig {
 
 impl AppConfig {
 	pub fn init() -> Result<Self, config::ConfigError> {
+		dotenv::dotenv().ok();
+
 		let config = config::Config::builder()
 			// Server
-			.set_default("server.port", 3000)?
-			.set_default("server.host", "127.0.0.1")?
-			.set_default("server.environment", "development")?
+			.set_default("server.app_port", 3000)?
+			.set_default("server.app_host", "127.0.0.1")?
+			.set_default("server.app_environment", "development")?
 			.set_default("server.app_url", "http://localhost:3000")?
 			// Database
-			.set_default("database.host", "localhost")?
-			.set_default("database.port", 5432)?
-			.set_default("database.username", "postgres")?
-			.set_default("database.password", "postgres")?
+			.set_default("database.db_host", "localhost")?
+			.set_default("database.db_port", 5432)?
+			.set_default("database.db_username", "postgres")?
+			.set_default("database.db_password", "postgres")?
 			.set_default("database.db_name", "rust_axum_app")?
-			.set_default("database.max_connections", 5)?
-			.set_default("database.min_connections", 1)?
+			.set_default("database.db_max_connections", 5)?
+			.set_default("database.db_min_connections", 1)?
 			// Security
 			.set_default("security.tokens.jwt_access_token.secret", "secret")?
 			.set_default("security.tokens.jwt_access_token.expires_in", 3600)?
@@ -105,6 +107,8 @@ impl AppConfig {
 			.add_source(config::Environment::with_prefix("JWT").separator("_"))
 			.add_source(config::Environment::with_prefix("FILES").separator("_"))
 			.add_source(config::Environment::with_prefix("EMAILS").separator("_"))
+			.add_source(config::Environment::with_prefix("SMTP").separator("_"))
+			.add_source(config::Environment::with_prefix("CONFIRMATION").separator("_"))
 			.build()?;
 
 		let app_config: AppConfig = config.try_deserialize()?;
