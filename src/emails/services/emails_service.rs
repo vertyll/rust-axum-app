@@ -8,13 +8,13 @@ use std::sync::Arc;
 use tera::{Context, Tera};
 
 #[derive(Clone)]
-pub struct EmailService {
+pub struct EmailsService {
 	pub email_strategy: Arc<dyn EmailStrategy>,
 	pub templates: Arc<Tera>,
 	pub app_url: String,
 }
 
-impl EmailService {
+impl EmailsService {
 	pub fn new(app_config: Arc<AppConfig>) -> Self {
 		let app_url = app_config.server.app_url.clone();
 
@@ -45,7 +45,7 @@ impl EmailService {
 }
 
 #[async_trait]
-pub trait EmailServiceTrait: Send + Sync {
+pub trait EmailsServiceTrait: Send + Sync {
 	async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), AppError>;
 	async fn send_email_confirmation(&self, to: &str, username: &str, token: &str) -> Result<(), AppError>;
 	async fn send_password_reset(&self, to: &str, username: &str, token: &str) -> Result<(), AppError>;
@@ -53,7 +53,7 @@ pub trait EmailServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl EmailServiceTrait for EmailService {
+impl EmailsServiceTrait for EmailsService {
 	async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), AppError> {
 		self.email_strategy.send_email(to, subject, body).await
 	}

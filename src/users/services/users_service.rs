@@ -9,7 +9,7 @@ use crate::auth::services::confirmation_token_service::{
 };
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
-use crate::emails::services::emails_service::{EmailService, EmailServiceTrait};
+use crate::emails::services::emails_service::{EmailsService, EmailsServiceTrait};
 use crate::i18n::setup::translate;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use crate::users::dto::create_user_dto::CreateUserDto;
@@ -31,7 +31,7 @@ use std::sync::Arc;
 pub struct UsersService {
 	pub users_repository: Arc<dyn UsersRepositoryTrait>,
 	user_roles_service: Arc<dyn UserRolesServiceTrait>,
-	email_service: Arc<dyn EmailServiceTrait>,
+	email_service: Arc<dyn EmailsServiceTrait>,
 	confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
 	confirmation_token_expires_in: i64,
 }
@@ -40,7 +40,7 @@ impl UsersService {
 	pub fn new(
 		users_repository: Arc<dyn UsersRepositoryTrait>,
 		user_roles_service: Arc<dyn UserRolesServiceTrait>,
-		email_service: Arc<dyn EmailServiceTrait>,
+		email_service: Arc<dyn EmailsServiceTrait>,
 		confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
 		app_config: Arc<AppConfig>,
 	) -> Self {

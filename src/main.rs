@@ -3,7 +3,7 @@ use crate::auth::services::auth_service::{AuthService, AuthServiceTrait};
 use crate::auth::services::confirmation_token_service::{ConfirmationTokenService, ConfirmationTokenServiceTrait};
 use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
 use crate::config::app_config::AppConfig;
-use crate::emails::services::emails_service::{EmailService, EmailServiceTrait};
+use crate::emails::services::emails_service::{EmailsService, EmailsServiceTrait};
 use crate::files::repositories::files_repository::FilesRepository;
 use crate::files::services::files_service::{FilesService, FilesServiceTrait};
 use crate::roles::repositories::roles_repository::RolesRepository;
@@ -82,7 +82,7 @@ struct AppState {
 	users_service: Arc<dyn UsersServiceTrait>,
 	auth_service: Arc<dyn AuthServiceTrait>,
 	refresh_token_service: Arc<dyn RefreshTokenServiceTrait>,
-	email_service: Arc<dyn EmailServiceTrait>,
+	email_service: Arc<dyn EmailsServiceTrait>,
 	user_roles_service: Arc<dyn UserRolesServiceTrait>,
 	confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
 	files_service: Arc<dyn FilesServiceTrait>,
@@ -103,7 +103,7 @@ fn initialize_app_state(db: DatabaseConnection, config: Arc<AppConfig>) -> AppSt
 	let files_repository = Arc::new(FilesRepository::new(db.clone()));
 
 	// 2. Basic services with no dependencies on other services
-	let email_service = Arc::new(EmailService::new(config.clone()));
+	let email_service = Arc::new(EmailsService::new(config.clone()));
 	let confirmation_token_service = Arc::new(ConfirmationTokenService::new(config.clone()));
 	let roles_service = Arc::new(RolesService::new(roles_repository.clone()));
 	let user_roles_service = Arc::new(UserRolesService::new(user_roles_repository.clone()));
