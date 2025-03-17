@@ -15,11 +15,11 @@ pub struct EmailService {
 }
 
 impl EmailService {
-	pub fn new(app_state: AppState) -> Self {
-		let app_url = app_state.config.server.app_url.clone();
+	pub fn new(app_config: Arc<AppConfig>) -> Self {
+		let app_url = app_config.server.app_url.clone();
 
-		let environment = app_state.config.server.app_environment.clone();
-		let emails = app_state.config.emails.clone();
+		let environment = app_config.server.app_environment.clone();
+		let emails = app_config.emails.clone();
 
 		let email_strategy = crate::emails::strategies::emails_strategy::get_email_strategy(&environment, &emails);
 

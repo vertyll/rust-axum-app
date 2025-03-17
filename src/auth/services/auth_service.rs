@@ -4,6 +4,7 @@ use crate::auth::services::refresh_token_service::RefreshTokenServiceTrait;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
+use crate::config::app_config::AppConfig;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use crate::users::entities::users::Model as User;
 use crate::users::services::users_service::{UsersService, UsersServiceTrait};
@@ -39,14 +40,16 @@ pub struct AuthResponse {
 }
 
 impl AuthService {
-	pub fn new(app_state: AppState) -> Self {
-		let users_service = Arc::new(UsersService::new(app_state.clone()));
-		let user_roles_service = Arc::new(UserRolesService::new(app_state.db.clone()));
+	pub fn new(
+		users_service: Arc<dyn UsersServiceTrait>,
+		user_roles_service: Arc<dyn UserRolesServiceTrait>,
+		app_config: Arc<AppConfig>,
+	) -> Self {
 		Self {
 			users_service,
 			user_roles_service,
-			jwt_access_token_secret: app_state.config.security.tokens.jwt_access_token.secret.clone(),
-			jwt_access_token_expires_in: app_state.config.security.tokens.jwt_access_token.expires_in,
+			jwt_access_token_secret: app_config.security.tokens.jwt_access_token.secret.clone(),
+			jwt_access_token_expires_in: app_config.security.tokens.jwt_access_token.expires_in,
 		}
 	}
 }
@@ -74,6 +77,41 @@ pub trait AuthServiceTrait: Send + Sync {
 
 #[async_trait]
 impl AuthServiceTrait for AuthService {
+	async fn register(
+		&self,
+		dto: RegisterDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError> {
+		let transaction = self.users_service.begin_transaction().await?;
+
+		let result = self
+			.register_in_transaction(&transaction, dto, refresh_token_service)
+			.await;
+
+		match result {
+			Ok(response) => {
+				transaction.commit().await?;
+				Ok(response)
+			}
+			Err(e) => {
+				transaction.rollback().await?;
+				Err(e)
+			}
+		}
+	}
+
+	async fn login(
+		&self,
+		dto: LoginDto,
+		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+	) -> Result<(User, String, String), AppError> {
+		let user = self.users_service.login(&dto.username, &dto.password).await?;
+		let access_token = self.generate_token(&user).await?;
+		let refresh_token = refresh_token_service.generate_refresh_token(user.id).await?;
+
+		Ok((user, access_token, refresh_token))
+	}
+
 	async fn generate_token(&self, user: &User) -> Result<String, AppError> {
 		let now = Utc::now();
 		let expires_at = now + Duration::seconds(self.jwt_access_token_expires_in);
@@ -101,29 +139,6 @@ impl AuthServiceTrait for AuthService {
 		.map_err(|_| AppError::InternalError)?;
 
 		Ok(token)
-	}
-
-	async fn register(
-		&self,
-		dto: RegisterDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
-	) -> Result<(User, String, String), AppError> {
-		let transaction = self.users_service.begin_transaction().await?;
-
-		let result = self
-			.register_in_transaction(&transaction, dto, refresh_token_service)
-			.await;
-
-		match result {
-			Ok(response) => {
-				transaction.commit().await?;
-				Ok(response)
-			}
-			Err(e) => {
-				transaction.rollback().await?;
-				Err(e)
-			}
-		}
 	}
 
 	async fn register_in_transaction(
@@ -159,18 +174,6 @@ impl AuthServiceTrait for AuthService {
 		let refresh_token = refresh_token_service
 			.generate_refresh_token_in_transaction(transaction, user.id)
 			.await?;
-
-		Ok((user, access_token, refresh_token))
-	}
-
-	async fn login(
-		&self,
-		dto: LoginDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
-	) -> Result<(User, String, String), AppError> {
-		let user = self.users_service.login(&dto.username, &dto.password).await?;
-		let access_token = self.generate_token(&user).await?;
-		let refresh_token = refresh_token_service.generate_refresh_token(user.id).await?;
 
 		Ok((user, access_token, refresh_token))
 	}

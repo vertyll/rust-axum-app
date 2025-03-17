@@ -1,10 +1,10 @@
 use crate::auth::dto::access_token_dto::AccessTokenDto;
-use crate::auth::repositories::refresh_token_repository::{RefreshTokenRepository, RefreshTokenRepositoryTrait};
+use crate::auth::repositories::refresh_token_repository::RefreshTokenRepositoryTrait;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
-use crate::common::r#struct::app_state::AppState;
+use crate::config::app_config::AppConfig;
 use crate::i18n::setup::translate;
-use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
+use crate::roles::services::user_roles_service::UserRolesServiceTrait;
 use async_trait::async_trait;
 use chrono::Utc;
 use jsonwebtoken::{EncodingKey, Header, encode};
@@ -25,27 +25,30 @@ pub struct Claims {
 #[derive(Clone)]
 pub struct RefreshTokenService {
 	refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait>,
+	user_roles_service: Arc<dyn UserRolesServiceTrait>,
 	jwt_access_token_secret: String,
 	jwt_access_token_expires_in: i64,
 	jwt_refresh_token_expires_in: i64,
 }
 
 impl RefreshTokenService {
-	pub fn new(app_state: AppState) -> Self {
-		let refresh_token_repository = Arc::new(RefreshTokenRepository::new(app_state.db.clone()));
-
+	pub fn new(
+		refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait>,
+		user_roles_service: Arc<dyn UserRolesServiceTrait>,
+		app_config: Arc<AppConfig>,
+	) -> Self {
 		Self {
 			refresh_token_repository,
-			jwt_access_token_secret: app_state.config.security.tokens.jwt_access_token.secret.clone(),
-			jwt_access_token_expires_in: app_state.config.security.tokens.jwt_access_token.expires_in,
-			jwt_refresh_token_expires_in: app_state.config.security.tokens.jwt_refresh_token.expires_in,
+			user_roles_service,
+			jwt_access_token_secret: app_config.security.tokens.jwt_access_token.secret.clone(),
+			jwt_access_token_expires_in: app_config.security.tokens.jwt_access_token.expires_in,
+			jwt_refresh_token_expires_in: app_config.security.tokens.jwt_refresh_token.expires_in,
 		}
 	}
 	async fn generate_access_token(&self, user_id: i32) -> Result<String, AppError> {
 		let user = self.refresh_token_repository.find_user_by_id(user_id).await?;
 
-		let user_roles_service = Arc::new(UserRolesService::new(self.refresh_token_repository.get_db().clone()));
-		let user_roles = user_roles_service.get_user_roles(user_id).await?;
+		let user_roles = self.user_roles_service.get_user_roles(user_id).await?;
 
 		let role_enums: Vec<RoleEnum> = user_roles
 			.into_iter()

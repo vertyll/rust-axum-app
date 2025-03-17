@@ -1,8 +1,7 @@
 use crate::common::error::app_error::AppError;
 use crate::roles::entities::roles::Model as RoleModel;
-use crate::roles::repositories::roles_repository::{RolesRepository, RolesRepositoryTrait};
+use crate::roles::repositories::roles_repository::RolesRepositoryTrait;
 use async_trait::async_trait;
-use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -11,10 +10,8 @@ pub struct RolesService {
 }
 
 impl RolesService {
-	pub fn new(db: DatabaseConnection) -> Self {
-		Self {
-			roles_repository: Arc::new(RolesRepository::new(db)),
-		}
+	pub fn new(roles_repository: Arc<dyn RolesRepositoryTrait>) -> Self {
+		Self { roles_repository }
 	}
 }
 

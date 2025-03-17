@@ -8,7 +8,7 @@ use crate::auth::services::confirmation_token_service::{
 	ConfirmationTokenService, ConfirmationTokenServiceTrait, TokenType,
 };
 use crate::common::error::app_error::AppError;
-use crate::common::r#struct::app_state::AppState;
+use crate::config::app_config::AppConfig;
 use crate::emails::services::emails_service::{EmailService, EmailServiceTrait};
 use crate::i18n::setup::translate;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
@@ -37,13 +37,19 @@ pub struct UsersService {
 }
 
 impl UsersService {
-	pub fn new(app_state: AppState) -> Self {
+	pub fn new(
+		users_repository: Arc<dyn UsersRepositoryTrait>,
+		user_roles_service: Arc<dyn UserRolesServiceTrait>,
+		email_service: Arc<dyn EmailServiceTrait>,
+		confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
+		app_config: Arc<AppConfig>,
+	) -> Self {
 		Self {
-			users_repository: Arc::new(UsersRepository::new(app_state.db.clone())),
-			user_roles_service: Arc::new(UserRolesService::new(app_state.db.clone())),
-			email_service: Arc::new(EmailService::new(app_state.clone())),
-			confirmation_token_service: Arc::new(ConfirmationTokenService::new(app_state.clone())),
-			confirmation_token_expires_in: app_state.config.security.tokens.confirmation_token.expires_in,
+			users_repository,
+			user_roles_service,
+			email_service,
+			confirmation_token_service,
+			confirmation_token_expires_in: app_config.security.tokens.confirmation_token.expires_in,
 		}
 	}
 
@@ -155,63 +161,6 @@ impl UsersServiceTrait for UsersService {
 				Err(e)
 			}
 		}
-	}
-
-	async fn send_confirmation_email(
-		&self,
-		transaction: &DatabaseTransaction,
-		user_id: i32,
-		email: &str,
-		username: &str,
-	) -> Result<(), AppError> {
-		let token = self
-			.confirmation_token_service
-			.generate_email_confirmation_token(user_id, email)
-			.await?;
-
-		let expiry = Utc::now() + chrono::Duration::seconds(self.confirmation_token_expires_in);
-		let expiry_sea_orm = expiry.into();
-
-		let user = users::Entity::find_by_id(user_id)
-			.one(transaction)
-			.await?
-			.ok_or(AppError::NotFound)?;
-
-		let mut user_active_model: users::ActiveModel = user.into();
-		user_active_model.email_confirmation_token = Set(Some(token.clone()));
-		user_active_model.email_confirmation_token_expiry = Set(Some(expiry_sea_orm));
-		user_active_model.updated_at = Set(Some(Utc::now().into()));
-
-		user_active_model.update(transaction).await?;
-
-		self.email_service
-			.send_email_confirmation(email, username, &token)
-			.await?;
-
-		Ok(())
-	}
-
-	async fn create_email_history(
-		&self,
-		transaction: &DatabaseTransaction,
-		user_id: i32,
-		old_email: &str,
-		new_email: &str,
-	) -> Result<(), AppError> {
-		let now = Utc::now();
-
-		let email_history = UserEmailHistoryActiveModel {
-			user_id: Set(user_id),
-			old_email: Set(old_email.to_string()),
-			new_email: Set(new_email.to_string()),
-			email_change_at: Set(now.into()),
-			created_at: Set(now.into()),
-			updated_at: Set(Some(now.into())),
-			..Default::default()
-		};
-
-		email_history.insert(transaction).await?;
-		Ok(())
 	}
 
 	async fn create_in_transaction(
@@ -546,6 +495,63 @@ impl UsersServiceTrait for UsersService {
 
 		transaction.commit().await?;
 
+		Ok(())
+	}
+
+	async fn send_confirmation_email(
+		&self,
+		transaction: &DatabaseTransaction,
+		user_id: i32,
+		email: &str,
+		username: &str,
+	) -> Result<(), AppError> {
+		let token = self
+			.confirmation_token_service
+			.generate_email_confirmation_token(user_id, email)
+			.await?;
+
+		let expiry = Utc::now() + chrono::Duration::seconds(self.confirmation_token_expires_in);
+		let expiry_sea_orm = expiry.into();
+
+		let user = users::Entity::find_by_id(user_id)
+			.one(transaction)
+			.await?
+			.ok_or(AppError::NotFound)?;
+
+		let mut user_active_model: users::ActiveModel = user.into();
+		user_active_model.email_confirmation_token = Set(Some(token.clone()));
+		user_active_model.email_confirmation_token_expiry = Set(Some(expiry_sea_orm));
+		user_active_model.updated_at = Set(Some(Utc::now().into()));
+
+		user_active_model.update(transaction).await?;
+
+		self.email_service
+			.send_email_confirmation(email, username, &token)
+			.await?;
+
+		Ok(())
+	}
+
+	async fn create_email_history(
+		&self,
+		transaction: &DatabaseTransaction,
+		user_id: i32,
+		old_email: &str,
+		new_email: &str,
+	) -> Result<(), AppError> {
+		let now = Utc::now();
+
+		let email_history = UserEmailHistoryActiveModel {
+			user_id: Set(user_id),
+			old_email: Set(old_email.to_string()),
+			new_email: Set(new_email.to_string()),
+			email_change_at: Set(now.into()),
+			created_at: Set(now.into()),
+			updated_at: Set(Some(now.into())),
+			..Default::default()
+		};
+
+		email_history.insert(transaction).await?;
 		Ok(())
 	}
 }

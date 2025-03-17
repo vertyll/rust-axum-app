@@ -19,9 +19,9 @@ pub struct FilesService {
 }
 
 impl FilesService {
-	pub fn new(db: DatabaseConnection, app_config: Arc<AppConfig>) -> Self {
+	pub fn new(files_repository: Arc<dyn FilesRepositoryTrait>, app_config: Arc<AppConfig>) -> Self {
 		Self {
-			files_repository: Arc::new(FilesRepository::new(db)),
+			files_repository,
 			app_config,
 		}
 	}

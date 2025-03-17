@@ -2,9 +2,9 @@ use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::roles::entities::roles::Model as RoleModel;
 use crate::roles::entities::user_roles::Model as UserRoleModel;
-use crate::roles::repositories::user_roles_repository::{UserRolesRepository, UserRolesRepositoryTrait};
+use crate::roles::repositories::user_roles_repository::UserRolesRepositoryTrait;
 use async_trait::async_trait;
-use sea_orm::{DatabaseConnection, DatabaseTransaction};
+use sea_orm::DatabaseTransaction;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -13,10 +13,8 @@ pub struct UserRolesService {
 }
 
 impl UserRolesService {
-	pub fn new(db: DatabaseConnection) -> Self {
-		Self {
-			user_roles_repository: Arc::new(UserRolesRepository::new(db)),
-		}
+	pub fn new(user_roles_repository: Arc<dyn UserRolesRepositoryTrait>) -> Self {
+		Self { user_roles_repository }
 	}
 }
 

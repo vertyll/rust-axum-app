@@ -5,17 +5,16 @@ use crate::auth::dto::login_dto::LoginDto;
 use crate::auth::dto::register_dto::RegisterDto;
 use crate::auth::dto::reset_password_dto::ResetPasswordDto;
 use crate::auth::extractor::jwt_auth_extractor::JwtAuth;
-use crate::auth::services::auth_service::{AuthResponse, AuthService, AuthServiceTrait};
-use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
+use crate::auth::services::auth_service::{AuthResponse, AuthServiceTrait};
+use crate::auth::services::refresh_token_service::RefreshTokenServiceTrait;
 use crate::common::error::app_error::AppError;
-use crate::common::r#struct::app_state::AppState;
+use crate::config::app_config::AppConfig;
 use crate::i18n::setup::translate;
-use crate::users::services::users_service::{UsersService, UsersServiceTrait};
+use crate::users::services::users_service::UsersServiceTrait;
 use axum::response::IntoResponse;
 use axum::{
 	Json, Router,
-	extract::Query,
-	extract::State,
+	extract::{Extension, Query},
 	routing::{get, post},
 };
 use serde::Deserialize;
@@ -23,14 +22,6 @@ use std::sync::Arc;
 use time::{Duration as TimeDuration, OffsetDateTime};
 use tower_cookies::{Cookie, Cookies};
 use validator::Validate;
-
-#[derive(Clone)]
-struct AuthControllerStateDyn {
-	auth_service: Arc<dyn AuthServiceTrait>,
-	refresh_token_service: Arc<dyn RefreshTokenServiceTrait>,
-	users_service: Arc<dyn UsersServiceTrait>,
-	jwt_refresh_token_expires_in: i64,
-}
 
 #[derive(Deserialize)]
 struct EmailConfirmationQuery {
@@ -42,18 +33,7 @@ struct EmailChangeConfirmationQuery {
 	token: String,
 }
 
-pub fn routes(app_state: AppState) -> Router {
-	let auth_service = Arc::new(AuthService::new(app_state.clone()));
-	let refresh_token_service = Arc::new(RefreshTokenService::new(app_state.clone()));
-	let users_service = Arc::new(UsersService::new(app_state.clone()));
-
-	let dependencies = AuthControllerStateDyn {
-		auth_service,
-		refresh_token_service: refresh_token_service.clone(),
-		users_service,
-		jwt_refresh_token_expires_in: app_state.config.security.tokens.jwt_refresh_token.expires_in,
-	};
-
+pub fn routes() -> Router {
 	Router::new()
 		.route("/register", post(register))
 		.route("/login", post(login))
@@ -66,22 +46,21 @@ pub fn routes(app_state: AppState) -> Router {
 		.route("/confirm-password-reset", post(confirm_reset_password))
 		.route("/email/change", post(request_email_change))
 		.route("/confirm-email-change", get(confirm_email_change))
-		.with_state(dependencies)
 }
 
 async fn register(
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(auth_service): Extension<Arc<dyn AuthServiceTrait>>,
+	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
+	Extension(config): Extension<Arc<AppConfig>>,
 	cookies: Cookies,
 	Json(dto): Json<RegisterDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
 
-	let (user, access_token, refresh_token) = dependencies
-		.auth_service
-		.register(dto, &dependencies.refresh_token_service)
-		.await?;
+	let (user, access_token, refresh_token) = auth_service.register(dto, &refresh_token_service).await?;
 
-	let cookie = create_refresh_token_cookie(refresh_token, dependencies.jwt_refresh_token_expires_in);
+	let jwt_refresh_token_expires_in = config.security.tokens.jwt_refresh_token.expires_in;
+	let cookie = create_refresh_token_cookie(refresh_token, jwt_refresh_token_expires_in);
 	cookies.add(cookie);
 
 	let response = AuthResponse { user, access_token };
@@ -90,18 +69,18 @@ async fn register(
 }
 
 async fn login(
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(auth_service): Extension<Arc<dyn AuthServiceTrait>>,
+	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
+	Extension(config): Extension<Arc<AppConfig>>,
 	cookies: Cookies,
 	Json(dto): Json<LoginDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
 
-	let (user, access_token, refresh_token) = dependencies
-		.auth_service
-		.login(dto, &dependencies.refresh_token_service)
-		.await?;
+	let (user, access_token, refresh_token) = auth_service.login(dto, &refresh_token_service).await?;
 
-	let cookie = create_refresh_token_cookie(refresh_token, dependencies.jwt_refresh_token_expires_in);
+	let jwt_refresh_token_expires_in = config.security.tokens.jwt_refresh_token.expires_in;
+	let cookie = create_refresh_token_cookie(refresh_token, jwt_refresh_token_expires_in);
 	cookies.add(cookie);
 
 	let response = AuthResponse { user, access_token };
@@ -111,7 +90,7 @@ async fn login(
 
 async fn refresh_token(
 	JwtAuth(claims): JwtAuth,
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
 	cookies: Cookies,
 ) -> Result<impl IntoResponse, AppError> {
 	let refresh_token = cookies
@@ -120,10 +99,7 @@ async fn refresh_token(
 		.value()
 		.to_string();
 
-	let response = dependencies
-		.refresh_token_service
-		.refresh_token(claims.sub, refresh_token)
-		.await?;
+	let response = refresh_token_service.refresh_token(claims.sub, refresh_token).await?;
 
 	Ok(Json(response))
 }
@@ -131,13 +107,12 @@ async fn refresh_token(
 async fn logout(
 	cookies: Cookies,
 	JwtAuth(claims): JwtAuth,
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
 ) -> Result<impl IntoResponse, AppError> {
 	let refresh_token = cookies.get("refresh_token").map(|cookie| cookie.value().to_string());
 
 	if let Some(token) = refresh_token {
-		dependencies
-			.refresh_token_service
+		refresh_token_service
 			.invalidate_refresh_token(claims.sub, token)
 			.await?;
 	}
@@ -156,13 +131,10 @@ async fn logout(
 
 async fn logout_all_devices(
 	JwtAuth(claims): JwtAuth,
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
 	cookies: Cookies,
 ) -> Result<impl IntoResponse, AppError> {
-	dependencies
-		.refresh_token_service
-		.invalidate_all_user_tokens(claims.sub)
-		.await?;
+	refresh_token_service.invalidate_all_user_tokens(claims.sub).await?;
 
 	let mut cookie = Cookie::new("refresh_token", "");
 	cookie.set_path("/");
@@ -177,56 +149,56 @@ async fn logout_all_devices(
 }
 
 async fn confirm_email(
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
 	Query(query): Query<EmailConfirmationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-	dependencies.users_service.confirm_email(&query.token).await?;
+	users_service.confirm_email(&query.token).await?;
 	Ok(())
 }
 
 async fn request_reset_password(
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
 	Json(dto): Json<ForgotPasswordDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
-	dependencies.users_service.request_reset_password(dto).await?;
+	users_service.request_reset_password(dto).await?;
 	Ok(())
 }
 
 async fn confirm_reset_password(
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
 	Json(dto): Json<ResetPasswordDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
-	dependencies.users_service.reset_password(dto).await?;
+	users_service.reset_password(dto).await?;
 	Ok(())
 }
 
 async fn change_password(
 	JwtAuth(claims): JwtAuth,
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
 	Json(dto): Json<ChangePasswordDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
-	dependencies.users_service.change_password(claims.sub, dto).await?;
+	users_service.change_password(claims.sub, dto).await?;
 	Ok(())
 }
 
 async fn request_email_change(
 	JwtAuth(claims): JwtAuth,
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
 	Json(dto): Json<ChangeEmailDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
-	dependencies.users_service.request_email_change(claims.sub, dto).await?;
+	users_service.request_email_change(claims.sub, dto).await?;
 	Ok(())
 }
 
 async fn confirm_email_change(
-	State(dependencies): State<AuthControllerStateDyn>,
+	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
 	Query(query): Query<EmailChangeConfirmationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-	dependencies.users_service.confirm_email_change(&query.token).await?;
+	users_service.confirm_email_change(&query.token).await?;
 	Ok(())
 }
 

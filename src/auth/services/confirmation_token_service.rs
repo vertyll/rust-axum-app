@@ -1,10 +1,11 @@
 use crate::common::error::app_error::AppError;
-use crate::common::r#struct::app_state::AppState;
+use crate::config::app_config::AppConfig;
 use crate::i18n::setup::translate;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,10 +33,10 @@ pub struct ConfirmationTokenService {
 }
 
 impl ConfirmationTokenService {
-	pub fn new(app_state: AppState) -> Self {
+	pub fn new(app_config: Arc<AppConfig>) -> Self {
 		Self {
-			confirmation_token_secret: app_state.config.security.tokens.confirmation_token.secret.clone(),
-			confirmation_token_expires_in: app_state.config.security.tokens.confirmation_token.expires_in,
+			confirmation_token_secret: app_config.security.tokens.confirmation_token.secret.clone(),
+			confirmation_token_expires_in: app_config.security.tokens.confirmation_token.expires_in,
 		}
 	}
 }
