@@ -13,12 +13,19 @@ pub struct Model {
 	#[serde(skip_serializing)]
 	pub password_hash: String,
 	pub is_email_confirmed: bool,
+	#[serde(skip_serializing)]
 	pub email_confirmation_token: Option<String>,
+	#[serde(skip_serializing)]
 	pub email_confirmation_token_expiry: Option<DateTimeWithTimeZone>,
+	#[serde(skip_serializing)]
 	pub email_change_token: Option<String>,
+	#[serde(skip_serializing)]
 	pub email_change_token_expiry: Option<DateTimeWithTimeZone>,
+	#[serde(skip_serializing)]
 	pub password_reset_token: Option<String>,
+	#[serde(skip_serializing)]
 	pub password_reset_token_expiry: Option<DateTimeWithTimeZone>,
+	#[serde(skip_serializing)]
 	pub pending_email: Option<String>,
 	pub created_at: DateTimeWithTimeZone,
 	pub updated_at: Option<DateTimeWithTimeZone>,
