@@ -3,7 +3,7 @@ use crate::auth::extractor::role_extractor::AdminRole;
 use crate::common::error::app_error::AppError;
 use crate::files::dto::update_file_dto::UpdateFileDto;
 use crate::files::entities::files;
-use crate::files::services::files_service::FilesServiceTrait;
+use crate::files::services::files_service::IFilesService;
 use axum::{
 	Extension, Json, Router,
 	extract::{Multipart, Path, Query},
@@ -27,7 +27,7 @@ pub fn routes() -> Router {
 
 async fn get_all_files(
 	JwtAuth(_claims): JwtAuth,
-	Extension(files_service): Extension<Arc<dyn FilesServiceTrait>>,
+	Extension(files_service): Extension<Arc<dyn IFilesService>>,
 ) -> Result<Json<Vec<files::Model>>, AppError> {
 	let files = files_service.find_all().await?;
 	Ok(Json(files))
@@ -35,7 +35,7 @@ async fn get_all_files(
 
 async fn get_file_by_id(
 	JwtAuth(_claims): JwtAuth,
-	Extension(files_service): Extension<Arc<dyn FilesServiceTrait>>,
+	Extension(files_service): Extension<Arc<dyn IFilesService>>,
 	Path(id): Path<i32>,
 ) -> Result<Json<files::Model>, AppError> {
 	let file = files_service.find_by_id(id).await?;
@@ -44,7 +44,7 @@ async fn get_file_by_id(
 
 async fn upload_file(
 	JwtAuth(_claims): JwtAuth,
-	Extension(files_service): Extension<Arc<dyn FilesServiceTrait>>,
+	Extension(files_service): Extension<Arc<dyn IFilesService>>,
 	Query(query): Query<UploadQuery>,
 	multipart: Multipart,
 ) -> Result<Json<files::Model>, AppError> {
@@ -55,7 +55,7 @@ async fn upload_file(
 async fn update_file(
 	JwtAuth(_claims): JwtAuth,
 	_admin_role: AdminRole,
-	Extension(files_service): Extension<Arc<dyn FilesServiceTrait>>,
+	Extension(files_service): Extension<Arc<dyn IFilesService>>,
 	Path(id): Path<i32>,
 	Json(dto): Json<UpdateFileDto>,
 ) -> Result<Json<files::Model>, AppError> {
@@ -68,7 +68,7 @@ async fn update_file(
 async fn delete_file(
 	JwtAuth(_claims): JwtAuth,
 	_admin_role: AdminRole,
-	Extension(files_service): Extension<Arc<dyn FilesServiceTrait>>,
+	Extension(files_service): Extension<Arc<dyn IFilesService>>,
 	Path(id): Path<i32>,
 ) -> Result<(), AppError> {
 	files_service.delete(id).await?;
@@ -78,7 +78,7 @@ async fn delete_file(
 async fn soft_delete_file(
 	JwtAuth(claims): JwtAuth,
 	_admin_role: AdminRole,
-	Extension(files_service): Extension<Arc<dyn FilesServiceTrait>>,
+	Extension(files_service): Extension<Arc<dyn IFilesService>>,
 	Path(id): Path<i32>,
 ) -> Result<(), AppError> {
 	files_service.soft_delete(id, claims.sub).await?;

@@ -1,51 +1,39 @@
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::config::app_config::AppConfig;
-use crate::emails::strategies::emails_strategy::EmailStrategy;
+use crate::di::{IAppConfig, ITemplates};
+use crate::emails::strategies::emails_strategy::IEmailStrategy;
 use async_trait::async_trait;
+use shaku::{Component, Interface};
 use std::path::Path;
 use std::sync::Arc;
 use tera::{Context, Tera};
 
-#[derive(Clone)]
-pub struct EmailsService {
-	pub email_strategy: Arc<dyn EmailStrategy>,
-	pub templates: Arc<Tera>,
-	pub app_url: String,
+#[derive(Component)]
+#[shaku(interface = IEmailsService)]
+pub struct EmailsServiceImpl {
+	#[shaku(inject)]
+	pub email_strategy: Arc<dyn IEmailStrategy>,
+	#[shaku(inject)]
+	pub app_config: Arc<dyn IAppConfig>,
+	#[shaku(inject)]
+	pub templates: Arc<dyn ITemplates>,
 }
 
-impl EmailsService {
-	pub fn new(app_config: Arc<AppConfig>) -> Self {
-		let app_url = app_config.server.app_url.clone();
-
-		let environment = app_config.server.app_environment.clone();
-		let emails = app_config.emails.clone();
-
-		let email_strategy = crate::emails::strategies::emails_strategy::get_email_strategy(&environment, &emails);
-
-		let templates_path = Path::new(&emails.email_templates_dir).join("**/*.html");
-		let templates = Tera::new(templates_path.to_str().unwrap()).unwrap_or_else(|e| {
-			tracing::error!("Error parsing templates: {}", e);
-			Tera::default()
-		});
-
-		Self {
-			email_strategy,
-			templates: Arc::new(templates),
-			app_url,
-		}
-	}
-
+impl EmailsServiceImpl {
 	fn render_template(&self, template_name: &str, context: &Context) -> Result<String, AppError> {
-		self.templates.render(template_name, context).map_err(|e| {
-			tracing::error!("Template rendering error: {}", e);
-			AppError::InternalError
-		})
+		self.templates
+			.get_templates()
+			.render(template_name, context)
+			.map_err(|e| {
+				tracing::error!("Template rendering error: {}", e);
+				AppError::InternalError
+			})
 	}
 }
 
 #[async_trait]
-pub trait EmailsServiceTrait: Send + Sync {
+pub trait IEmailsService: Interface {
 	async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), AppError>;
 	async fn send_email_confirmation(&self, to: &str, username: &str, token: &str) -> Result<(), AppError>;
 	async fn send_password_reset(&self, to: &str, username: &str, token: &str) -> Result<(), AppError>;
@@ -53,7 +41,7 @@ pub trait EmailsServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl EmailsServiceTrait for EmailsService {
+impl IEmailsService for EmailsServiceImpl {
 	async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), AppError> {
 		self.email_strategy.send_email(to, subject, body).await
 	}
@@ -63,7 +51,11 @@ impl EmailsServiceTrait for EmailsService {
 		context.insert("username", username);
 		context.insert(
 			"confirmation_link",
-			&format!("{}/api/auth/confirm-email?token={}", self.app_url, token),
+			&format!(
+				"{}/api/auth/confirm-email?token={}",
+				self.app_config.get_config().server.app_url,
+				token
+			),
 		);
 
 		let body = self.render_template("email_confirmation.html", &context)?;
@@ -75,7 +67,11 @@ impl EmailsServiceTrait for EmailsService {
 		context.insert("username", username);
 		context.insert(
 			"reset_link",
-			&format!("{}/api/auth/confirm-password-reset?token={}", self.app_url, token),
+			&format!(
+				"{}/api/auth/confirm-password-reset?token={}",
+				self.app_config.get_config().server.app_url,
+				token
+			),
 		);
 
 		let body = self.render_template("password_reset.html", &context)?;
@@ -87,7 +83,11 @@ impl EmailsServiceTrait for EmailsService {
 		context.insert("username", username);
 		context.insert(
 			"confirmation_link",
-			&format!("{}/api/auth/confirm-email-change?token={}", self.app_url, token),
+			&format!(
+				"{}/api/auth/confirm-email-change?token={}",
+				self.app_config.get_config().server.app_url,
+				token
+			),
 		);
 
 		let body = self.render_template("email_change.html", &context)?;

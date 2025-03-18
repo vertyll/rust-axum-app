@@ -1,60 +1,55 @@
 use crate::common::enums::environment_enum::EnvironmentEnum;
 use crate::common::error::app_error::AppError;
+use crate::config::app_config::AppConfig;
+use crate::di::IAppConfig;
 use async_trait::async_trait;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 use reqwest::Client;
 use serde_json::json;
+use shaku::{Component, Interface};
 use std::sync::Arc;
 
 #[async_trait]
-pub trait EmailStrategy: Send + Sync {
+pub trait IEmailStrategy: Interface {
 	async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), AppError>;
 }
 
-pub struct MailDevEmailStrategy {
+#[derive(Component)]
+#[shaku(interface = IEmailStrategy)]
+pub struct MailDevEmailStrategyImpl {
 	pub base_url: String,
 	pub from_email: String,
 }
 
-impl MailDevEmailStrategy {
+impl MailDevEmailStrategyImpl {
 	pub fn new(base_url: String, from_email: String) -> Self {
 		Self { base_url, from_email }
 	}
 }
 
-pub struct SmtpEmailStrategy {
-	pub smtp_host: String,
-	pub smtp_port: u16,
-	pub smtp_username: String,
-	pub smtp_password: String,
-	pub from_email: String,
+#[derive(Component)]
+#[shaku(interface = IEmailStrategy)]
+pub struct SmtpEmailStrategyImpl {
+	#[shaku(inject)]
+	app_config: Arc<dyn IAppConfig>,
 }
 
-impl SmtpEmailStrategy {
-	pub fn new(
-		smtp_host: String,
-		smtp_port: u16,
-		smtp_username: String,
-		smtp_password: String,
-		from_email: String,
-	) -> Self {
+impl SmtpEmailStrategyImpl {
+	pub fn new(app_config: Arc<dyn IAppConfig>) -> Self {
+		let config = app_config.get_config();
 		Self {
-			smtp_host,
-			smtp_port,
-			smtp_username,
-			smtp_password,
-			from_email,
+			app_config: app_config.clone(),
 		}
 	}
 }
 
 #[async_trait]
-impl EmailStrategy for SmtpEmailStrategy {
+impl IEmailStrategy for SmtpEmailStrategyImpl {
 	async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), AppError> {
 		let email = Message::builder()
-			.from(self.from_email.parse().map_err(|_| {
-				tracing::error!("Invalid from email: {}", self.from_email);
+			.from(self.app_config.get_config().emails.email_from.parse().map_err(|_| {
+				tracing::error!("Invalid from email: {}", self.app_config.get_config().emails.email_from);
 				AppError::InternalError
 			})?)
 			.to(to.parse().map_err(|_| {
@@ -69,10 +64,16 @@ impl EmailStrategy for SmtpEmailStrategy {
 				AppError::InternalError
 			})?;
 
-		let mut builder = SmtpTransport::builder_dangerous(&self.smtp_host).port(self.smtp_port);
+		let mut builder = SmtpTransport::builder_dangerous(&self.app_config.get_config().emails.smtp_host)
+			.port(self.app_config.get_config().emails.smtp_port);
 
-		if !self.smtp_username.is_empty() && !self.smtp_password.is_empty() {
-			let creds = Credentials::new(self.smtp_username.clone(), self.smtp_password.clone());
+		if !self.app_config.get_config().emails.smtp_username.is_empty()
+			&& !self.app_config.get_config().emails.smtp_password.is_empty()
+		{
+			let creds = Credentials::new(
+				self.app_config.get_config().emails.smtp_username.clone(),
+				self.app_config.get_config().emails.smtp_password.clone(),
+			);
 			builder = builder.credentials(creds);
 		}
 
@@ -86,12 +87,6 @@ impl EmailStrategy for SmtpEmailStrategy {
 			}
 			Err(e) => {
 				tracing::error!("Failed to send email via SMTP: {}", e);
-				tracing::debug!(
-					"SMTP connection details: host={}, port={}, username={}",
-					self.smtp_host,
-					self.smtp_port,
-					self.smtp_username
-				);
 				Err(AppError::InternalError)
 			}
 		}
@@ -101,21 +96,44 @@ impl EmailStrategy for SmtpEmailStrategy {
 pub fn get_email_strategy(
 	environment: &str,
 	config: &crate::config::app_config::EmailsConfig,
-) -> Arc<dyn EmailStrategy> {
+	app_config: Arc<dyn IAppConfig>,
+) -> Arc<dyn IEmailStrategy> {
 	match EnvironmentEnum::from_str(environment) {
-		Some(EnvironmentEnum::Development) => Arc::new(SmtpEmailStrategy::new(
-			config.smtp_host.clone(),
-			config.smtp_port.clone(),
-			config.smtp_username.clone(),
-			config.smtp_password.clone(),
-			config.email_from.clone(),
-		)),
-		_ => Arc::new(SmtpEmailStrategy::new(
-			config.smtp_host.clone(),
-			config.smtp_port,
-			config.smtp_username.clone(),
-			config.smtp_password.clone(),
-			config.email_from.clone(),
-		)),
+		Some(EnvironmentEnum::Development) => Arc::new(SmtpEmailStrategyImpl::new(app_config)),
+		_ => Arc::new(SmtpEmailStrategyImpl::new(app_config)),
+	}
+}
+#[async_trait]
+impl IEmailStrategy for MailDevEmailStrategyImpl {
+	async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), AppError> {
+		let client = Client::new();
+
+		let payload = json!({
+			"from": self.from_email,
+			"to": to,
+			"subject": subject,
+			"html": body
+		});
+
+		match client
+			.post(&format!("{}/email", self.base_url))
+			.json(&payload)
+			.send()
+			.await
+		{
+			Ok(response) => {
+				if response.status().is_success() {
+					tracing::info!("Email sent via MailDev to {}", to);
+					Ok(())
+				} else {
+					tracing::error!("Failed to send email via MailDev: HTTP {}", response.status());
+					Err(AppError::InternalError)
+				}
+			}
+			Err(e) => {
+				tracing::error!("Failed to send email via MailDev: {}", e);
+				Err(AppError::InternalError)
+			}
+		}
 	}
 }

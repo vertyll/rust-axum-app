@@ -1,26 +1,31 @@
 use crate::auth::dto::login_dto::LoginDto;
 use crate::auth::dto::register_dto::RegisterDto;
-use crate::auth::services::refresh_token_service::RefreshTokenServiceTrait;
+use crate::auth::services::refresh_token_service::IRefreshTokenService;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::config::app_config::AppConfig;
-use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
+use crate::di::IAppConfig;
+use crate::roles::services::user_roles_service::IUserRolesService;
 use crate::users::entities::users::Model as User;
-use crate::users::services::users_service::{UsersService, UsersServiceTrait};
+use crate::users::services::users_service::IUsersService;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sea_orm::DatabaseTransaction;
 use serde::{Deserialize, Serialize};
+use shaku::{Component, Interface};
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct AuthService {
-	users_service: Arc<dyn UsersServiceTrait>,
-	user_roles_service: Arc<dyn UserRolesServiceTrait>,
-	jwt_access_token_secret: String,
-	jwt_access_token_expires_in: i64,
+#[derive(Component)]
+#[shaku(interface = IAuthService)]
+pub struct AuthServiceImpl {
+	#[shaku(inject)]
+	users_service: Arc<dyn IUsersService>,
+	#[shaku(inject)]
+	user_roles_service: Arc<dyn IUserRolesService>,
+	#[shaku(inject)]
+	app_config: Arc<dyn IAppConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,48 +44,47 @@ pub struct AuthResponse {
 	pub access_token: String,
 }
 
-impl AuthService {
+impl AuthServiceImpl {
 	pub fn new(
-		users_service: Arc<dyn UsersServiceTrait>,
-		user_roles_service: Arc<dyn UserRolesServiceTrait>,
-		app_config: Arc<AppConfig>,
+		users_service: Arc<dyn IUsersService>,
+		user_roles_service: Arc<dyn IUserRolesService>,
+		app_config: Arc<dyn IAppConfig>,
 	) -> Self {
 		Self {
 			users_service,
 			user_roles_service,
-			jwt_access_token_secret: app_config.security.tokens.jwt_access_token.secret.clone(),
-			jwt_access_token_expires_in: app_config.security.tokens.jwt_access_token.expires_in,
+			app_config,
 		}
 	}
 }
 
 #[async_trait]
-pub trait AuthServiceTrait: Send + Sync {
+pub trait IAuthService: Interface {
 	async fn register(
 		&self,
 		dto: RegisterDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+		refresh_token_service: &Arc<dyn IRefreshTokenService>,
 	) -> Result<(User, String, String), AppError>;
 	async fn login(
 		&self,
 		dto: LoginDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+		refresh_token_service: &Arc<dyn IRefreshTokenService>,
 	) -> Result<(User, String, String), AppError>;
 	async fn generate_token(&self, user: &User) -> Result<String, AppError>;
 	async fn register_in_transaction(
 		&self,
 		transaction: &DatabaseTransaction,
 		dto: RegisterDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+		refresh_token_service: &Arc<dyn IRefreshTokenService>,
 	) -> Result<(User, String, String), AppError>;
 }
 
 #[async_trait]
-impl AuthServiceTrait for AuthService {
+impl IAuthService for AuthServiceImpl {
 	async fn register(
 		&self,
 		dto: RegisterDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+		refresh_token_service: &Arc<dyn IRefreshTokenService>,
 	) -> Result<(User, String, String), AppError> {
 		let transaction = self.users_service.begin_transaction().await?;
 
@@ -103,7 +107,7 @@ impl AuthServiceTrait for AuthService {
 	async fn login(
 		&self,
 		dto: LoginDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+		refresh_token_service: &Arc<dyn IRefreshTokenService>,
 	) -> Result<(User, String, String), AppError> {
 		let user = self.users_service.login(&dto.username, &dto.password).await?;
 		let access_token = self.generate_token(&user).await?;
@@ -114,7 +118,8 @@ impl AuthServiceTrait for AuthService {
 
 	async fn generate_token(&self, user: &User) -> Result<String, AppError> {
 		let now = Utc::now();
-		let expires_at = now + Duration::seconds(self.jwt_access_token_expires_in);
+		let expires_at =
+			now + Duration::seconds(self.app_config.get_config().security.tokens.jwt_access_token.expires_in);
 
 		let user_roles = self.user_roles_service.get_user_roles(user.id).await?;
 		let role_enums: Vec<RoleEnum> = user_roles
@@ -134,7 +139,15 @@ impl AuthServiceTrait for AuthService {
 		let token = encode(
 			&Header::default(),
 			&claims,
-			&EncodingKey::from_secret(self.jwt_access_token_secret.as_bytes()),
+			&EncodingKey::from_secret(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.jwt_access_token
+					.secret
+					.as_bytes(),
+			),
 		)
 		.map_err(|_| AppError::InternalError)?;
 
@@ -145,7 +158,7 @@ impl AuthServiceTrait for AuthService {
 		&self,
 		transaction: &DatabaseTransaction,
 		dto: RegisterDto,
-		refresh_token_service: &Arc<dyn RefreshTokenServiceTrait>,
+		refresh_token_service: &Arc<dyn IRefreshTokenService>,
 	) -> Result<(User, String, String), AppError> {
 		let create_user_dto = crate::users::dto::create_user_dto::CreateUserDto {
 			username: dto.username.clone(),

@@ -1,10 +1,11 @@
 use crate::common::error::app_error::AppError;
-use crate::config::app_config::AppConfig;
+use crate::di::IAppConfig;
 use crate::i18n::setup::translate;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
+use shaku::{Component, Interface};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -26,23 +27,21 @@ pub struct ConfirmationClaims {
 	pub jti: String,
 }
 
-#[derive(Clone)]
-pub struct ConfirmationTokenService {
-	confirmation_token_secret: String,
-	confirmation_token_expires_in: i64,
+#[derive(Component)]
+#[shaku(interface = IConfirmationTokenService)]
+pub struct ConfirmationTokenServiceImpl {
+	#[shaku(inject)]
+	app_config: Arc<dyn IAppConfig>,
 }
 
-impl ConfirmationTokenService {
-	pub fn new(app_config: Arc<AppConfig>) -> Self {
-		Self {
-			confirmation_token_secret: app_config.security.tokens.confirmation_token.secret.clone(),
-			confirmation_token_expires_in: app_config.security.tokens.confirmation_token.expires_in,
-		}
+impl ConfirmationTokenServiceImpl {
+	pub fn new(app_config: Arc<dyn IAppConfig>) -> Self {
+		Self { app_config }
 	}
 }
 
 #[async_trait]
-pub trait ConfirmationTokenServiceTrait: Send + Sync {
+pub trait IConfirmationTokenService: Interface {
 	async fn generate_email_confirmation_token(&self, user_id: i32, email: &str) -> Result<String, AppError>;
 	async fn generate_email_change_token(
 		&self,
@@ -62,10 +61,18 @@ pub trait ConfirmationTokenServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl ConfirmationTokenServiceTrait for ConfirmationTokenService {
+impl IConfirmationTokenService for ConfirmationTokenServiceImpl {
 	async fn generate_email_confirmation_token(&self, user_id: i32, email: &str) -> Result<String, AppError> {
 		let now = Utc::now();
-		let expires_at = now + Duration::seconds(self.confirmation_token_expires_in);
+		let expires_at = now
+			+ Duration::seconds(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.expires_in,
+			);
 
 		let claims = ConfirmationClaims {
 			sub: user_id,
@@ -80,7 +87,15 @@ impl ConfirmationTokenServiceTrait for ConfirmationTokenService {
 		let token = encode(
 			&Header::default(),
 			&claims,
-			&EncodingKey::from_secret(self.confirmation_token_secret.as_bytes()),
+			&EncodingKey::from_secret(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.secret
+					.as_bytes(),
+			),
 		)
 		.map_err(|_| AppError::InternalError)?;
 
@@ -94,7 +109,15 @@ impl ConfirmationTokenServiceTrait for ConfirmationTokenService {
 		new_email: &str,
 	) -> Result<String, AppError> {
 		let now = Utc::now();
-		let expires_at = now + Duration::seconds(self.confirmation_token_expires_in);
+		let expires_at = now
+			+ Duration::seconds(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.expires_in,
+			);
 
 		let claims = ConfirmationClaims {
 			sub: user_id,
@@ -109,7 +132,15 @@ impl ConfirmationTokenServiceTrait for ConfirmationTokenService {
 		let token = encode(
 			&Header::default(),
 			&claims,
-			&EncodingKey::from_secret(self.confirmation_token_secret.as_bytes()),
+			&EncodingKey::from_secret(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.secret
+					.as_bytes(),
+			),
 		)
 		.map_err(|_| AppError::InternalError)?;
 
@@ -118,7 +149,15 @@ impl ConfirmationTokenServiceTrait for ConfirmationTokenService {
 
 	async fn generate_password_reset_token(&self, user_id: i32, email: &str) -> Result<String, AppError> {
 		let now = Utc::now();
-		let expires_at = now + Duration::seconds(self.confirmation_token_expires_in);
+		let expires_at = now
+			+ Duration::seconds(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.expires_in,
+			);
 
 		let claims = ConfirmationClaims {
 			sub: user_id,
@@ -133,7 +172,15 @@ impl ConfirmationTokenServiceTrait for ConfirmationTokenService {
 		let token = encode(
 			&Header::default(),
 			&claims,
-			&EncodingKey::from_secret(self.confirmation_token_secret.as_bytes()),
+			&EncodingKey::from_secret(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.secret
+					.as_bytes(),
+			),
 		)
 		.map_err(|_| AppError::InternalError)?;
 
@@ -143,7 +190,15 @@ impl ConfirmationTokenServiceTrait for ConfirmationTokenService {
 	async fn validate_token(&self, token: &str) -> Result<ConfirmationClaims, AppError> {
 		let token_data = decode::<ConfirmationClaims>(
 			token,
-			&DecodingKey::from_secret(self.confirmation_token_secret.as_bytes()),
+			&DecodingKey::from_secret(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.secret
+					.as_bytes(),
+			),
 			&Validation::default(),
 		)
 		.map_err(|_| AppError::AuthenticationError(translate("auth.errors.invalid_token")))?;

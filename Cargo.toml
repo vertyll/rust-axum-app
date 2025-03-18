@@ -46,6 +46,7 @@ time = "0.3.39"
 reqwest = { version = "0.12.14", features = ["json"] }
 lettre = { version = "0.11.15", features = ["builder", "smtp-transport", "tokio1", "tokio1-native-tls"] }
 tera = "1.20.0"
+shaku = "0.6.2"
 
 [dev-dependencies]
 anyhow = "1"

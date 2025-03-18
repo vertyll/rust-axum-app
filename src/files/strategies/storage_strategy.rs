@@ -1,8 +1,10 @@
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
+use crate::di::IAppConfig;
 use async_trait::async_trait;
 use axum::extract::Multipart;
 use serde_json::Value;
+use shaku::{Component, Interface};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
@@ -18,24 +20,26 @@ pub struct FileInfo {
 }
 
 #[async_trait]
-pub trait StorageStrategy: Send + Sync {
+pub trait IStorageStrategy: Interface {
 	async fn save_file(&self, file_data: Vec<u8>, original_name: &str, mime_type: &str) -> Result<FileInfo, AppError>;
 	async fn delete_file(&self, file_path: &str) -> Result<(), AppError>;
 }
 
-pub struct LocalStorageStrategy {
+#[derive(Component)]
+#[shaku(interface = IStorageStrategy)]
+pub struct LocalStorageStrategyImpl {
 	upload_dir: String,
 	base_url: String,
 }
 
-impl LocalStorageStrategy {
+impl LocalStorageStrategyImpl {
 	pub fn new(upload_dir: String, base_url: String) -> Self {
 		Self { upload_dir, base_url }
 	}
 }
 
 #[async_trait]
-impl StorageStrategy for LocalStorageStrategy {
+impl IStorageStrategy for LocalStorageStrategyImpl {
 	async fn save_file(&self, file_data: Vec<u8>, original_name: &str, _mime_type: &str) -> Result<FileInfo, AppError> {
 		if !Path::new(&self.upload_dir).exists() {
 			fs::create_dir_all(&self.upload_dir).map_err(|e| {
@@ -102,11 +106,11 @@ impl StorageStrategy for LocalStorageStrategy {
 	}
 }
 
-pub fn get_storage_strategy(storage_type: &str, app_config: &AppConfig) -> Box<dyn StorageStrategy> {
+pub fn get_storage_strategy(storage_type: &str, app_config: &dyn IAppConfig) -> Box<dyn IStorageStrategy> {
 	match storage_type {
-		_ => Box::new(LocalStorageStrategy::new(
-			app_config.files.upload_dir.clone(),
-			app_config.files.base_url.clone(),
+		"local" | _ => Box::new(LocalStorageStrategyImpl::new(
+			app_config.get_config().files.upload_dir.clone(),
+			app_config.get_config().files.base_url.clone(),
 		)),
 	}
 }

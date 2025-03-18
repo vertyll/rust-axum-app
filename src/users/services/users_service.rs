@@ -4,19 +4,19 @@ use crate::auth::dto::forgot_password_dto::ForgotPasswordDto;
 use crate::auth::dto::register_dto::RegisterDto;
 use crate::auth::dto::reset_password_dto::ResetPasswordDto;
 use crate::auth::services::auth_service::AuthResponse;
-use crate::auth::services::confirmation_token_service::{
-	ConfirmationTokenService, ConfirmationTokenServiceTrait, TokenType,
-};
+use crate::auth::services::confirmation_token_service::{IConfirmationTokenService, TokenType};
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
-use crate::emails::services::emails_service::{EmailsService, EmailsServiceTrait};
+use crate::di::IAppConfig;
+use crate::emails::services::emails_service::IEmailsService;
 use crate::i18n::setup::translate;
-use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
+use crate::roles::repositories::user_roles_repository::IUserRolesRepository;
+use crate::roles::services::user_roles_service::IUserRolesService;
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::users::{self, Entity as User, Model as UserModel};
 use crate::users::entities::users_email_history::{self, ActiveModel as UserEmailHistoryActiveModel};
-use crate::users::repositories::users_repository::{UsersRepository, UsersRepositoryTrait};
+use crate::users::repositories::users_repository::IUsersRepository;
 use argon2::{
 	Argon2,
 	password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
@@ -25,31 +25,38 @@ use async_trait::async_trait;
 use chrono::Utc;
 use sea_orm::EntityTrait;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, DatabaseTransaction, Set, TransactionTrait};
+use shaku::{Component, Interface};
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct UsersService {
-	pub users_repository: Arc<dyn UsersRepositoryTrait>,
-	user_roles_service: Arc<dyn UserRolesServiceTrait>,
-	email_service: Arc<dyn EmailsServiceTrait>,
-	confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
-	confirmation_token_expires_in: i64,
+#[derive(Component)]
+#[shaku(interface = IUsersService)]
+pub struct UsersServiceImpl {
+	#[shaku(inject)]
+	pub users_repository: Arc<dyn IUsersRepository>,
+	#[shaku(inject)]
+	user_roles_service: Arc<dyn IUserRolesService>,
+	#[shaku(inject)]
+	email_service: Arc<dyn IEmailsService>,
+	#[shaku(inject)]
+	confirmation_token_service: Arc<dyn IConfirmationTokenService>,
+	#[shaku(inject)]
+	app_config: Arc<dyn IAppConfig>,
 }
 
-impl UsersService {
+impl UsersServiceImpl {
 	pub fn new(
-		users_repository: Arc<dyn UsersRepositoryTrait>,
-		user_roles_service: Arc<dyn UserRolesServiceTrait>,
-		email_service: Arc<dyn EmailsServiceTrait>,
-		confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
-		app_config: Arc<AppConfig>,
+		users_repository: Arc<dyn IUsersRepository>,
+		user_roles_service: Arc<dyn IUserRolesService>,
+		email_service: Arc<dyn IEmailsService>,
+		confirmation_token_service: Arc<dyn IConfirmationTokenService>,
+		app_config: Arc<dyn IAppConfig>,
 	) -> Self {
 		Self {
 			users_repository,
 			user_roles_service,
 			email_service,
 			confirmation_token_service,
-			confirmation_token_expires_in: app_config.security.tokens.confirmation_token.expires_in,
+			app_config,
 		}
 	}
 
@@ -81,7 +88,7 @@ impl UsersService {
 }
 
 #[async_trait]
-pub trait UsersServiceTrait: Send + Sync {
+pub trait IUsersService: Interface {
 	async fn begin_transaction(&self) -> Result<DatabaseTransaction, AppError>;
 	async fn find_all(&self) -> Result<Vec<UserModel>, AppError>;
 	async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError>;
@@ -117,7 +124,7 @@ pub trait UsersServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl UsersServiceTrait for UsersService {
+impl IUsersService for UsersServiceImpl {
 	async fn begin_transaction(&self) -> Result<DatabaseTransaction, AppError> {
 		Ok(self.users_repository.get_db().begin().await?)
 	}
@@ -295,7 +302,15 @@ impl UsersServiceTrait for UsersService {
 			.generate_password_reset_token(user.id, &user.email)
 			.await?;
 
-		let expiry = Utc::now() + chrono::Duration::seconds(self.confirmation_token_expires_in);
+		let expiry = Utc::now()
+			+ chrono::Duration::seconds(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.expires_in,
+			);
 		let expiry_sea_orm = expiry.into();
 
 		let db = self.users_repository.get_db();
@@ -432,7 +447,15 @@ impl UsersServiceTrait for UsersService {
 		let transaction = db.begin().await?;
 
 		let now = Utc::now();
-		let expiry = now + chrono::Duration::seconds(self.confirmation_token_expires_in);
+		let expiry = now
+			+ chrono::Duration::seconds(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.expires_in,
+			);
 
 		let mut user_active_model = users::ActiveModel {
 			email_change_token: Set(Some(token.clone())),
@@ -510,7 +533,15 @@ impl UsersServiceTrait for UsersService {
 			.generate_email_confirmation_token(user_id, email)
 			.await?;
 
-		let expiry = Utc::now() + chrono::Duration::seconds(self.confirmation_token_expires_in);
+		let expiry = Utc::now()
+			+ chrono::Duration::seconds(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.confirmation_token
+					.expires_in,
+			);
 		let expiry_sea_orm = expiry.into();
 
 		let user = users::Entity::find_by_id(user_id)

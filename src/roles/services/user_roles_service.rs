@@ -2,24 +2,27 @@ use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::roles::entities::roles::Model as RoleModel;
 use crate::roles::entities::user_roles::Model as UserRoleModel;
-use crate::roles::repositories::user_roles_repository::UserRolesRepositoryTrait;
+use crate::roles::repositories::user_roles_repository::IUserRolesRepository;
 use async_trait::async_trait;
 use sea_orm::DatabaseTransaction;
+use shaku::{Component, Interface};
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct UserRolesService {
-	user_roles_repository: Arc<dyn UserRolesRepositoryTrait>,
+#[derive(Component)]
+#[shaku(interface = IUserRolesService)]
+pub struct UserRolesServiceImpl {
+	#[shaku(inject)]
+	user_roles_repository: Arc<dyn IUserRolesRepository>,
 }
 
-impl UserRolesService {
-	pub fn new(user_roles_repository: Arc<dyn UserRolesRepositoryTrait>) -> Self {
+impl UserRolesServiceImpl {
+	pub fn new(user_roles_repository: Arc<dyn IUserRolesRepository>) -> Self {
 		Self { user_roles_repository }
 	}
 }
 
 #[async_trait]
-pub trait UserRolesServiceTrait: Send + Sync {
+pub trait IUserRolesService: Interface {
 	async fn get_user_roles(&self, user_id: i32) -> Result<Vec<RoleModel>, AppError>;
 	async fn assign_user_role_in_transaction(
 		&self,
@@ -31,7 +34,7 @@ pub trait UserRolesServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl UserRolesServiceTrait for UserRolesService {
+impl IUserRolesService for UserRolesServiceImpl {
 	async fn get_user_roles(&self, user_id: i32) -> Result<Vec<RoleModel>, AppError> {
 		self.user_roles_repository.find_user_roles(user_id).await
 	}

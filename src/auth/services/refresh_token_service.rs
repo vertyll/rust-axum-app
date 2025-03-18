@@ -1,15 +1,16 @@
 use crate::auth::dto::access_token_dto::AccessTokenDto;
-use crate::auth::repositories::refresh_token_repository::RefreshTokenRepositoryTrait;
+use crate::auth::repositories::refresh_token_repository::IRefreshTokenRepository;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
-use crate::config::app_config::AppConfig;
+use crate::di::IAppConfig;
 use crate::i18n::setup::translate;
-use crate::roles::services::user_roles_service::UserRolesServiceTrait;
+use crate::roles::services::user_roles_service::IUserRolesService;
 use async_trait::async_trait;
 use chrono::Utc;
 use jsonwebtoken::{EncodingKey, Header, encode};
 use sea_orm::DatabaseTransaction;
 use serde::{Deserialize, Serialize};
+use shaku::{Component, Interface};
 use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -22,27 +23,27 @@ pub struct Claims {
 	pub iat: i64,
 }
 
-#[derive(Clone)]
-pub struct RefreshTokenService {
-	refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait>,
-	user_roles_service: Arc<dyn UserRolesServiceTrait>,
-	jwt_access_token_secret: String,
-	jwt_access_token_expires_in: i64,
-	jwt_refresh_token_expires_in: i64,
+#[derive(Component)]
+#[shaku(interface = IRefreshTokenService)]
+pub struct RefreshTokenServiceImpl {
+	#[shaku(inject)]
+	refresh_token_repository: Arc<dyn IRefreshTokenRepository>,
+	#[shaku(inject)]
+	user_roles_service: Arc<dyn IUserRolesService>,
+	#[shaku(inject)]
+	app_config: Arc<dyn IAppConfig>,
 }
 
-impl RefreshTokenService {
+impl RefreshTokenServiceImpl {
 	pub fn new(
-		refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait>,
-		user_roles_service: Arc<dyn UserRolesServiceTrait>,
-		app_config: Arc<AppConfig>,
+		refresh_token_repository: Arc<dyn IRefreshTokenRepository>,
+		user_roles_service: Arc<dyn IUserRolesService>,
+		app_config: Arc<dyn IAppConfig>,
 	) -> Self {
 		Self {
 			refresh_token_repository,
 			user_roles_service,
-			jwt_access_token_secret: app_config.security.tokens.jwt_access_token.secret.clone(),
-			jwt_access_token_expires_in: app_config.security.tokens.jwt_access_token.expires_in,
-			jwt_refresh_token_expires_in: app_config.security.tokens.jwt_refresh_token.expires_in,
+			app_config,
 		}
 	}
 	async fn generate_access_token(&self, user_id: i32) -> Result<String, AppError> {
@@ -56,7 +57,8 @@ impl RefreshTokenService {
 			.collect();
 
 		let now = Utc::now();
-		let expires_at = now + chrono::Duration::seconds(self.jwt_access_token_expires_in);
+		let expires_at =
+			now + chrono::Duration::seconds(self.app_config.get_config().security.tokens.jwt_access_token.expires_in);
 
 		let claims = Claims {
 			sub: user_id,
@@ -70,14 +72,22 @@ impl RefreshTokenService {
 		encode(
 			&Header::default(),
 			&claims,
-			&EncodingKey::from_secret(self.jwt_access_token_secret.as_bytes()),
+			&EncodingKey::from_secret(
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.jwt_access_token
+					.secret
+					.as_bytes(),
+			),
 		)
 		.map_err(|_| AppError::InternalError)
 	}
 }
 
 #[async_trait]
-pub trait RefreshTokenServiceTrait: Send + Sync {
+pub trait IRefreshTokenService: Interface {
 	async fn generate_refresh_token(&self, user_id: i32) -> Result<String, AppError>;
 	async fn generate_refresh_token_in_transaction(
 		&self,
@@ -91,11 +101,19 @@ pub trait RefreshTokenServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl RefreshTokenServiceTrait for RefreshTokenService {
+impl IRefreshTokenService for RefreshTokenServiceImpl {
 	async fn generate_refresh_token(&self, user_id: i32) -> Result<String, AppError> {
 		let (_, token) = self
 			.refresh_token_repository
-			.create(user_id, self.jwt_refresh_token_expires_in)
+			.create(
+				user_id,
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.jwt_refresh_token
+					.expires_in,
+			)
 			.await?;
 		Ok(token)
 	}
@@ -107,7 +125,16 @@ impl RefreshTokenServiceTrait for RefreshTokenService {
 	) -> Result<String, AppError> {
 		let (_, token) = self
 			.refresh_token_repository
-			.create_in_transaction(transaction, user_id, self.jwt_refresh_token_expires_in)
+			.create_in_transaction(
+				transaction,
+				user_id,
+				self.app_config
+					.get_config()
+					.security
+					.tokens
+					.jwt_refresh_token
+					.expires_in,
+			)
 			.await?;
 		Ok(token)
 	}

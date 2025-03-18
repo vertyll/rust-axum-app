@@ -1,34 +1,30 @@
 use crate::common::enums::file_storage_type_enum::FileStorageTypeEnum;
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
+use crate::di::module::IAppConfig;
 use crate::files::dto::create_file_dto::CreateFileDto;
 use crate::files::dto::update_file_dto::UpdateFileDto;
 use crate::files::entities::files::Model as FileModel;
-use crate::files::repositories::files_repository::{FilesRepository, FilesRepositoryTrait};
-use crate::files::strategies::storage_strategy::{StorageStrategy, get_storage_strategy};
+use crate::files::repositories::files_repository::IFilesRepository;
+use crate::files::strategies::storage_strategy::get_storage_strategy;
 use crate::i18n::setup::translate;
 use async_trait::async_trait;
 use axum::extract::Multipart;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
+use shaku::{Component, Interface};
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct FilesService {
-	pub files_repository: Arc<dyn FilesRepositoryTrait>,
-	pub app_config: Arc<AppConfig>,
-}
-
-impl FilesService {
-	pub fn new(files_repository: Arc<dyn FilesRepositoryTrait>, app_config: Arc<AppConfig>) -> Self {
-		Self {
-			files_repository,
-			app_config,
-		}
-	}
+#[derive(Component)]
+#[shaku(interface = IFilesService)]
+pub struct FilesServiceImpl {
+	#[shaku(inject)]
+	pub files_repository: Arc<dyn IFilesRepository>,
+	#[shaku(inject)]
+	pub app_config: Arc<dyn IAppConfig>,
 }
 
 #[async_trait]
-pub trait FilesServiceTrait: Send + Sync {
+pub trait IFilesService: Interface {
 	async fn begin_transaction(&self) -> Result<DatabaseTransaction, AppError>;
 	async fn find_all(&self) -> Result<Vec<FileModel>, AppError>;
 	async fn find_by_id(&self, id: i32) -> Result<FileModel, AppError>;
@@ -39,7 +35,7 @@ pub trait FilesServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl FilesServiceTrait for FilesService {
+impl IFilesService for FilesServiceImpl {
 	async fn begin_transaction(&self) -> Result<DatabaseTransaction, AppError> {
 		Ok(self.files_repository.get_db().begin().await?)
 	}
@@ -54,7 +50,7 @@ impl FilesServiceTrait for FilesService {
 
 	async fn upload(&self, mut multipart: Multipart, storage_type: Option<String>) -> Result<FileModel, AppError> {
 		let storage_type = storage_type.unwrap_or_else(|| FileStorageTypeEnum::Local.to_string());
-		let storage_strategy = get_storage_strategy(&storage_type, &self.app_config);
+		let storage_strategy = get_storage_strategy(&storage_type, self.app_config.as_ref());
 
 		let mut file_data = Vec::new();
 		let mut original_name = String::new();
@@ -137,7 +133,7 @@ impl FilesServiceTrait for FilesService {
 	async fn delete(&self, id: i32) -> Result<(), AppError> {
 		let file = self.files_repository.find_by_id(id).await?;
 
-		let storage_strategy = get_storage_strategy(&file.storage_type, &self.app_config);
+		let storage_strategy = get_storage_strategy(&file.storage_type, self.app_config.as_ref());
 		storage_strategy.delete_file(&file.path).await?;
 
 		self.files_repository.delete(id).await

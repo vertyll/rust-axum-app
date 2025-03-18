@@ -5,12 +5,12 @@ use crate::auth::dto::login_dto::LoginDto;
 use crate::auth::dto::register_dto::RegisterDto;
 use crate::auth::dto::reset_password_dto::ResetPasswordDto;
 use crate::auth::extractor::jwt_auth_extractor::JwtAuth;
-use crate::auth::services::auth_service::{AuthResponse, AuthServiceTrait};
-use crate::auth::services::refresh_token_service::RefreshTokenServiceTrait;
+use crate::auth::services::auth_service::{AuthResponse, IAuthService};
+use crate::auth::services::refresh_token_service::IRefreshTokenService;
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
 use crate::i18n::setup::translate;
-use crate::users::services::users_service::UsersServiceTrait;
+use crate::users::services::users_service::IUsersService;
 use axum::response::IntoResponse;
 use axum::{
 	Json, Router,
@@ -49,8 +49,8 @@ pub fn routes() -> Router {
 }
 
 async fn register(
-	Extension(auth_service): Extension<Arc<dyn AuthServiceTrait>>,
-	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
+	Extension(auth_service): Extension<Arc<dyn IAuthService>>,
+	Extension(refresh_token_service): Extension<Arc<dyn IRefreshTokenService>>,
 	Extension(config): Extension<Arc<AppConfig>>,
 	cookies: Cookies,
 	Json(dto): Json<RegisterDto>,
@@ -69,8 +69,8 @@ async fn register(
 }
 
 async fn login(
-	Extension(auth_service): Extension<Arc<dyn AuthServiceTrait>>,
-	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
+	Extension(auth_service): Extension<Arc<dyn IAuthService>>,
+	Extension(refresh_token_service): Extension<Arc<dyn IRefreshTokenService>>,
 	Extension(config): Extension<Arc<AppConfig>>,
 	cookies: Cookies,
 	Json(dto): Json<LoginDto>,
@@ -90,7 +90,7 @@ async fn login(
 
 async fn refresh_token(
 	JwtAuth(claims): JwtAuth,
-	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
+	Extension(refresh_token_service): Extension<Arc<dyn IRefreshTokenService>>,
 	cookies: Cookies,
 ) -> Result<impl IntoResponse, AppError> {
 	let refresh_token = cookies
@@ -107,7 +107,7 @@ async fn refresh_token(
 async fn logout(
 	cookies: Cookies,
 	JwtAuth(claims): JwtAuth,
-	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
+	Extension(refresh_token_service): Extension<Arc<dyn IRefreshTokenService>>,
 ) -> Result<impl IntoResponse, AppError> {
 	let refresh_token = cookies.get("refresh_token").map(|cookie| cookie.value().to_string());
 
@@ -131,7 +131,7 @@ async fn logout(
 
 async fn logout_all_devices(
 	JwtAuth(claims): JwtAuth,
-	Extension(refresh_token_service): Extension<Arc<dyn RefreshTokenServiceTrait>>,
+	Extension(refresh_token_service): Extension<Arc<dyn IRefreshTokenService>>,
 	cookies: Cookies,
 ) -> Result<impl IntoResponse, AppError> {
 	refresh_token_service.invalidate_all_user_tokens(claims.sub).await?;
@@ -149,7 +149,7 @@ async fn logout_all_devices(
 }
 
 async fn confirm_email(
-	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
+	Extension(users_service): Extension<Arc<dyn IUsersService>>,
 	Query(query): Query<EmailConfirmationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
 	users_service.confirm_email(&query.token).await?;
@@ -157,7 +157,7 @@ async fn confirm_email(
 }
 
 async fn request_reset_password(
-	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
+	Extension(users_service): Extension<Arc<dyn IUsersService>>,
 	Json(dto): Json<ForgotPasswordDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
@@ -166,7 +166,7 @@ async fn request_reset_password(
 }
 
 async fn confirm_reset_password(
-	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
+	Extension(users_service): Extension<Arc<dyn IUsersService>>,
 	Json(dto): Json<ResetPasswordDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
@@ -176,7 +176,7 @@ async fn confirm_reset_password(
 
 async fn change_password(
 	JwtAuth(claims): JwtAuth,
-	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
+	Extension(users_service): Extension<Arc<dyn IUsersService>>,
 	Json(dto): Json<ChangePasswordDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
@@ -186,7 +186,7 @@ async fn change_password(
 
 async fn request_email_change(
 	JwtAuth(claims): JwtAuth,
-	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
+	Extension(users_service): Extension<Arc<dyn IUsersService>>,
 	Json(dto): Json<ChangeEmailDto>,
 ) -> Result<impl IntoResponse, AppError> {
 	dto.validate()?;
@@ -195,7 +195,7 @@ async fn request_email_change(
 }
 
 async fn confirm_email_change(
-	Extension(users_service): Extension<Arc<dyn UsersServiceTrait>>,
+	Extension(users_service): Extension<Arc<dyn IUsersService>>,
 	Query(query): Query<EmailChangeConfirmationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
 	users_service.confirm_email_change(&query.token).await?;

@@ -1,22 +1,25 @@
 use crate::common::error::app_error::AppError;
 use crate::roles::entities::roles::Model as RoleModel;
-use crate::roles::repositories::roles_repository::RolesRepositoryTrait;
+use crate::roles::repositories::roles_repository::IRolesRepository;
 use async_trait::async_trait;
+use shaku::{Component, Interface};
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct RolesService {
-	roles_repository: Arc<dyn RolesRepositoryTrait>,
+#[derive(Component)]
+#[shaku(interface = IRolesService)]
+pub struct RolesServiceImpl {
+	#[shaku(inject)]
+	roles_repository: Arc<dyn IRolesRepository>,
 }
 
-impl RolesService {
-	pub fn new(roles_repository: Arc<dyn RolesRepositoryTrait>) -> Self {
+impl RolesServiceImpl {
+	pub fn new(roles_repository: Arc<dyn IRolesRepository>) -> Self {
 		Self { roles_repository }
 	}
 }
 
 #[async_trait]
-pub trait RolesServiceTrait: Send + Sync {
+pub trait IRolesService: Interface {
 	async fn find_all(&self) -> Result<Vec<RoleModel>, AppError>;
 	async fn find_by_id(&self, id: i32) -> Result<RoleModel, AppError>;
 	async fn find_by_name(&self, name: &str) -> Result<RoleModel, AppError>;
@@ -26,7 +29,7 @@ pub trait RolesServiceTrait: Send + Sync {
 }
 
 #[async_trait]
-impl RolesServiceTrait for RolesService {
+impl IRolesService for RolesServiceImpl {
 	async fn find_all(&self) -> Result<Vec<RoleModel>, AppError> {
 		self.roles_repository.find_all().await
 	}

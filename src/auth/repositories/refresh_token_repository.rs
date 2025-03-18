@@ -2,27 +2,26 @@ use crate::auth::entities::refresh_tokens::{
 	self, ActiveModel as RefreshTokenActiveModel, Entity as RefreshToken, Model as RefreshTokenModel,
 };
 use crate::common::error::app_error::AppError;
+use crate::di::module::IDatabaseConnection;
 use crate::users::entities::users::{Entity as User, Model as UserModel};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use sea_orm::{
 	ActiveModelTrait, ActiveValue, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set,
 };
+use shaku::{Component, Interface};
+use std::sync::Arc;
 use uuid::Uuid;
 
-#[derive(Clone)]
-pub struct RefreshTokenRepository {
-	pub db: DatabaseConnection,
-}
-
-impl RefreshTokenRepository {
-	pub fn new(db: DatabaseConnection) -> Self {
-		Self { db }
-	}
+#[derive(Component)]
+#[shaku(interface = IRefreshTokenRepository)]
+pub struct RefreshTokenRepositoryImpl {
+	#[shaku(inject)]
+	pub db_provider: Arc<dyn IDatabaseConnection>,
 }
 
 #[async_trait]
-pub trait RefreshTokenRepositoryTrait: Send + Sync {
+pub trait IRefreshTokenRepository: Interface {
 	fn get_db(&self) -> &DatabaseConnection;
 	async fn create(&self, user_id: i32, expires_in: i64) -> Result<(RefreshTokenModel, String), AppError>;
 	async fn create_in_transaction(
@@ -40,10 +39,11 @@ pub trait RefreshTokenRepositoryTrait: Send + Sync {
 }
 
 #[async_trait]
-impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
+impl IRefreshTokenRepository for RefreshTokenRepositoryImpl {
 	fn get_db(&self) -> &DatabaseConnection {
-		&self.db
+		self.db_provider.get_connection()
 	}
+
 	async fn create(&self, user_id: i32, expires_in: i64) -> Result<(RefreshTokenModel, String), AppError> {
 		let token = Uuid::new_v4().to_string();
 		let now = Utc::now();
@@ -61,7 +61,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 			user_id: Set(user_id),
 		};
 
-		let model = refresh_token.insert(&self.db).await.map_err(|err| {
+		let model = refresh_token.insert(self.get_db()).await.map_err(|err| {
 			eprintln!("Error inserting refresh token: {}", err);
 			AppError::InternalError
 		})?;
@@ -103,7 +103,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 		let refresh_token = RefreshToken::find()
 			.filter(refresh_tokens::Column::Token.eq(token))
 			.filter(refresh_tokens::Column::UserId.eq(user_id))
-			.one(&self.db)
+			.one(self.get_db())
 			.await
 			.map_err(|_| AppError::InternalError)?
 			.ok_or(AppError::NotFound)?;
@@ -115,7 +115,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 		RefreshToken::delete_many()
 			.filter(refresh_tokens::Column::Token.eq(token))
 			.filter(refresh_tokens::Column::UserId.eq(user_id))
-			.exec(&self.db)
+			.exec(self.get_db())
 			.await
 			.map_err(|_| AppError::InternalError)?;
 
@@ -125,7 +125,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 	async fn delete_all_by_user_id(&self, user_id: i32) -> Result<(), AppError> {
 		RefreshToken::delete_many()
 			.filter(refresh_tokens::Column::UserId.eq(user_id))
-			.exec(&self.db)
+			.exec(self.get_db())
 			.await
 			.map_err(|_| AppError::InternalError)?;
 
@@ -138,7 +138,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 
 		RefreshToken::delete_many()
 			.filter(refresh_tokens::Column::ExpiresAt.lt(now_db))
-			.exec(&self.db)
+			.exec(self.get_db())
 			.await
 			.map_err(|_| AppError::InternalError)?;
 
@@ -152,7 +152,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
 
 	async fn find_user_by_id(&self, user_id: i32) -> Result<UserModel, AppError> {
 		User::find_by_id(user_id)
-			.one(&self.db)
+			.one(self.get_db())
 			.await
 			.map_err(|_| AppError::InternalError)?
 			.ok_or_else(|| AppError::NotFound)
