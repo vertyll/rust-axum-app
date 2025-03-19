@@ -4,10 +4,7 @@ use crate::di::DatabaseConnectionTrait;
 use crate::i18n::setup::translate;
 use crate::users::entities::users::Column;
 use crate::users::entities::users::Entity as User;
-use axum::{
-	extract::{Extension, FromRequestParts},
-	http::request::Parts,
-};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use std::future::Future;

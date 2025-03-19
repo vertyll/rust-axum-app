@@ -57,8 +57,11 @@ impl AppConfigTrait for AppConfigImpl {
 
 #[derive(Clone)]
 pub struct AppModule {
+	// Add db connection and config
 	pub db_connection: Arc<dyn DatabaseConnectionTrait>,
 	pub app_config: Arc<dyn AppConfigTrait>,
+
+	// Add dependencies
 	pub users_service: Arc<dyn UsersServiceTrait>,
 	pub auth_service: Arc<dyn AuthServiceTrait>,
 	pub refresh_token_service: Arc<dyn RefreshTokenServiceTrait>,
