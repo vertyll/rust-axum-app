@@ -2995,6 +2995,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "shaku",
+ "shaku_axum",
  "strum 0.27.1",
  "strum_macros",
  "tera",
@@ -3525,6 +3526,16 @@ dependencies = [
  "anymap2",
  "once_cell",
  "shaku_derive",
+]
+
+[[package]]
+name = "shaku_axum"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b4cb5052ca87a5f83bbc924b3faef0b523183841f57d2093b2cb96747985c59"
+dependencies = [
+ "axum",
+ "shaku",
 ]
 
 [[package]]

@@ -17,6 +17,7 @@ use sea_orm::DatabaseConnection;
 use shaku::{Component, HasComponent, Interface, Module, Provider, module};
 use std::path::Path;
 use std::sync::Arc;
+use tera::Tera;
 
 // Connection pool interfaces
 pub trait IDatabaseConnection: Interface {
@@ -26,17 +27,17 @@ pub trait IDatabaseConnection: Interface {
 // Connection pool implementation
 #[derive(Component)]
 #[shaku(interface = IDatabaseConnection)]
-pub struct DatabaseConnectionProvider {
+pub struct DatabaseConnectionImpl {
 	connection: Arc<DatabaseConnection>,
 }
 
-impl DatabaseConnectionProvider {
+impl DatabaseConnectionImpl {
 	pub fn new(connection: Arc<DatabaseConnection>) -> Self {
 		Self { connection }
 	}
 }
 
-impl IDatabaseConnection for DatabaseConnectionProvider {
+impl IDatabaseConnection for DatabaseConnectionImpl {
 	fn get_connection(&self) -> &DatabaseConnection {
 		&self.connection
 	}
@@ -50,45 +51,21 @@ pub trait IAppConfig: Interface {
 // Configuration implementation
 #[derive(Component)]
 #[shaku(interface = IAppConfig)]
-pub struct AppConfigProvider {
+pub struct AppConfigImpl {
 	config: Arc<AppConfig>,
 }
 
-impl AppConfigProvider {
+impl AppConfigImpl {
 	pub fn new(config: Arc<AppConfig>) -> Self {
 		Self { config }
 	}
 }
 
-impl IAppConfig for AppConfigProvider {
+impl IAppConfig for AppConfigImpl {
 	fn get_config(&self) -> &AppConfig {
 		&self.config
 	}
 }
-
-// Database handle provided per request
-pub struct Database {
-	connection: Arc<DatabaseConnection>,
-}
-
-impl Database {
-	pub fn get_connection(&self) -> &DatabaseConnection {
-		&self.connection
-	}
-}
-
-// App configuration provided per request
-pub struct App {
-	config: Arc<AppConfig>,
-}
-
-impl App {
-	pub fn get_config(&self) -> &AppConfig {
-		&self.config
-	}
-}
-
-use tera::Tera;
 
 pub trait ITemplates: Interface {
 	fn get_templates(&self) -> &Tera;
@@ -109,9 +86,9 @@ impl ITemplates for TemplatesImpl {
 module! {
 	pub AppModule {
 		components = [
-			// Connection pools
-			DatabaseConnectionProvider,
-			AppConfigProvider,
+			// Connection pools and configuration
+			DatabaseConnectionImpl,
+			AppConfigImpl,
 
 			// Repositories and Services
 			UsersRepositoryImpl,
@@ -127,8 +104,9 @@ module! {
 			UsersServiceImpl,
 			AuthServiceImpl,
 			FilesServiceImpl,
-
 			SmtpEmailStrategyImpl,
+
+			// Custom components
 			TemplatesImpl,
 		],
 		providers = [ ]
@@ -143,10 +121,10 @@ pub fn initialize_di(db_connection: Arc<DatabaseConnection>, app_config: Arc<App
 	});
 
 	let module = AppModule::builder()
-		.with_component_parameters::<DatabaseConnectionProvider>(DatabaseConnectionProviderParameters {
+		.with_component_parameters::<DatabaseConnectionImpl>(DatabaseConnectionImplParameters {
 			connection: db_connection,
 		})
-		.with_component_parameters::<AppConfigProvider>(AppConfigProviderParameters { config: app_config })
+		.with_component_parameters::<AppConfigImpl>(AppConfigImplParameters { config: app_config })
 		.with_component_parameters::<TemplatesImpl>(TemplatesImplParameters {
 			templates: Arc::new(templates),
 		})
