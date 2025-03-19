@@ -11,15 +11,16 @@ use async_trait::async_trait;
 use axum::extract::Multipart;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use std::sync::Arc;
+use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct FilesService {
 	pub files_repository: Arc<dyn FilesRepositoryTrait>,
-	pub app_config: Arc<AppConfig>,
+	pub app_config: Arc<dyn AppConfigTrait>,
 }
 
 impl FilesService {
-	pub fn new(files_repository: Arc<dyn FilesRepositoryTrait>, app_config: Arc<AppConfig>) -> Self {
+	pub fn new(files_repository: Arc<dyn FilesRepositoryTrait>, app_config: Arc<dyn AppConfigTrait>) -> Self {
 		Self {
 			files_repository,
 			app_config,
@@ -54,7 +55,7 @@ impl FilesServiceTrait for FilesService {
 
 	async fn upload(&self, mut multipart: Multipart, storage_type: Option<String>) -> Result<FileModel, AppError> {
 		let storage_type = storage_type.unwrap_or_else(|| FileStorageTypeEnum::Local.to_string());
-		let storage_strategy = get_storage_strategy(&storage_type, &self.app_config);
+		let storage_strategy = get_storage_strategy(&storage_type, self.app_config.as_ref());
 
 		let mut file_data = Vec::new();
 		let mut original_name = String::new();
@@ -137,7 +138,7 @@ impl FilesServiceTrait for FilesService {
 	async fn delete(&self, id: i32) -> Result<(), AppError> {
 		let file = self.files_repository.find_by_id(id).await?;
 
-		let storage_strategy = get_storage_strategy(&file.storage_type, &self.app_config);
+		let storage_strategy = get_storage_strategy(&file.storage_type, self.app_config.as_ref());
 		storage_strategy.delete_file(&file.path).await?;
 
 		self.files_repository.delete(id).await

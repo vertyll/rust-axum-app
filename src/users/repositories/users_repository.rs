@@ -1,18 +1,20 @@
+use std::sync::Arc;
 use crate::common::error::app_error::AppError;
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::users::{self, ActiveModel as UserActiveModel, Entity as User, Model as UserModel};
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set};
+use crate::di::DatabaseConnectionTrait;
 
 #[derive(Clone)]
 pub struct UsersRepository {
-	pub db: DatabaseConnection,
+	pub db_connection: Arc<dyn DatabaseConnectionTrait>,
 }
 
 impl UsersRepository {
-	pub fn new(db: DatabaseConnection) -> Self {
-		Self { db }
+	pub fn new(db_connection: Arc<dyn DatabaseConnectionTrait>) -> Self {
+		Self { db_connection }
 	}
 }
 
@@ -36,16 +38,16 @@ pub trait UsersRepositoryTrait: Send + Sync {
 #[async_trait]
 impl UsersRepositoryTrait for UsersRepository {
 	fn get_db(&self) -> &DatabaseConnection {
-		&self.db
+		self.db_connection.get_connection()
 	}
 	async fn find_all(&self) -> Result<Vec<UserModel>, AppError> {
-		let users = User::find().all(&self.db).await?;
+		let users = User::find().all(self.get_db()).await?;
 
 		Ok(users)
 	}
 
 	async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError> {
-		let user = User::find_by_id(id).one(&self.db).await?.ok_or(AppError::NotFound)?;
+		let user = User::find_by_id(id).one(self.get_db()).await?.ok_or(AppError::NotFound)?;
 
 		Ok(user)
 	}
@@ -53,7 +55,7 @@ impl UsersRepositoryTrait for UsersRepository {
 	async fn find_by_username(&self, username: &str) -> Result<UserModel, AppError> {
 		let user = User::find()
 			.filter(users::Column::Username.eq(username))
-			.one(&self.db)
+			.one(self.get_db())
 			.await?
 			.ok_or(AppError::NotFound)?;
 
@@ -98,7 +100,7 @@ impl UsersRepositoryTrait for UsersRepository {
 
 		user_active_model.updated_at = Set(Some(now.into()));
 
-		let updated_user = user_active_model.update(&self.db).await?;
+		let updated_user = user_active_model.update(self.get_db()).await?;
 
 		Ok(updated_user)
 	}
@@ -107,7 +109,7 @@ impl UsersRepositoryTrait for UsersRepository {
 		let user = self.find_by_id(id).await?;
 		let user_active_model: UserActiveModel = user.into();
 
-		user_active_model.delete(&self.db).await?;
+		user_active_model.delete(self.get_db()).await?;
 
 		Ok(())
 	}
@@ -115,7 +117,7 @@ impl UsersRepositoryTrait for UsersRepository {
 	async fn find_by_email(&self, email: &str) -> Result<UserModel, AppError> {
 		let user = User::find()
 			.filter(users::Column::Email.eq(email))
-			.one(&self.db)
+			.one(self.get_db())
 			.await?
 			.ok_or(AppError::NotFound)?;
 

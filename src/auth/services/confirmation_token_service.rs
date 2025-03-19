@@ -1,5 +1,4 @@
 use crate::common::error::app_error::AppError;
-use crate::config::app_config::AppConfig;
 use crate::i18n::setup::translate;
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -7,6 +6,7 @@ use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode}
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
+use crate::di::AppConfigTrait;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum TokenType {
@@ -28,15 +28,19 @@ pub struct ConfirmationClaims {
 
 #[derive(Clone)]
 pub struct ConfirmationTokenService {
+	app_config: Arc<dyn AppConfigTrait>,
 	confirmation_token_secret: String,
 	confirmation_token_expires_in: i64,
 }
 
 impl ConfirmationTokenService {
-	pub fn new(app_config: Arc<AppConfig>) -> Self {
+	pub fn new(app_config: Arc<dyn AppConfigTrait>) -> Self {
+		let confirmation_token_secret = app_config.get_config().security.tokens.confirmation_token.secret.clone();
+		let confirmation_token_expires_in = app_config.get_config().security.tokens.confirmation_token.expires_in;
 		Self {
-			confirmation_token_secret: app_config.security.tokens.confirmation_token.secret.clone(),
-			confirmation_token_expires_in: app_config.security.tokens.confirmation_token.expires_in,
+			app_config,
+			confirmation_token_secret,
+			confirmation_token_expires_in
 		}
 	}
 }

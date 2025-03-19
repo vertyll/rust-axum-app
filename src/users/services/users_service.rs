@@ -26,6 +26,7 @@ use chrono::Utc;
 use sea_orm::EntityTrait;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, DatabaseTransaction, Set, TransactionTrait};
 use std::sync::Arc;
+use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct UsersService {
@@ -33,6 +34,7 @@ pub struct UsersService {
 	user_roles_service: Arc<dyn UserRolesServiceTrait>,
 	email_service: Arc<dyn EmailsServiceTrait>,
 	confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
+	app_config: Arc<dyn AppConfigTrait>,
 	confirmation_token_expires_in: i64,
 }
 
@@ -42,14 +44,16 @@ impl UsersService {
 		user_roles_service: Arc<dyn UserRolesServiceTrait>,
 		email_service: Arc<dyn EmailsServiceTrait>,
 		confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
-		app_config: Arc<AppConfig>,
+		app_config: Arc<dyn AppConfigTrait>,
 	) -> Self {
+		let confirmation_token_expires_in = app_config.get_config().security.tokens.confirmation_token.expires_in;
 		Self {
 			users_repository,
 			user_roles_service,
 			email_service,
 			confirmation_token_service,
-			confirmation_token_expires_in: app_config.security.tokens.confirmation_token.expires_in,
+			app_config,
+			confirmation_token_expires_in
 		}
 	}
 

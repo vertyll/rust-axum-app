@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::roles::entities::roles;
@@ -8,20 +9,22 @@ use chrono::Utc;
 use sea_orm::{
 	ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set,
 };
+use crate::di::DatabaseConnectionTrait;
 
 #[derive(Clone)]
 pub struct UserRolesRepository {
-	db: DatabaseConnection,
+	db_connection: Arc<dyn DatabaseConnectionTrait>,
 }
 
 impl UserRolesRepository {
-	pub fn new(db: DatabaseConnection) -> Self {
-		Self { db }
+	pub fn new(db_connection: Arc<dyn DatabaseConnectionTrait>) -> Self {
+		Self { db_connection }
 	}
 }
 
 #[async_trait]
 pub trait UserRolesRepositoryTrait: Send + Sync {
+	fn get_db(&self) -> &DatabaseConnection;
 	async fn find_user_roles(&self, user_id: i32) -> Result<Vec<role_entity::Model>, AppError>;
 	async fn assign_user_role_in_transaction(
 		&self,
@@ -34,11 +37,14 @@ pub trait UserRolesRepositoryTrait: Send + Sync {
 
 #[async_trait]
 impl UserRolesRepositoryTrait for UserRolesRepository {
+	fn get_db(&self) -> &DatabaseConnection {
+		self.db_connection.get_connection()
+	}
 	async fn find_user_roles(&self, user_id: i32) -> Result<Vec<role_entity::Model>, AppError> {
 		let user_roles = UserRole::find()
 			.filter(user_roles::Column::UserId.eq(user_id))
 			.find_with_related(Role)
-			.all(&self.db)
+			.all(self.get_db())
 			.await?;
 
 		let roles = user_roles.into_iter().flat_map(|(_, roles)| roles).collect();
@@ -81,7 +87,7 @@ impl UserRolesRepositoryTrait for UserRolesRepository {
 					.add(user_roles::Column::UserId.eq(user_id))
 					.add(user_roles::Column::RoleId.eq(role_id)),
 			)
-			.exec(&self.db)
+			.exec(self.get_db())
 			.await?;
 
 		if result.rows_affected == 0 {

@@ -6,20 +6,22 @@ use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
 use tera::{Context, Tera};
+use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct EmailsService {
 	pub email_strategy: Arc<dyn EmailStrategy>,
+	pub app_config: Arc<dyn AppConfigTrait>,
 	pub templates: Arc<Tera>,
 	pub app_url: String,
 }
 
 impl EmailsService {
-	pub fn new(app_config: Arc<AppConfig>) -> Self {
-		let app_url = app_config.server.app_url.clone();
+	pub fn new(app_config: Arc<dyn AppConfigTrait>) -> Self {
+		let app_url = app_config.get_config().server.app_url.clone();
 
-		let environment = app_config.server.app_environment.clone();
-		let emails = app_config.emails.clone();
+		let environment = app_config.get_config().server.app_environment.clone();
+		let emails = app_config.get_config().emails.clone();
 
 		let email_strategy = crate::emails::strategies::emails_strategy::get_email_strategy(&environment, &emails);
 
@@ -31,6 +33,7 @@ impl EmailsService {
 
 		Self {
 			email_strategy,
+			app_config,
 			templates: Arc::new(templates),
 			app_url,
 		}

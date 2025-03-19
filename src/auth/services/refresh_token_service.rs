@@ -2,7 +2,6 @@ use crate::auth::dto::access_token_dto::AccessTokenDto;
 use crate::auth::repositories::refresh_token_repository::RefreshTokenRepositoryTrait;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
-use crate::config::app_config::AppConfig;
 use crate::i18n::setup::translate;
 use crate::roles::services::user_roles_service::UserRolesServiceTrait;
 use async_trait::async_trait;
@@ -11,6 +10,7 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use sea_orm::DatabaseTransaction;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::di::AppConfigTrait;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
@@ -26,6 +26,7 @@ pub struct Claims {
 pub struct RefreshTokenService {
 	refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait>,
 	user_roles_service: Arc<dyn UserRolesServiceTrait>,
+	app_config: Arc<dyn AppConfigTrait>,
 	jwt_access_token_secret: String,
 	jwt_access_token_expires_in: i64,
 	jwt_refresh_token_expires_in: i64,
@@ -35,14 +36,19 @@ impl RefreshTokenService {
 	pub fn new(
 		refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait>,
 		user_roles_service: Arc<dyn UserRolesServiceTrait>,
-		app_config: Arc<AppConfig>,
+		app_config: Arc<dyn AppConfigTrait>,
 	) -> Self {
+		let jwt_access_token_secret = app_config.get_config().security.tokens.jwt_access_token.secret.clone();
+		let jwt_access_token_expires_in = app_config.get_config().security.tokens.jwt_access_token.expires_in;
+		let jwt_refresh_token_expires_in = app_config.get_config().security.tokens.jwt_refresh_token.expires_in;
+
 		Self {
 			refresh_token_repository,
 			user_roles_service,
-			jwt_access_token_secret: app_config.security.tokens.jwt_access_token.secret.clone(),
-			jwt_access_token_expires_in: app_config.security.tokens.jwt_access_token.expires_in,
-			jwt_refresh_token_expires_in: app_config.security.tokens.jwt_refresh_token.expires_in,
+			app_config,
+			jwt_access_token_secret,
+			jwt_access_token_expires_in,
+			jwt_refresh_token_expires_in
 		}
 	}
 	async fn generate_access_token(&self, user_id: i32) -> Result<String, AppError> {

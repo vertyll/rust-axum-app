@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::common::error::app_error::AppError;
 use crate::files::dto::create_file_dto::CreateFileDto;
 use crate::files::dto::update_file_dto::UpdateFileDto;
@@ -5,15 +6,16 @@ use crate::files::entities::files::{self, ActiveModel as FileActiveModel, Entity
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set};
 use serde_json::Value;
+use crate::di::DatabaseConnectionTrait;
 
 #[derive(Clone)]
 pub struct FilesRepository {
-	pub db: DatabaseConnection,
+	pub database_connection: Arc<dyn DatabaseConnectionTrait>,
 }
 
 impl FilesRepository {
-	pub fn new(db: DatabaseConnection) -> Self {
-		Self { db }
+	pub fn new(database_connection: Arc<dyn DatabaseConnectionTrait>) -> Self {
+		Self { database_connection }
 	}
 }
 
@@ -39,13 +41,13 @@ pub trait FilesRepositoryTrait: Send + Sync {
 #[async_trait]
 impl FilesRepositoryTrait for FilesRepository {
 	fn get_db(&self) -> &DatabaseConnection {
-		&self.db
+		self.database_connection.get_connection()
 	}
 
 	async fn find_all(&self) -> Result<Vec<FileModel>, AppError> {
 		let files = File::find()
 			.filter(files::Column::DeletedAt.is_null())
-			.all(&self.db)
+			.all(self.get_db())
 			.await?;
 
 		Ok(files)
@@ -54,7 +56,7 @@ impl FilesRepositoryTrait for FilesRepository {
 	async fn find_by_id(&self, id: i32) -> Result<FileModel, AppError> {
 		let file = File::find_by_id(id)
 			.filter(files::Column::DeletedAt.is_null())
-			.one(&self.db)
+			.one(self.get_db())
 			.await?
 			.ok_or(AppError::NotFound)?;
 
@@ -127,7 +129,7 @@ impl FilesRepositoryTrait for FilesRepository {
 
 		file_active_model.updated_at = Set(Some(now.into()));
 
-		let updated_file = file_active_model.update(&self.db).await?;
+		let updated_file = file_active_model.update(self.get_db()).await?;
 
 		Ok(updated_file)
 	}
@@ -136,7 +138,7 @@ impl FilesRepositoryTrait for FilesRepository {
 		let file = self.find_by_id(id).await?;
 		let file_active_model: FileActiveModel = file.into();
 
-		file_active_model.delete(&self.db).await?;
+		file_active_model.delete(self.get_db()).await?;
 
 		Ok(())
 	}
@@ -149,7 +151,7 @@ impl FilesRepositoryTrait for FilesRepository {
 		file_active_model.deleted_at = Set(Some(now.into()));
 		file_active_model.deleted_by_user_id = Set(Some(user_id));
 
-		file_active_model.update(&self.db).await?;
+		file_active_model.update(self.get_db()).await?;
 
 		Ok(())
 	}

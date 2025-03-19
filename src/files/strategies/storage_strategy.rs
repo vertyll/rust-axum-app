@@ -8,6 +8,7 @@ use std::io::Write;
 use std::path::Path;
 use tokio::fs as tokio_fs;
 use uuid::Uuid;
+use crate::di::AppConfigTrait;
 
 pub struct FileInfo {
 	pub filename: String,
@@ -102,11 +103,11 @@ impl StorageStrategy for LocalStorageStrategy {
 	}
 }
 
-pub fn get_storage_strategy(storage_type: &str, app_config: &AppConfig) -> Box<dyn StorageStrategy> {
+pub fn get_storage_strategy(storage_type: &str, app_config: &dyn AppConfigTrait) -> Box<dyn StorageStrategy> {
 	match storage_type {
 		_ => Box::new(LocalStorageStrategy::new(
-			app_config.files.upload_dir.clone(),
-			app_config.files.base_url.clone(),
+			app_config.get_config().files.upload_dir.clone(),
+			app_config.get_config().files.base_url.clone(),
 		)),
 	}
 }

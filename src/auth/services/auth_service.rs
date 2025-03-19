@@ -14,11 +14,13 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use sea_orm::DatabaseTransaction;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct AuthService {
 	users_service: Arc<dyn UsersServiceTrait>,
 	user_roles_service: Arc<dyn UserRolesServiceTrait>,
+	app_config: Arc<dyn AppConfigTrait>,
 	jwt_access_token_secret: String,
 	jwt_access_token_expires_in: i64,
 }
@@ -43,13 +45,16 @@ impl AuthService {
 	pub fn new(
 		users_service: Arc<dyn UsersServiceTrait>,
 		user_roles_service: Arc<dyn UserRolesServiceTrait>,
-		app_config: Arc<AppConfig>,
+		app_config: Arc<dyn AppConfigTrait>,
 	) -> Self {
+		let jwt_access_token_secret = app_config.get_config().security.tokens.jwt_access_token.secret.clone();
+		let jwt_access_token_expires_in = app_config.get_config().security.tokens.jwt_access_token.expires_in;
 		Self {
 			users_service,
 			user_roles_service,
-			jwt_access_token_secret: app_config.security.tokens.jwt_access_token.secret.clone(),
-			jwt_access_token_expires_in: app_config.security.tokens.jwt_access_token.expires_in,
+			app_config,
+			jwt_access_token_secret,
+			jwt_access_token_expires_in
 		}
 	}
 }
