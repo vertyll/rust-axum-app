@@ -78,25 +78,25 @@ pub struct AppModule {
 
 // Dependency injection
 pub fn initialize_di(db: DatabaseConnection, config: Arc<AppConfig>) -> AppModule {
-	// Tworzymy współdzielone zasoby
+	// Add db connection and config
 	let db_arc = Arc::new(db);
 	let db_connection = Arc::new(DatabaseConnectionImpl::new(db_arc)) as Arc<dyn DatabaseConnectionTrait>;
 	let app_config = Arc::new(AppConfigImpl::new(config)) as Arc<dyn AppConfigTrait>;
 
-	// 1. Repozytoria
+	// 1. Add repositories
 	let refresh_token_repository = Arc::new(RefreshTokenRepository::new(db_connection.clone()));
 	let users_repository = Arc::new(UsersRepository::new(db_connection.clone()));
 	let roles_repository = Arc::new(RolesRepository::new(db_connection.clone()));
 	let user_roles_repository = Arc::new(UserRolesRepository::new(db_connection.clone()));
 	let files_repository = Arc::new(FilesRepository::new(db_connection.clone()));
 
-	// 2. Podstawowe serwisy bez zależności od innych serwisów
+	// 2. Add basic dependencies
 	let email_service = Arc::new(EmailsService::new(app_config.clone()));
 	let confirmation_token_service = Arc::new(ConfirmationTokenService::new(app_config.clone()));
+
+	// 3. Add dependencies with sub-dependencies
 	let roles_service = Arc::new(RolesService::new(roles_repository.clone()));
 	let user_roles_service = Arc::new(UserRolesService::new(user_roles_repository.clone()));
-
-	// 3. Serwisy zależne od innych serwisów
 	let users_service = Arc::new(UsersService::new(
 		users_repository.clone(),
 		user_roles_service.clone(),
