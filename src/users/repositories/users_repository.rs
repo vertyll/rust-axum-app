@@ -110,9 +110,13 @@ impl UsersRepositoryTrait for UsersRepository {
 
 	async fn delete(&self, id: i32) -> Result<(), AppError> {
 		let user = self.find_by_id(id).await?;
-		let user_active_model: UserActiveModel = user.into();
+		let mut user_active_model: UserActiveModel = user.into();
 
-		user_active_model.delete(self.get_db()).await?;
+		user_active_model.is_active = Set(false);
+		let now = chrono::Utc::now();
+		user_active_model.updated_at = Set(Some(now.into()));
+
+		user_active_model.update(self.get_db()).await?;
 
 		Ok(())
 	}

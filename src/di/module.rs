@@ -57,6 +57,8 @@ impl AppConfigTrait for AppConfigImpl {
 
 #[derive(Clone)]
 pub struct AppModule {
+	pub db_connection: Arc<dyn DatabaseConnectionTrait>,
+	pub app_config: Arc<dyn AppConfigTrait>,
 	pub users_service: Arc<dyn UsersServiceTrait>,
 	pub auth_service: Arc<dyn AuthServiceTrait>,
 	pub refresh_token_service: Arc<dyn RefreshTokenServiceTrait>,
@@ -115,6 +117,8 @@ pub fn initialize_di(db: DatabaseConnection, config: Arc<AppConfig>) -> AppModul
 	let files_service = Arc::new(FilesService::new(files_repository.clone(), app_config.clone()));
 
 	AppModule {
+		db_connection,
+		app_config,
 		users_service,
 		auth_service,
 		refresh_token_service,

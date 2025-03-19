@@ -30,6 +30,7 @@ pub async fn configure(config: Arc<AppConfig>, di_module: Arc<AppModule>) -> Rou
 		.layer(Extension(di_module.confirmation_token_service.clone()))
 		.layer(Extension(di_module.files_service.clone()))
 		.layer(Extension(di_module.roles_service.clone()))
+		.layer(Extension(di_module.db_connection.clone()))
 		.layer(from_fn(i18n_middleware))
 		.layer(from_fn(move |req, next| {
 			let jwt_secret = jwt_access_token_secret.clone();

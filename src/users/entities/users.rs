@@ -12,7 +12,10 @@ pub struct Model {
 	pub email: String,
 	#[serde(skip_serializing)]
 	pub password_hash: String,
+	#[serde(skip_serializing)]
 	pub is_email_confirmed: bool,
+	#[serde(skip_serializing)]
+	pub is_active: bool,
 	#[serde(skip_serializing)]
 	pub email_confirmation_token: Option<String>,
 	#[serde(skip_serializing)]

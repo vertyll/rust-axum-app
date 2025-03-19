@@ -1,9 +1,17 @@
 use crate::auth::services::auth_service::Claims;
 use crate::common::error::app_error::AppError;
+use crate::di::DatabaseConnectionTrait;
 use crate::i18n::setup::translate;
-use axum::{extract::FromRequestParts, http::request::Parts};
+use crate::users::entities::users::Column;
+use crate::users::entities::users::Entity as User;
+use axum::{
+	extract::{Extension, FromRequestParts},
+	http::request::Parts,
+};
 use jsonwebtoken::{DecodingKey, Validation, decode};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use std::future::Future;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct JwtSecret(pub String);
@@ -44,7 +52,34 @@ where
 			)
 			.map_err(|_| AppError::AuthenticationError(translate("auth.errors.invalid_token")))?;
 
-			Ok(JwtAuth(token_data.claims))
+			let claims = token_data.claims;
+
+			// Get database connection from request extensions
+			let db = parts
+				.extensions
+				.get::<Arc<dyn DatabaseConnectionTrait>>()
+				.ok_or_else(|| AppError::InternalError)?
+				.get_connection();
+
+			// Verify user is active and email confirmed
+			let user = User::find()
+				.filter(Column::Id.eq(claims.sub))
+				.one(db)
+				.await
+				.map_err(|_| AppError::AuthenticationError(translate("auth.errors.invalid_user")))?
+				.ok_or_else(|| AppError::AuthenticationError(translate("auth.errors.user_not_found")))?;
+
+			if !user.is_active {
+				return Err(AppError::AuthenticationError(translate("auth.errors.account_inactive")));
+			}
+
+			if !user.is_email_confirmed {
+				return Err(AppError::AuthenticationError(translate(
+					"auth.errors.email_not_confirmed",
+				)));
+			}
+
+			Ok(JwtAuth(claims))
 		}
 	}
 }

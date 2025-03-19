@@ -232,6 +232,10 @@ impl UsersServiceTrait for UsersService {
 	async fn login(&self, username: &str, password: &str) -> Result<UserModel, AppError> {
 		let user = self.users_repository.find_by_username(username).await?;
 
+		if !user.is_active {
+			return Err(AppError::AuthenticationError(translate("auth.errors.account_inactive")));
+		}
+
 		if !user.is_email_confirmed {
 			return Err(AppError::AuthenticationError(translate(
 				"auth.errors.email_not_confirmed",
