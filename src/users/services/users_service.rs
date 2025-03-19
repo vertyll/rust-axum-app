@@ -30,7 +30,7 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct UsersService {
-	pub users_repository: Arc<dyn UsersRepositoryTrait>,
+	users_repository: Arc<dyn UsersRepositoryTrait>,
 	user_roles_service: Arc<dyn UserRolesServiceTrait>,
 	email_service: Arc<dyn EmailsServiceTrait>,
 	confirmation_token_service: Arc<dyn ConfirmationTokenServiceTrait>,
