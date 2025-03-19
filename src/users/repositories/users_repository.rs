@@ -1,11 +1,11 @@
-use std::sync::Arc;
 use crate::common::error::app_error::AppError;
+use crate::di::DatabaseConnectionTrait;
 use crate::users::dto::create_user_dto::CreateUserDto;
 use crate::users::dto::update_user_dto::UpdateUserDto;
 use crate::users::entities::users::{self, ActiveModel as UserActiveModel, Entity as User, Model as UserModel};
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set};
-use crate::di::DatabaseConnectionTrait;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct UsersRepository {
@@ -47,7 +47,10 @@ impl UsersRepositoryTrait for UsersRepository {
 	}
 
 	async fn find_by_id(&self, id: i32) -> Result<UserModel, AppError> {
-		let user = User::find_by_id(id).one(self.get_db()).await?.ok_or(AppError::NotFound)?;
+		let user = User::find_by_id(id)
+			.one(self.get_db())
+			.await?
+			.ok_or(AppError::NotFound)?;
 
 		Ok(user)
 	}

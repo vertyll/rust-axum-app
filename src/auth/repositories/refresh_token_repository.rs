@@ -2,15 +2,13 @@ use crate::auth::entities::refresh_tokens::{
 	self, ActiveModel as RefreshTokenActiveModel, Entity as RefreshToken, Model as RefreshTokenModel,
 };
 use crate::common::error::app_error::AppError;
+use crate::di::DatabaseConnectionTrait;
 use crate::users::entities::users::{Entity as User, Model as UserModel};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
-use sea_orm::{
-	ActiveModelTrait, ActiveValue, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter, Set,
-};
+use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter, Set};
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::di::DatabaseConnectionTrait;
 
 #[derive(Clone)]
 pub struct RefreshTokenRepository {

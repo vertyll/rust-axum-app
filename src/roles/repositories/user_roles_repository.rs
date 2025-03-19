@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
+use crate::di::DatabaseConnectionTrait;
 use crate::roles::entities::roles;
 use crate::roles::entities::roles::{self as role_entity, Entity as Role};
 use crate::roles::entities::user_roles::{self, Entity as UserRole, Model as UserRoleModel};
@@ -9,7 +9,7 @@ use chrono::Utc;
 use sea_orm::{
 	ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set,
 };
-use crate::di::DatabaseConnectionTrait;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct UserRolesRepository {

@@ -2,6 +2,7 @@ use crate::auth::dto::access_token_dto::AccessTokenDto;
 use crate::auth::repositories::refresh_token_repository::RefreshTokenRepositoryTrait;
 use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
+use crate::di::AppConfigTrait;
 use crate::i18n::setup::translate;
 use crate::roles::services::user_roles_service::UserRolesServiceTrait;
 use async_trait::async_trait;
@@ -10,7 +11,6 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use sea_orm::DatabaseTransaction;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::di::AppConfigTrait;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
@@ -48,7 +48,7 @@ impl RefreshTokenService {
 			app_config,
 			jwt_access_token_secret,
 			jwt_access_token_expires_in,
-			jwt_refresh_token_expires_in
+			jwt_refresh_token_expires_in,
 		}
 	}
 	async fn generate_access_token(&self, user_id: i32) -> Result<String, AppError> {

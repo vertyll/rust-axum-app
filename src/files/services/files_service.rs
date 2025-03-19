@@ -1,6 +1,7 @@
 use crate::common::enums::file_storage_type_enum::FileStorageTypeEnum;
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
+use crate::di::AppConfigTrait;
 use crate::files::dto::create_file_dto::CreateFileDto;
 use crate::files::dto::update_file_dto::UpdateFileDto;
 use crate::files::entities::files::Model as FileModel;
@@ -11,7 +12,6 @@ use async_trait::async_trait;
 use axum::extract::Multipart;
 use sea_orm::{DatabaseConnection, DatabaseTransaction, TransactionTrait};
 use std::sync::Arc;
-use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct FilesService {

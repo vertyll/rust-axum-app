@@ -1,12 +1,12 @@
-use std::sync::Arc;
 use crate::common::error::app_error::AppError;
+use crate::di::DatabaseConnectionTrait;
 use crate::files::dto::create_file_dto::CreateFileDto;
 use crate::files::dto::update_file_dto::UpdateFileDto;
 use crate::files::entities::files::{self, ActiveModel as FileActiveModel, Entity as File, Model as FileModel};
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QueryFilter, Set};
 use serde_json::Value;
-use crate::di::DatabaseConnectionTrait;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct FilesRepository {

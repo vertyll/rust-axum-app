@@ -5,6 +5,7 @@ use crate::common::enums::role_enum::RoleEnum;
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::config::app_config::AppConfig;
+use crate::di::AppConfigTrait;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
 use crate::users::entities::users::Model as User;
 use crate::users::services::users_service::{UsersService, UsersServiceTrait};
@@ -14,7 +15,6 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use sea_orm::DatabaseTransaction;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct AuthService {
@@ -54,7 +54,7 @@ impl AuthService {
 			user_roles_service,
 			app_config,
 			jwt_access_token_secret,
-			jwt_access_token_expires_in
+			jwt_access_token_expires_in,
 		}
 	}
 }

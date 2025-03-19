@@ -3,6 +3,8 @@ use crate::auth::services::auth_service::{AuthService, AuthServiceTrait};
 use crate::auth::services::confirmation_token_service::{ConfirmationTokenService, ConfirmationTokenServiceTrait};
 use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
 use crate::config::app_config::AppConfig;
+use crate::di::module;
+use crate::di::{AppConfigImpl, AppConfigTrait, DatabaseConnectionImpl, DatabaseConnectionTrait};
 use crate::emails::services::emails_service::{EmailsService, EmailsServiceTrait};
 use crate::files::repositories::files_repository::FilesRepository;
 use crate::files::services::files_service::{FilesService, FilesServiceTrait};
@@ -19,8 +21,6 @@ use sea_orm::DatabaseConnection;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use crate::di::{AppConfigImpl, AppConfigTrait, DatabaseConnectionImpl, DatabaseConnectionTrait};
-use crate::di::module;
 
 rust_i18n::i18n!("translations");
 
@@ -29,12 +29,12 @@ mod auth;
 mod common;
 mod config;
 mod database;
+mod di;
 mod emails;
 mod files;
 mod i18n;
 mod roles;
 mod users;
-mod di;
 
 #[tokio::main]
 async fn main() {

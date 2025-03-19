@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use crate::common::error::app_error::AppError;
+use crate::di::DatabaseConnectionTrait;
 use crate::roles::entities::roles::{self, ActiveModel as RoleActiveModel, Entity as Role, Model as RoleModel};
 use async_trait::async_trait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
-use crate::di::DatabaseConnectionTrait;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct RolesRepository {
@@ -39,7 +39,10 @@ impl RolesRepositoryTrait for RolesRepository {
 	}
 
 	async fn find_by_id(&self, id: i32) -> Result<RoleModel, AppError> {
-		let role = Role::find_by_id(id).one(self.get_db()).await?.ok_or(AppError::NotFound)?;
+		let role = Role::find_by_id(id)
+			.one(self.get_db())
+			.await?
+			.ok_or(AppError::NotFound)?;
 		Ok(role)
 	}
 

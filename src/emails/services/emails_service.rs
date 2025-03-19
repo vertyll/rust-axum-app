@@ -1,12 +1,12 @@
 use crate::common::error::app_error::AppError;
 use crate::common::r#struct::app_state::AppState;
 use crate::config::app_config::AppConfig;
+use crate::di::AppConfigTrait;
 use crate::emails::strategies::emails_strategy::EmailStrategy;
 use async_trait::async_trait;
 use std::path::Path;
 use std::sync::Arc;
 use tera::{Context, Tera};
-use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct EmailsService {

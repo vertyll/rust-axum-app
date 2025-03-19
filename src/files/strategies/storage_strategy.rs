@@ -1,5 +1,6 @@
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
+use crate::di::AppConfigTrait;
 use async_trait::async_trait;
 use axum::extract::Multipart;
 use serde_json::Value;
@@ -8,7 +9,6 @@ use std::io::Write;
 use std::path::Path;
 use tokio::fs as tokio_fs;
 use uuid::Uuid;
-use crate::di::AppConfigTrait;
 
 pub struct FileInfo {
 	pub filename: String,

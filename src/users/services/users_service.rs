@@ -9,6 +9,7 @@ use crate::auth::services::confirmation_token_service::{
 };
 use crate::common::error::app_error::AppError;
 use crate::config::app_config::AppConfig;
+use crate::di::AppConfigTrait;
 use crate::emails::services::emails_service::{EmailsService, EmailsServiceTrait};
 use crate::i18n::setup::translate;
 use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
@@ -26,7 +27,6 @@ use chrono::Utc;
 use sea_orm::EntityTrait;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, DatabaseTransaction, Set, TransactionTrait};
 use std::sync::Arc;
-use crate::di::AppConfigTrait;
 
 #[derive(Clone)]
 pub struct UsersService {
@@ -53,7 +53,7 @@ impl UsersService {
 			email_service,
 			confirmation_token_service,
 			app_config,
-			confirmation_token_expires_in
+			confirmation_token_expires_in,
 		}
 	}
 

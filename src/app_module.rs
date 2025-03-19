@@ -2,13 +2,13 @@ use crate::auth::auth_module;
 use crate::auth::middleware::jwt_secret_middleware::jwt_secret_middleware;
 use crate::common::middleware::i18n_middleware::i18n_middleware;
 use crate::config::app_config::AppConfig;
+use crate::di::module::AppModule;
 use crate::files::files_module;
 use crate::users::users_module;
 use axum::{Extension, Router, middleware::from_fn};
 use std::sync::Arc;
 use tower_cookies::CookieManagerLayer;
 use tower_http::trace::TraceLayer;
-use crate::di::module::AppModule;
 
 pub async fn configure(config: Arc<AppConfig>, di_module: Arc<AppModule>) -> Router {
 	let jwt_access_token_secret = config.security.tokens.jwt_access_token.secret.clone();
