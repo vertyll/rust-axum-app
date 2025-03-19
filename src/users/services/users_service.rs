@@ -32,7 +32,7 @@ use std::sync::Arc;
 #[shaku(interface = IUsersService)]
 pub struct UsersServiceImpl {
 	#[shaku(inject)]
-	pub users_repository: Arc<dyn IUsersRepository>,
+	users_repository: Arc<dyn IUsersRepository>,
 	#[shaku(inject)]
 	user_roles_service: Arc<dyn IUserRolesService>,
 	#[shaku(inject)]
