@@ -23,6 +23,9 @@ auth:
     email_not_confirmed: "Adres e-mail nie został potwierdzony"
     invalid_credentials: "Nieprawidłowe dane uwierzytelniające"
     email_already_confirmed: "Adres e-mail został już potwierdzony"
+    invalid_user: "Nieprawidłowy użytkownik"
+    user_not_found: "Użytkownik nie został znaleziony"
+    account_inactive: "Konto jest nieaktywne"
 users:
   validators:
     username:

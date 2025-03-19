@@ -27,6 +27,7 @@ impl MigrationTrait for Migration {
 							.not_null()
 							.default(false),
 					)
+					.col(ColumnDef::new(Users::IsActive).boolean().not_null().default(true))
 					.col(ColumnDef::new(Users::EmailConfirmationToken).string())
 					.col(ColumnDef::new(Users::EmailConfirmationTokenExpiry).timestamp_with_time_zone())
 					.col(ColumnDef::new(Users::EmailChangeToken).string())
@@ -59,6 +60,7 @@ enum Users {
 	Email,
 	PasswordHash,
 	IsEmailConfirmed,
+	IsActive,
 	EmailConfirmationToken,
 	EmailConfirmationTokenExpiry,
 	EmailChangeToken,

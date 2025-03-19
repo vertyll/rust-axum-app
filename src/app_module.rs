@@ -5,6 +5,7 @@ use crate::auth::services::confirmation_token_service::IConfirmationTokenService
 use crate::auth::services::refresh_token_service::IRefreshTokenService;
 use crate::common::middleware::i18n_middleware::i18n_middleware;
 use crate::config::app_config::AppConfig;
+use crate::di::IDatabaseConnection;
 use crate::di::module::AppModule;
 use crate::emails::services::emails_service::IEmailsService;
 use crate::files::files_module;
@@ -31,6 +32,7 @@ pub async fn configure(config: Arc<AppConfig>, di_module: Arc<AppModule>) -> Rou
 	let confirmation_token_service: Arc<dyn IConfirmationTokenService> = di_module.resolve();
 	let files_service: Arc<dyn IFilesService> = di_module.resolve();
 	let roles_service: Arc<dyn IRolesService> = di_module.resolve();
+	let db_connection: Arc<dyn IDatabaseConnection> = di_module.resolve();
 
 	Router::new()
 		// Add all modules
@@ -49,6 +51,7 @@ pub async fn configure(config: Arc<AppConfig>, di_module: Arc<AppModule>) -> Rou
 		.layer(Extension(confirmation_token_service))
 		.layer(Extension(files_service))
 		.layer(Extension(roles_service))
+		.layer(Extension(db_connection))
 		.layer(from_fn(i18n_middleware))
 		.layer(from_fn(move |req, next| {
 			let jwt_secret = jwt_access_token_secret.clone();

@@ -23,6 +23,9 @@ auth:
     email_not_confirmed: "Email address not confirmed"
     invalid_credentials: "Invalid credentials"
     email_already_confirmed: "Email address already confirmed"
+    invalid_user: "Invalid user"
+    user_not_found: "User not found"
+    account_inactive: "Account is inactive"
 users:
   validators:
     username:
