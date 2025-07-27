@@ -18,7 +18,7 @@ This project implements a simple HTTP server using the Axum web framework for Ru
 
 ## Features
 
-- JWT authentication with refresh token (http secure cookie)
+- JWT authentication with refresh token (http only secure cookie)
 - RBAC (Role-Based Access Control)
 - internationalization
 - modularity architecture
