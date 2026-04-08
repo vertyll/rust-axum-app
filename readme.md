@@ -11,7 +11,7 @@ This project implements a simple HTTP server using the Axum web framework for Ru
 - REST API with Axum
 - Asynchronous runtime with Tokio
 - JSON serialization with Serde
-- SeaORM - Async ORM for Rust
+- SeaORM – Async ORM for Rust
 - cargo-watch for REPL
 - rust-i18n for internationalization
 - PostgreSQL for database
