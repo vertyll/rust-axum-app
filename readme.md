@@ -1,4 +1,4 @@
-# Rust Axum App
+## Project Assumptions
 
 A web server application built with Rust and Axum framework.
 
