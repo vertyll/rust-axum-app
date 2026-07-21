@@ -39,6 +39,16 @@ impl JwtTokenService {
 	}
 }
 
+/// Maps a decode failure to the domain: expiry is the one condition clients
+/// act on differently (refresh vs. re-authenticate); everything else
+/// collapses into `InvalidToken` without leaking why verification failed.
+fn verification_error(err: jsonwebtoken::errors::Error) -> IdentityError {
+	match err.kind() {
+		jsonwebtoken::errors::ErrorKind::ExpiredSignature => IdentityError::ExpiredToken,
+		_ => IdentityError::InvalidToken,
+	}
+}
+
 impl TokenService for JwtTokenService {
 	fn sign_access(&self, user: &User) -> Result<String, IdentityError> {
 		let now = Timestamp::now().as_second();
@@ -60,7 +70,7 @@ impl TokenService for JwtTokenService {
 			&Validation::default(),
 		)
 		.map(|data| data.claims)
-		.map_err(|_| IdentityError::InvalidToken)
+		.map_err(verification_error)
 	}
 
 	fn confirmation_ttl_seconds(&self) -> i64 {
@@ -94,7 +104,7 @@ impl TokenService for JwtTokenService {
 			&Validation::default(),
 		)
 		.map(|data| data.claims)
-		.map_err(|_| IdentityError::InvalidToken)
+		.map_err(verification_error)
 	}
 }
 #[cfg(test)]
@@ -148,7 +158,7 @@ mod tests {
 		let stale = service(-3600).sign_access(&user()).unwrap();
 		assert!(matches!(
 			service(3600).verify_access(&stale),
-			Err(IdentityError::InvalidToken)
+			Err(IdentityError::ExpiredToken)
 		));
 	}
 

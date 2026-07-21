@@ -5,16 +5,15 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use validator::Validate;
 
-use super::error::ApiError;
-use super::requests::{UpdateFileRequest, UploadQuery};
-use super::responses::FileResponse;
+use super::Files;
 use crate::files::application::commands::UploadFile;
 use crate::files::application::ports::FileStorage;
 use crate::files::application::service::FilesService;
 use crate::files::domain::{FileId, FileRepository, FilesError, StorageKind};
+use crate::files::infrastructure::http::error::ApiError;
+use crate::files::infrastructure::http::requests::{UpdateFileRequest, UploadQuery};
+use crate::files::infrastructure::http::responses::FileResponse;
 use crate::identity::{Auth, RequireAdmin};
-
-type Files<R, S> = State<Arc<FilesService<R, S>>>;
 
 pub fn files_router<R, S>(files: Arc<FilesService<R, S>>) -> Router
 where

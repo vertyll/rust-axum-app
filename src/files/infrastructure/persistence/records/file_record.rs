@@ -28,7 +28,7 @@ pub struct FileRecord {
 }
 
 impl FileRecord {
-	pub(super) fn to_domain(&self) -> Result<StoredFile, FilesError> {
+	pub fn to_domain(&self) -> Result<StoredFile, FilesError> {
 		Ok(StoredFile {
 			id: FileId(self.id),
 			filename: self.filename.clone(),

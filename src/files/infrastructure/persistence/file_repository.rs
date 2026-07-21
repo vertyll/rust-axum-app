@@ -1,4 +1,4 @@
-use super::file_record::FileRecord;
+use super::records::FileRecord;
 use crate::files::domain::{FileId, FileRepository, FilesError, NewStoredFile, StoredFile};
 
 #[derive(Clone)]

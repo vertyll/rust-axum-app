@@ -1,7 +1,6 @@
 # Rust Axum App
 
-A modular monolith in Rust: **axum 0.8** + **Toasty ORM 0.8** (PostgreSQL), structured
-as textbook hexagonal architecture (ports & adapters) with DDD layering.
+A modular monolith in Rust – Axum, structured as textbook hexagonal architecture (ports & adapters) with DDD layering.
 
 ## Architecture
 
@@ -10,10 +9,8 @@ Two bounded contexts, each an independent module with the same three layers:
 ```
 src/
 ├── identity/                    # accounts, auth, sessions, roles, e-mail flows
-│   ├── domain/                  # User aggregate + value objects, RefreshSession,
-│   │                            # domain rules, repository ports
-│   ├── application/             # IdentityService use cases; ports: PasswordHasher,
-│   │                            # TokenService, IdentityMailer
+│   ├── domain/                  # User aggregate + value objects, RefreshSession, domain rules, repository ports
+│   ├── application/             # IdentityService use cases; ports: PasswordHasher, TokenService, IdentityMailer
 │   └── infrastructure/          # adapters: Toasty persistence, Argon2, JWT,
 │                                # SMTP+Tera, axum HTTP (routes, DTOs, auth guards)
 ├── files/                       # file upload & metadata
@@ -66,8 +63,7 @@ The API listens on `http://127.0.0.1:3000` (`APP_HOST`/`APP_PORT`).
 ### Migrations
 
 `cargo run` uses `push_schema` in development (plain CREATE TABLEs from the models).
-For managed, versioned migrations use the bundled CLI (files land in `toasty/`,
-configured by `Toasty.toml`):
+For managed, versioned migrations use the bundled CLI (files land in `toasty/`, configured by `Toasty.toml`):
 
 ```bash
 cargo run --bin cli -- migration generate --name init
@@ -98,11 +94,18 @@ Locale is negotiated per request from `Accept-Language` (`en`, `pl`).
 
 ## Configuration
 
-Environment variables are the single source of truth (12-factor): `dotenvy` loads `.env` locally, the platform injects them in production. There is deliberately no TOML layer — a second configuration source adds precedence rules, and config files in a repository are the classic way secrets leak. Outside development the app refuses to boot when the token secrets are unset, and on startup it logs one structured line of the effective configuration with secrets redacted.
+Environment variables are the single source of truth (12-factor): `dotenvy` loads `.env` locally, the platform injects 
+them in production. There is deliberately no TOML layer — a second configuration source adds precedence rules, and 
+config files in a repository are the classic way secrets leak. Outside development the app refuses to boot when the 
+token secrets are unset, and on startup it logs one structured line of the effective configuration with secrets redacted.
 
 ## Tests
 
-`cargo test` runs the unit suite. The domain layer is tested directly — the aggregates are pure functions of `now`, so no mocking is needed. Every application use case runs against in-memory fake adapters plugged into the same ports as production, so the full flows (registration, login, token refresh, e-mail change, upload compensation) execute without a database, an SMTP server or real cryptography. Adapter-level tests cover JWT round-trips, Argon2 hashing and the local file storage.
+`cargo test` runs the unit suite. The domain layer is tested directly — the aggregates are pure functions of `now`, so 
+no mocking is needed. Every application use case runs against in-memory fake adapters plugged into the same ports as 
+production, so the full flows (registration, login, token refresh, e-mail change, upload compensation) execute without 
+a database, an SMTP server or real cryptography. Adapter-level tests cover JWT round-trips, Argon2 hashing and the 
+local file storage.
 
 For a coverage report:
 
@@ -111,4 +114,4 @@ cargo install cargo-llvm-cov
 cargo llvm-cov --html
 ```
 
-Integration tests against a real Postgres (e.g. via testcontainers) are the natural next layer and are not included here.
+Integration tests against a real Postgres (e.g. via Testcontainers) are the natural next layer and are not included here.
