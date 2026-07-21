@@ -51,24 +51,14 @@ fn identity_response(err: IdentityError) -> Response {
 	match err {
 		// Business-rule violations.
 		E::EmailTaken => field_error("email", "already_exists", "users.errors.user_already_exists"),
-		E::UsernameTaken => {
-			field_error("username", "already_exists", "users.errors.username_already_exists")
-		}
-		E::SameEmailAsCurrent => {
-			field_error("email", "same_email", "users.errors.new_email_same_as_current")
-		}
+		E::UsernameTaken => field_error("username", "already_exists", "users.errors.username_already_exists"),
+		E::SameEmailAsCurrent => field_error("email", "same_email", "users.errors.new_email_same_as_current"),
 		E::InvalidCurrentPassword => {
 			field_error("current_password", "invalid", "users.errors.invalid_current_password")
 		}
-		E::EmailAlreadyConfirmed => {
-			field_error("email", "already_confirmed", "auth.errors.email_already_confirmed")
-		}
-		E::InvalidEmail => {
-			field_error("email", "invalid_format", "users.validators.email.invalid_format")
-		}
-		E::UsernameTooShort => {
-			field_error("username", "too_short", "users.validators.username.too_short")
-		}
+		E::EmailAlreadyConfirmed => field_error("email", "already_confirmed", "auth.errors.email_already_confirmed"),
+		E::InvalidEmail => field_error("email", "invalid_format", "users.validators.email.invalid_format"),
+		E::UsernameTooShort => field_error("username", "too_short", "users.validators.username.too_short"),
 
 		// Authentication problems.
 		E::InvalidCredentials => authentication("auth.errors.invalid_credentials"),
@@ -94,10 +84,11 @@ fn identity_response(err: IdentityError) -> Response {
 			(StatusCode::FORBIDDEN, Json(json!({ "error": body }))).into_response()
 		}
 
-		E::UserNotFound => {
-			(StatusCode::NOT_FOUND, Json(json!({ "error": translate("errors.not_found") })))
-				.into_response()
-		}
+		E::UserNotFound => (
+			StatusCode::NOT_FOUND,
+			Json(json!({ "error": translate("errors.not_found") })),
+		)
+			.into_response(),
 
 		// Adapter failures: log the detail, return a generic body.
 		E::PersistenceFailure(detail) => {
@@ -144,6 +135,9 @@ fn authentication(message_key: &str) -> Response {
 }
 
 fn internal(message_key: &str) -> Response {
-	(StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": translate(message_key) })))
+	(
+		StatusCode::INTERNAL_SERVER_ERROR,
+		Json(json!({ "error": translate(message_key) })),
+	)
 		.into_response()
 }

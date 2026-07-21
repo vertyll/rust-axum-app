@@ -28,10 +28,7 @@ where
 		.with_state(files)
 }
 
-async fn list_files<R, S>(
-	State(files): Files<R, S>,
-	Auth(_claims): Auth,
-) -> Result<Json<Vec<FileResponse>>, ApiError>
+async fn list_files<R, S>(State(files): Files<R, S>, Auth(_claims): Auth) -> Result<Json<Vec<FileResponse>>, ApiError>
 where
 	R: FileRepository,
 	S: FileStorage,
@@ -74,8 +71,7 @@ where
 	})? {
 		if field.name() == Some("file") {
 			let original_name = field.file_name().unwrap_or("unknown").to_string();
-			let mime_type =
-				field.content_type().unwrap_or("application/octet-stream").to_string();
+			let mime_type = field.content_type().unwrap_or("application/octet-stream").to_string();
 			let data = field
 				.bytes()
 				.await
@@ -85,7 +81,12 @@ where
 				})?
 				.to_vec();
 
-			upload = Some(UploadFile { data, original_name, mime_type, storage });
+			upload = Some(UploadFile {
+				data,
+				original_name,
+				mime_type,
+				storage,
+			});
 		}
 	}
 

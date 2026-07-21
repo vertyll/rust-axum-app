@@ -38,10 +38,7 @@ impl FileRecord {
 			encoding: self.encoding.clone(),
 			size: self.size,
 			storage: self.storage_type.parse().map_err(|_| {
-				FilesError::CorruptData(format!(
-					"file {}: unknown storage type {}",
-					self.id, self.storage_type
-				))
+				FilesError::CorruptData(format!("file {}: unknown storage type {}", self.id, self.storage_type))
 			})?,
 			url: self.url.clone(),
 			metadata: self.metadata.0.clone(),

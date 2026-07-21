@@ -3,8 +3,7 @@ use toasty::Deferred;
 
 use super::{EmailHistoryRecord, RefreshTokenRecord, UserRoleRecord};
 use crate::identity::domain::{
-	Email, IdentityError, PasswordHash, PendingEmailChange, RoleName, StoredToken, User, UserId,
-	Username,
+	Email, IdentityError, PasswordHash, PendingEmailChange, RoleName, StoredToken, User, UserId, Username,
 };
 
 #[derive(Debug, toasty::Model)]
@@ -50,8 +49,7 @@ impl UserRecord {
 			self.email_confirmation_token.clone(),
 			self.email_confirmation_token_expiry,
 		);
-		let password_reset =
-			stored_token(self.password_reset_token.clone(), self.password_reset_token_expiry);
+		let password_reset = stored_token(self.password_reset_token.clone(), self.password_reset_token_expiry);
 
 		let email_change = match (
 			stored_token(self.email_change_token.clone(), self.email_change_token_expiry),
@@ -59,16 +57,14 @@ impl UserRecord {
 		) {
 			(Some(token), Some(pending)) => Some(PendingEmailChange {
 				token,
-				new_email: Email::parse(pending.clone())
-					.map_err(|_| corrupt("invalid pending e-mail"))?,
+				new_email: Email::parse(pending.clone()).map_err(|_| corrupt("invalid pending e-mail"))?,
 			}),
 			_ => None,
 		};
 
 		Ok(User {
 			id: UserId(self.id),
-			username: Username::parse(self.username.clone())
-				.map_err(|_| corrupt("invalid username"))?,
+			username: Username::parse(self.username.clone()).map_err(|_| corrupt("invalid username"))?,
 			email: Email::parse(self.email.clone()).map_err(|_| corrupt("invalid e-mail"))?,
 			password_hash: PasswordHash::new(self.password_hash.clone()),
 			is_email_confirmed: self.is_email_confirmed,
@@ -84,5 +80,8 @@ impl UserRecord {
 }
 
 fn stored_token(value: Option<String>, expires_at: Option<Timestamp>) -> Option<StoredToken> {
-	Some(StoredToken { value: value?, expires_at: expires_at? })
+	Some(StoredToken {
+		value: value?,
+		expires_at: expires_at?,
+	})
 }

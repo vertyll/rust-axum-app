@@ -103,7 +103,10 @@ mod tests {
 	#[test]
 	fn storage_kind_parses_case_insensitively() {
 		assert_eq!("Local".parse::<StorageKind>(), Ok(StorageKind::Local));
-		assert!(matches!("s3".parse::<StorageKind>(), Err(FilesError::InvalidStorageType)));
+		assert!(matches!(
+			"s3".parse::<StorageKind>(),
+			Err(FilesError::InvalidStorageType)
+		));
 	}
 
 	#[test]

@@ -37,7 +37,12 @@ fn parse_kind(value: &str) -> Result<TokenKind, IdentityError> {
 
 impl TokenService for FakeTokens {
 	fn sign_access(&self, user: &User) -> Result<String, IdentityError> {
-		let roles = user.roles.iter().map(|role| role.as_str()).collect::<Vec<_>>().join(",");
+		let roles = user
+			.roles
+			.iter()
+			.map(|role| role.as_str())
+			.collect::<Vec<_>>()
+			.join(",");
 		Ok(format!("access|{}|{}|{}|{roles}", user.id.0, user.username, user.email))
 	}
 
@@ -46,7 +51,10 @@ impl TokenService for FakeTokens {
 		if parts.next() != Some("access") {
 			return Err(IdentityError::InvalidToken);
 		}
-		let sub = parts.next().and_then(|v| v.parse().ok()).ok_or(IdentityError::InvalidToken)?;
+		let sub = parts
+			.next()
+			.and_then(|v| v.parse().ok())
+			.ok_or(IdentityError::InvalidToken)?;
 		let username = parts.next().ok_or(IdentityError::InvalidToken)?.to_string();
 		let email = parts.next().ok_or(IdentityError::InvalidToken)?.to_string();
 		let roles = parts
@@ -56,7 +64,14 @@ impl TokenService for FakeTokens {
 			.filter_map(|role| role.parse::<RoleName>().ok())
 			.collect();
 		let now = Timestamp::now().as_second();
-		Ok(AccessClaims { sub, username, email, roles, exp: now + self.ttl, iat: now })
+		Ok(AccessClaims {
+			sub,
+			username,
+			email,
+			roles,
+			exp: now + self.ttl,
+			iat: now,
+		})
 	}
 
 	fn confirmation_ttl_seconds(&self) -> i64 {
@@ -86,11 +101,22 @@ impl TokenService for FakeTokens {
 			return Err(IdentityError::InvalidToken);
 		}
 		let kind = parse_kind(parts.next().ok_or(IdentityError::InvalidToken)?)?;
-		let sub = parts.next().and_then(|v| v.parse().ok()).ok_or(IdentityError::InvalidToken)?;
+		let sub = parts
+			.next()
+			.and_then(|v| v.parse().ok())
+			.ok_or(IdentityError::InvalidToken)?;
 		let email = parts.next().ok_or(IdentityError::InvalidToken)?.to_string();
 		let new_email = parts.next().filter(|v| !v.is_empty()).map(str::to_string);
 		let jti = parts.next().ok_or(IdentityError::InvalidToken)?.to_string();
 		let now = Timestamp::now().as_second();
-		Ok(ConfirmationClaims { sub, email, kind, new_email, exp: now + self.ttl, iat: now, jti })
+		Ok(ConfirmationClaims {
+			sub,
+			email,
+			kind,
+			new_email,
+			exp: now + self.ttl,
+			iat: now,
+			jti,
+		})
 	}
 }

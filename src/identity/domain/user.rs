@@ -108,7 +108,10 @@ pub struct StoredToken {
 
 impl StoredToken {
 	pub fn new(value: impl Into<String>, expires_at: Timestamp) -> Self {
-		Self { value: value.into(), expires_at }
+		Self {
+			value: value.into(),
+			expires_at,
+		}
 	}
 
 	fn verify(&self, presented: &str, now: Timestamp) -> Result<(), IdentityError> {
@@ -144,7 +147,12 @@ pub struct NewUser {
 impl NewUser {
 	/// Registers a new account with the default role.
 	pub fn register(username: Username, email: Email, password_hash: PasswordHash) -> Self {
-		Self { username, email, password_hash, roles: vec![RoleName::User] }
+		Self {
+			username,
+			email,
+			password_hash,
+			roles: vec![RoleName::User],
+		}
 	}
 }
 
@@ -165,7 +173,6 @@ pub struct User {
 }
 
 impl User {
-
 	/// An account may authenticate only when active and confirmed.
 	pub fn ensure_can_authenticate(&self) -> Result<(), IdentityError> {
 		if !self.is_active {
@@ -180,7 +187,6 @@ impl User {
 	pub fn has_role(&self, role: RoleName) -> bool {
 		self.roles.contains(&role)
 	}
-
 
 	pub fn start_email_confirmation(&mut self, token: StoredToken) {
 		self.email_confirmation = Some(token);
@@ -199,7 +205,6 @@ impl User {
 		self.email_confirmation = None;
 		Ok(())
 	}
-
 
 	pub fn start_password_reset(&mut self, token: StoredToken) {
 		self.password_reset = Some(token);
@@ -227,12 +232,7 @@ impl User {
 		self.password_hash = new_hash;
 	}
 
-
-	pub fn start_email_change(
-		&mut self,
-		new_email: Email,
-		token: StoredToken,
-	) -> Result<(), IdentityError> {
+	pub fn start_email_change(&mut self, new_email: Email, token: StoredToken) -> Result<(), IdentityError> {
 		if new_email == self.email {
 			return Err(IdentityError::SameEmailAsCurrent);
 		}
@@ -242,11 +242,7 @@ impl User {
 
 	/// Confirms a pending e-mail change; returns the previous address so the
 	/// caller can record it in the change history.
-	pub fn complete_email_change(
-		&mut self,
-		presented: &str,
-		now: Timestamp,
-	) -> Result<Email, IdentityError> {
+	pub fn complete_email_change(&mut self, presented: &str, now: Timestamp) -> Result<Email, IdentityError> {
 		let pending = self.email_change.as_ref().ok_or(IdentityError::InvalidToken)?;
 		pending.token.verify(presented, now)?;
 
@@ -254,7 +250,6 @@ impl User {
 		self.email_change = None;
 		Ok(previous)
 	}
-
 
 	/// "Deleting" a user is a business-level deactivation, never a row delete.
 	pub fn deactivate(&mut self) {
@@ -389,6 +384,9 @@ mod tests {
 		assert!(user.ensure_can_authenticate().is_ok());
 
 		user.deactivate();
-		assert!(matches!(user.ensure_can_authenticate(), Err(IdentityError::AccountInactive)));
+		assert!(matches!(
+			user.ensure_can_authenticate(),
+			Err(IdentityError::AccountInactive)
+		));
 	}
 }

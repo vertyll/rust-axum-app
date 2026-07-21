@@ -23,16 +23,19 @@ impl JwtTokenService {
 		confirmation_secret: String,
 		confirmation_ttl_seconds: i64,
 	) -> Self {
-		Self { access_secret, access_ttl_seconds, confirmation_secret, confirmation_ttl_seconds }
+		Self {
+			access_secret,
+			access_ttl_seconds,
+			confirmation_secret,
+			confirmation_ttl_seconds,
+		}
 	}
 
 	fn sign<C: serde::Serialize>(&self, claims: &C, secret: &str) -> Result<String, IdentityError> {
-		encode(&Header::default(), claims, &EncodingKey::from_secret(secret.as_bytes())).map_err(
-			|err| {
-				tracing::error!("token signing failed: {err}");
-				IdentityError::TokenSigningFailure
-			},
-		)
+		encode(&Header::default(), claims, &EncodingKey::from_secret(secret.as_bytes())).map_err(|err| {
+			tracing::error!("token signing failed: {err}");
+			IdentityError::TokenSigningFailure
+		})
 	}
 }
 
@@ -101,9 +104,7 @@ mod tests {
 	use super::JwtTokenService;
 	use crate::identity::application::ports::TokenService;
 	use crate::identity::application::token::TokenKind;
-	use crate::identity::domain::{
-		Email, IdentityError, PasswordHash, RoleName, User, UserId, Username,
-	};
+	use crate::identity::domain::{Email, IdentityError, PasswordHash, RoleName, User, UserId, Username};
 
 	fn service(ttl: i64) -> JwtTokenService {
 		JwtTokenService::new("access-secret".into(), ttl, "confirm-secret".into(), ttl)
@@ -138,12 +139,17 @@ mod tests {
 	#[test]
 	fn rejects_foreign_and_expired_tokens() {
 		let token = service(3600).sign_access(&user()).unwrap();
-		let foreign =
-			JwtTokenService::new("other".into(), 3600, "confirm-secret".into(), 3600);
-		assert!(matches!(foreign.verify_access(&token), Err(IdentityError::InvalidToken)));
+		let foreign = JwtTokenService::new("other".into(), 3600, "confirm-secret".into(), 3600);
+		assert!(matches!(
+			foreign.verify_access(&token),
+			Err(IdentityError::InvalidToken)
+		));
 
 		let stale = service(-3600).sign_access(&user()).unwrap();
-		assert!(matches!(service(3600).verify_access(&stale), Err(IdentityError::InvalidToken)));
+		assert!(matches!(
+			service(3600).verify_access(&stale),
+			Err(IdentityError::InvalidToken)
+		));
 	}
 
 	#[test]

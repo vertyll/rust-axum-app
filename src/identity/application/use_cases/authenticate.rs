@@ -27,8 +27,10 @@ mod tests {
 	async fn returns_claims_for_a_live_account() {
 		let h = harness();
 		let user = confirmed_user(&h, "alice", "a@example.com").await;
-		let credentials =
-			Credentials { username: "alice".into(), password: "password123".into() };
+		let credentials = Credentials {
+			username: "alice".into(),
+			password: "password123".into(),
+		};
 		let (_, tokens) = h.service.login(credentials).await.unwrap();
 
 		let claims = h.service.authenticate(&tokens.access_token).await.unwrap();
@@ -42,8 +44,10 @@ mod tests {
 		assert!(matches!(garbage, IdentityError::InvalidToken));
 
 		let mut user = confirmed_user(&h, "alice", "a@example.com").await;
-		let credentials =
-			Credentials { username: "alice".into(), password: "password123".into() };
+		let credentials = Credentials {
+			username: "alice".into(),
+			password: "password123".into(),
+		};
 		let (_, tokens) = h.service.login(credentials).await.unwrap();
 		user.is_active = false;
 		h.users.set(user);

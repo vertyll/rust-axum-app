@@ -5,13 +5,12 @@ use crate::identity::application::token::TokenKind;
 use crate::identity::domain::{IdentityError, UserId, UserRepository};
 
 impl<P: IdentityPorts> IdentityService<P> {
-	pub async fn request_email_change(
-		&self,
-		user_id: UserId,
-		cmd: RequestEmailChange,
-	) -> Result<(), IdentityError> {
-		let mut user =
-			self.users.find_by_id(user_id).await?.ok_or(IdentityError::UserNotFound)?;
+	pub async fn request_email_change(&self, user_id: UserId, cmd: RequestEmailChange) -> Result<(), IdentityError> {
+		let mut user = self
+			.users
+			.find_by_id(user_id)
+			.await?
+			.ok_or(IdentityError::UserNotFound)?;
 
 		if let Some(existing) = self.users.find_by_email(&cmd.new_email).await? {
 			if existing.id != user_id {
@@ -19,12 +18,9 @@ impl<P: IdentityPorts> IdentityService<P> {
 			}
 		}
 
-		let token = self.tokens.sign_confirmation(
-			TokenKind::EmailChange,
-			user.id,
-			&user.email,
-			Some(&cmd.new_email),
-		)?;
+		let token =
+			self.tokens
+				.sign_confirmation(TokenKind::EmailChange, user.id, &user.email, Some(&cmd.new_email))?;
 		user.start_email_change(cmd.new_email, self.confirmation_token(&token))?;
 		self.users.update(&user).await?;
 
@@ -41,7 +37,9 @@ mod tests {
 	use crate::identity::domain::{Email, IdentityError};
 
 	fn cmd(email: &str) -> RequestEmailChange {
-		RequestEmailChange { new_email: Email::parse(email).unwrap() }
+		RequestEmailChange {
+			new_email: Email::parse(email).unwrap(),
+		}
 	}
 
 	#[tokio::test]
@@ -49,7 +47,10 @@ mod tests {
 		let h = harness();
 		let user = confirmed_user(&h, "alice", "a@example.com").await;
 
-		h.service.request_email_change(user.id, cmd("new@example.com")).await.unwrap();
+		h.service
+			.request_email_change(user.id, cmd("new@example.com"))
+			.await
+			.unwrap();
 		let pending = h.users.get(user.id).unwrap().email_change.unwrap();
 		assert_eq!(pending.new_email.as_str(), "new@example.com");
 

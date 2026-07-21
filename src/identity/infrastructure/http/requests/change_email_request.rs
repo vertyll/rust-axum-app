@@ -13,6 +13,8 @@ pub struct ChangeEmailRequest {
 
 impl ChangeEmailRequest {
 	pub fn into_command(self) -> Result<RequestEmailChange, ApiError> {
-		Ok(RequestEmailChange { new_email: Email::parse(self.email)? })
+		Ok(RequestEmailChange {
+			new_email: Email::parse(self.email)?,
+		})
 	}
 }

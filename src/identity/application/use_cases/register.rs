@@ -20,8 +20,11 @@ mod tests {
 	#[tokio::test]
 	async fn creates_account_opens_session_and_mails_token() {
 		let h = harness();
-		let (user, tokens) =
-			h.service.register(register_cmd("alice", "alice@example.com")).await.unwrap();
+		let (user, tokens) = h
+			.service
+			.register(register_cmd("alice", "alice@example.com"))
+			.await
+			.unwrap();
 
 		assert!(!user.is_email_confirmed);
 		assert!(h.users.get(user.id).unwrap().email_confirmation.is_some());
@@ -36,8 +39,15 @@ mod tests {
 	#[tokio::test]
 	async fn rejects_taken_email() {
 		let h = harness();
-		h.service.register(register_cmd("alice", "a@example.com")).await.unwrap();
-		let err = h.service.register(register_cmd("bob", "a@example.com")).await.unwrap_err();
+		h.service
+			.register(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
+		let err = h
+			.service
+			.register(register_cmd("bob", "a@example.com"))
+			.await
+			.unwrap_err();
 		assert!(matches!(err, IdentityError::EmailTaken));
 	}
 
@@ -45,7 +55,11 @@ mod tests {
 	async fn mailer_failure_does_not_roll_back_registration() {
 		let h = harness();
 		h.mailer.set_fail(true);
-		let (user, _) = h.service.register(register_cmd("alice", "a@example.com")).await.unwrap();
+		let (user, _) = h
+			.service
+			.register(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
 		assert!(h.users.get(user.id).is_some());
 		assert!(h.mailer.sent().is_empty());
 	}

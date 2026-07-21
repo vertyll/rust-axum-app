@@ -31,7 +31,13 @@ pub(crate) fn harness() -> Harness {
 		mailer.clone(),
 		3600,
 	);
-	Harness { service, users, sessions, tokens, mailer }
+	Harness {
+		service,
+		users,
+		sessions,
+		tokens,
+		mailer,
+	}
 }
 
 pub(crate) fn register_cmd(username: &str, email: &str) -> RegisterUser {

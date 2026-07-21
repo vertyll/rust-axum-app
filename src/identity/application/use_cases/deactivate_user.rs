@@ -16,7 +16,11 @@ mod tests {
 	#[tokio::test]
 	async fn flips_is_active_off() {
 		let h = harness();
-		let user = h.service.create_user(register_cmd("alice", "a@example.com")).await.unwrap();
+		let user = h
+			.service
+			.create_user(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
 		h.service.deactivate_user(user.id).await.unwrap();
 		assert!(!h.users.get(user.id).unwrap().is_active);
 	}

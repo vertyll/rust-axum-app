@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use super::records::{EmailHistoryRecord, RoleRecord, UserRecord, UserRoleRecord};
-use crate::identity::domain::{
-	Email, IdentityError, NewUser, RoleName, User, UserId, UserRepository, Username,
-};
+use crate::identity::domain::{Email, IdentityError, NewUser, RoleName, User, UserId, UserRepository, Username};
 
 #[derive(Clone)]
 pub struct ToastyUserRepository {
@@ -15,10 +13,7 @@ impl ToastyUserRepository {
 		Self { db }
 	}
 
-	async fn load_roles(
-		db: &mut toasty::Db,
-		user_id: i64,
-	) -> Result<Vec<RoleName>, IdentityError> {
+	async fn load_roles(db: &mut toasty::Db, user_id: i64) -> Result<Vec<RoleName>, IdentityError> {
 		let roles = RoleRecord::filter(
 			RoleRecord::fields()
 				.user_roles()
@@ -31,10 +26,7 @@ impl ToastyUserRepository {
 		Ok(roles.iter().filter_map(|role| role.name.parse().ok()).collect())
 	}
 
-	async fn map_one(
-		db: &mut toasty::Db,
-		record: Option<UserRecord>,
-	) -> Result<Option<User>, IdentityError> {
+	async fn map_one(db: &mut toasty::Db, record: Option<UserRecord>) -> Result<Option<User>, IdentityError> {
 		match record {
 			Some(record) => {
 				let roles = Self::load_roles(db, record.id).await?;
@@ -65,14 +57,15 @@ impl UserRepository for ToastyUserRepository {
 				.exec(&mut tx)
 				.await
 				.map_err(persistence)?
-				.ok_or_else(|| {
-					IdentityError::PersistenceFailure(format!("role '{role}' is not seeded"))
-				})?;
+				.ok_or_else(|| IdentityError::PersistenceFailure(format!("role '{role}' is not seeded")))?;
 
-			toasty::create!(UserRoleRecord { user_id: record.id, role_id: role_record.id })
-				.exec(&mut tx)
-				.await
-				.map_err(persistence)?;
+			toasty::create!(UserRoleRecord {
+				user_id: record.id,
+				role_id: role_record.id
+			})
+			.exec(&mut tx)
+			.await
+			.map_err(persistence)?;
 		}
 
 		tx.commit().await.map_err(persistence)?;
@@ -143,11 +136,7 @@ impl UserRepository for ToastyUserRepository {
 		apply_update(&mut db, user).await
 	}
 
-	async fn save_email_change(
-		&self,
-		user: &User,
-		previous_email: &Email,
-	) -> Result<(), IdentityError> {
+	async fn save_email_change(&self, user: &User, previous_email: &Email) -> Result<(), IdentityError> {
 		let mut db = self.db.clone();
 		let mut tx = db.transaction().await.map_err(persistence)?;
 

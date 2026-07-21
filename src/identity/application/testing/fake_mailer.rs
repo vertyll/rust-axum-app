@@ -34,7 +34,11 @@ impl FakeMailer {
 		if *self.fail.lock().unwrap() {
 			return Err(IdentityError::MailerFailure("test mailer down".into()));
 		}
-		let mail = SentEmail { kind, to: to.to_string(), token: token.to_string() };
+		let mail = SentEmail {
+			kind,
+			to: to.to_string(),
+			token: token.to_string(),
+		};
 		self.sent.lock().unwrap().push(mail);
 		Ok(())
 	}
@@ -50,12 +54,7 @@ impl IdentityMailer for FakeMailer {
 		self.record("confirmation", to, token)
 	}
 
-	async fn send_password_reset(
-		&self,
-		to: &Email,
-		_username: &Username,
-		token: &str,
-	) -> Result<(), IdentityError> {
+	async fn send_password_reset(&self, to: &Email, _username: &Username, token: &str) -> Result<(), IdentityError> {
 		self.record("password_reset", to, token)
 	}
 

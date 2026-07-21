@@ -34,7 +34,14 @@ impl<P: IdentityPorts> IdentityService<P> {
 		mailer: P::Mailer,
 		refresh_ttl_seconds: i64,
 	) -> Self {
-		Self { users, sessions, hasher, tokens, mailer, refresh_ttl_seconds }
+		Self {
+			users,
+			sessions,
+			hasher,
+			tokens,
+			mailer,
+			refresh_ttl_seconds,
+		}
 	}
 
 	pub fn refresh_ttl_seconds(&self) -> i64 {
@@ -74,23 +81,24 @@ impl<P: IdentityPorts> IdentityService<P> {
 		}
 
 		let password_hash = self.hasher.hash(cmd.password).await?;
-		let mut user =
-			self.users.create(NewUser::register(cmd.username, cmd.email, password_hash)).await?;
+		let mut user = self
+			.users
+			.create(NewUser::register(cmd.username, cmd.email, password_hash))
+			.await?;
 
-		let token = self.tokens.sign_confirmation(
-			TokenKind::EmailConfirmation,
-			user.id,
-			&user.email,
-			None,
-		)?;
+		let token = self
+			.tokens
+			.sign_confirmation(TokenKind::EmailConfirmation, user.id, &user.email, None)?;
 		user.start_email_confirmation(self.confirmation_token(&token));
 		self.users.update(&user).await?;
 
 		// E-mail after commit, best-effort: rolling registration back on an
 		// SMTP failure would couple a network call into persistence (the
 		// production-grade fix is an outbox).
-		if let Err(err) =
-			self.mailer.send_email_confirmation(&user.email, &user.username, &token).await
+		if let Err(err) = self
+			.mailer
+			.send_email_confirmation(&user.email, &user.username, &token)
+			.await
 		{
 			tracing::error!(user_id = %user.id, "failed to send confirmation e-mail: {err}");
 		}

@@ -2,9 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use jiff::Timestamp;
 
-use crate::identity::domain::{
-	Email, IdentityError, NewUser, User, UserId, UserRepository, Username,
-};
+use crate::identity::domain::{Email, IdentityError, NewUser, User, UserId, UserRepository, Username};
 
 #[derive(Default)]
 struct State {
@@ -20,7 +18,13 @@ pub(crate) struct InMemoryUsers {
 
 impl InMemoryUsers {
 	pub fn get(&self, id: UserId) -> Option<User> {
-		self.state.lock().unwrap().users.iter().find(|user| user.id == id).cloned()
+		self.state
+			.lock()
+			.unwrap()
+			.users
+			.iter()
+			.find(|user| user.id == id)
+			.cloned()
 	}
 
 	/// Inserts or replaces, for direct test setup.
@@ -65,7 +69,14 @@ impl UserRepository for InMemoryUsers {
 	}
 
 	async fn find_by_email(&self, email: &Email) -> Result<Option<User>, IdentityError> {
-		Ok(self.state.lock().unwrap().users.iter().find(|user| &user.email == email).cloned())
+		Ok(self
+			.state
+			.lock()
+			.unwrap()
+			.users
+			.iter()
+			.find(|user| &user.email == email)
+			.cloned())
 	}
 
 	async fn find_by_username(&self, username: &Username) -> Result<Option<User>, IdentityError> {
@@ -88,11 +99,7 @@ impl UserRepository for InMemoryUsers {
 		Ok(())
 	}
 
-	async fn save_email_change(
-		&self,
-		user: &User,
-		previous_email: &Email,
-	) -> Result<(), IdentityError> {
+	async fn save_email_change(&self, user: &User, previous_email: &Email) -> Result<(), IdentityError> {
 		let mut state = self.state.lock().unwrap();
 		let index = state
 			.users

@@ -31,7 +31,11 @@ mod tests {
 	#[tokio::test]
 	async fn confirms_with_the_mailed_token() {
 		let h = harness();
-		let user = h.service.create_user(register_cmd("alice", "a@example.com")).await.unwrap();
+		let user = h
+			.service
+			.create_user(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
 		let token = h.mailer.last_token().unwrap();
 
 		h.service.confirm_email(&token).await.unwrap();
@@ -43,7 +47,11 @@ mod tests {
 	#[tokio::test]
 	async fn rejects_wrong_kind_and_non_stored_tokens() {
 		let h = harness();
-		let user = h.service.create_user(register_cmd("alice", "a@example.com")).await.unwrap();
+		let user = h
+			.service
+			.create_user(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
 
 		let reset = h
 			.tokens

@@ -12,6 +12,9 @@ pub struct ResetPasswordRequest {
 
 impl From<ResetPasswordRequest> for ResetPassword {
 	fn from(request: ResetPasswordRequest) -> Self {
-		ResetPassword { token: request.token, new_password: request.password }
+		ResetPassword {
+			token: request.token,
+			new_password: request.password,
+		}
 	}
 }

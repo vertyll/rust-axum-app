@@ -41,7 +41,9 @@ mod tests {
 
 	#[test]
 	fn maps_into_domain_command() {
-		let cmd = request("alice", "alice@example.com", "password123").into_command().unwrap();
+		let cmd = request("alice", "alice@example.com", "password123")
+			.into_command()
+			.unwrap();
 		assert_eq!(cmd.username.as_str(), "alice");
 		assert_eq!(cmd.email.as_str(), "alice@example.com");
 	}

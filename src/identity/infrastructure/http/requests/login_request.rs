@@ -11,6 +11,9 @@ pub struct LoginRequest {
 
 impl From<LoginRequest> for Credentials {
 	fn from(request: LoginRequest) -> Self {
-		Credentials { username: request.username, password: request.password }
+		Credentials {
+			username: request.username,
+			password: request.password,
+		}
 	}
 }

@@ -17,7 +17,10 @@ mod tests {
 		let h = harness();
 		let alice = confirmed_user(&h, "alice", "a@example.com").await;
 		confirmed_user(&h, "bob", "b@example.com").await;
-		let login = |u: &str| Credentials { username: u.into(), password: "password123".into() };
+		let login = |u: &str| Credentials {
+			username: u.into(),
+			password: "password123".into(),
+		};
 		h.service.login(login("alice")).await.unwrap();
 		h.service.login(login("alice")).await.unwrap();
 		h.service.login(login("bob")).await.unwrap();

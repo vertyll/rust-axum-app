@@ -46,9 +46,10 @@ fn files_response(err: FilesError) -> Response {
 		E::NotFound => (StatusCode::NOT_FOUND, translate("errors.not_found")),
 		E::NoFileUploaded => (StatusCode::BAD_REQUEST, translate("files.errors.no_file")),
 		E::UploadFailed => (StatusCode::BAD_REQUEST, translate("files.errors.upload")),
-		E::InvalidStorageType => {
-			(StatusCode::BAD_REQUEST, translate("files.validators.file.storage_type.invalid"))
-		}
+		E::InvalidStorageType => (
+			StatusCode::BAD_REQUEST,
+			translate("files.validators.file.storage_type.invalid"),
+		),
 		E::PersistenceFailure(detail) => {
 			tracing::error!("persistence failure: {detail}");
 			(StatusCode::INTERNAL_SERVER_ERROR, translate("errors.database"))

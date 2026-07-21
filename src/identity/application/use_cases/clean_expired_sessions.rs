@@ -21,8 +21,10 @@ mod tests {
 	async fn drops_expired_keeps_live() {
 		let h = harness();
 		let user = confirmed_user(&h, "alice", "a@example.com").await;
-		let credentials =
-			Credentials { username: "alice".into(), password: "password123".into() };
+		let credentials = Credentials {
+			username: "alice".into(),
+			password: "password123".into(),
+		};
 		h.service.login(credentials).await.unwrap();
 		h.sessions.insert(RefreshSession {
 			token: "stale".into(),

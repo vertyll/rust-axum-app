@@ -40,8 +40,10 @@ mod tests {
 	async fn issues_a_fresh_access_token() {
 		let h = harness();
 		confirmed_user(&h, "alice", "a@example.com").await;
-		let credentials =
-			Credentials { username: "alice".into(), password: "password123".into() };
+		let credentials = Credentials {
+			username: "alice".into(),
+			password: "password123".into(),
+		};
 		let (_, tokens) = h.service.login(credentials).await.unwrap();
 
 		let access = h.service.refresh_access_token(&tokens.refresh_token).await.unwrap();

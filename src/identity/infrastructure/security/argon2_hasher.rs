@@ -10,8 +10,7 @@
 
 use argon2::Argon2;
 use argon2::password_hash::{
-	PasswordHash as ParsedHash, PasswordHasher as _, PasswordVerifier as _, SaltString,
-	rand_core::OsRng,
+	PasswordHash as ParsedHash, PasswordHasher as _, PasswordVerifier as _, SaltString, rand_core::OsRng,
 };
 
 use crate::identity::application::ports::PasswordHasher;
@@ -36,11 +35,7 @@ impl PasswordHasher for Argon2PasswordHasher {
 		.map_err(|_| IdentityError::HashingFailure)?
 	}
 
-	async fn verify(
-		&self,
-		plaintext: String,
-		hash: PasswordHash,
-	) -> Result<bool, IdentityError> {
+	async fn verify(&self, plaintext: String, hash: PasswordHash) -> Result<bool, IdentityError> {
 		tokio::task::spawn_blocking(move || {
 			let parsed = ParsedHash::new(hash.as_str()).map_err(|err| {
 				tracing::error!("stored password hash is unparsable: {err}");

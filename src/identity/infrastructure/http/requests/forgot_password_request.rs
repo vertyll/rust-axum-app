@@ -13,6 +13,8 @@ pub struct ForgotPasswordRequest {
 
 impl ForgotPasswordRequest {
 	pub fn into_command(self) -> Result<RequestPasswordReset, ApiError> {
-		Ok(RequestPasswordReset { email: Email::parse(self.email)? })
+		Ok(RequestPasswordReset {
+			email: Email::parse(self.email)?,
+		})
 	}
 }

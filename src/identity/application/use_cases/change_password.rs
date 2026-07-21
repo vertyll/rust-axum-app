@@ -4,16 +4,17 @@ use crate::identity::application::service::IdentityService;
 use crate::identity::domain::{IdentityError, UserId, UserRepository};
 
 impl<P: IdentityPorts> IdentityService<P> {
-	pub async fn change_password(
-		&self,
-		user_id: UserId,
-		cmd: ChangePassword,
-	) -> Result<(), IdentityError> {
-		let mut user =
-			self.users.find_by_id(user_id).await?.ok_or(IdentityError::UserNotFound)?;
+	pub async fn change_password(&self, user_id: UserId, cmd: ChangePassword) -> Result<(), IdentityError> {
+		let mut user = self
+			.users
+			.find_by_id(user_id)
+			.await?
+			.ok_or(IdentityError::UserNotFound)?;
 
-		let current_ok =
-			self.hasher.verify(cmd.current_password, user.password_hash.clone()).await?;
+		let current_ok = self
+			.hasher
+			.verify(cmd.current_password, user.password_hash.clone())
+			.await?;
 		if !current_ok {
 			return Err(IdentityError::InvalidCurrentPassword);
 		}

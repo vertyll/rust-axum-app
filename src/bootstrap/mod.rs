@@ -83,7 +83,10 @@ pub fn build_services(db: toasty::Db, config: &AppConfig) -> anyhow::Result<Serv
 		LocalFileStorage::new(&config.files.upload_dir, &config.files.base_url),
 	);
 
-	Ok(Services { identity: Arc::new(identity), files: Arc::new(files) })
+	Ok(Services {
+		identity: Arc::new(identity),
+		files: Arc::new(files),
+	})
 }
 
 /// Assembles the HTTP router. The composition root decides which routers
@@ -94,13 +97,10 @@ pub fn router(services: &Services, config: &AppConfig) -> Router {
 		identity_http::authenticate::<ProductionPorts>,
 	);
 
-	let auth_routes = identity_http::routes::auth_public_router(services.identity.clone()).merge(
-		identity_http::routes::auth_protected_router(services.identity.clone())
-			.layer(auth_layer.clone()),
-	);
+	let auth_routes = identity_http::routes::auth_public_router(services.identity.clone())
+		.merge(identity_http::routes::auth_protected_router(services.identity.clone()).layer(auth_layer.clone()));
 
-	let users_routes =
-		identity_http::routes::users_router(services.identity.clone()).layer(auth_layer.clone());
+	let users_routes = identity_http::routes::users_router(services.identity.clone()).layer(auth_layer.clone());
 
 	let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer);
 

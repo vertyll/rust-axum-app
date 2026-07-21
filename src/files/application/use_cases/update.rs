@@ -4,11 +4,7 @@ use crate::files::application::service::FilesService;
 use crate::files::domain::{FileId, FileRepository, FilesError, StoredFile};
 
 impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
-	pub async fn update(
-		&self,
-		id: FileId,
-		changes: UpdateFileMeta,
-	) -> Result<StoredFile, FilesError> {
+	pub async fn update(&self, id: FileId, changes: UpdateFileMeta) -> Result<StoredFile, FilesError> {
 		let mut file = self.get(id).await?;
 
 		if let Some(original_name) = changes.original_name {
@@ -44,8 +40,10 @@ mod tests {
 		let (service, _, _) = files_harness();
 		let file = service.upload(upload_cmd("note.txt", b"hello")).await.unwrap();
 
-		let changes =
-			UpdateFileMeta { original_name: Some("renamed.txt".into()), ..Default::default() };
+		let changes = UpdateFileMeta {
+			original_name: Some("renamed.txt".into()),
+			..Default::default()
+		};
 		let updated = service.update(file.id, changes).await.unwrap();
 
 		assert_eq!(updated.original_name, "renamed.txt");

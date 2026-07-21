@@ -165,8 +165,11 @@ impl AppConfig {
 			return Ok(());
 		}
 
-		let required =
-			["JWT_ACCESS_TOKEN_SECRET", "JWT_REFRESH_TOKEN_SECRET", "CONFIRMATION_TOKEN_SECRET"];
+		let required = [
+			"JWT_ACCESS_TOKEN_SECRET",
+			"JWT_REFRESH_TOKEN_SECRET",
+			"CONFIRMATION_TOKEN_SECRET",
+		];
 		for key in required {
 			if env::var(key).map(|value| value.trim().is_empty()).unwrap_or(true) {
 				bail!("{key} must be set when APP_ENVIRONMENT is not development");

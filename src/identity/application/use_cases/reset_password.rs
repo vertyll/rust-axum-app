@@ -34,12 +34,16 @@ mod tests {
 	async fn resets_with_the_mailed_token() {
 		let h = harness();
 		let user = confirmed_user(&h, "alice", "a@example.com").await;
-		let request =
-			RequestPasswordReset { email: Email::parse("a@example.com").unwrap() };
+		let request = RequestPasswordReset {
+			email: Email::parse("a@example.com").unwrap(),
+		};
 		h.service.request_password_reset(request).await.unwrap();
 		let token = h.mailer.last_token().unwrap();
 
-		let cmd = ResetPassword { token, new_password: "brand-new-pass".into() };
+		let cmd = ResetPassword {
+			token,
+			new_password: "brand-new-pass".into(),
+		};
 		h.service.reset_password(cmd).await.unwrap();
 
 		let stored = h.users.get(user.id).unwrap();
@@ -54,7 +58,10 @@ mod tests {
 		// The registration e-mail carried an *email-confirmation* token.
 		let confirmation = h.mailer.last_token().unwrap();
 
-		let cmd = ResetPassword { token: confirmation, new_password: "whatever-pass".into() };
+		let cmd = ResetPassword {
+			token: confirmation,
+			new_password: "whatever-pass".into(),
+		};
 		let err = h.service.reset_password(cmd).await.unwrap_err();
 		assert!(matches!(err, IdentityError::InvalidTokenType));
 	}

@@ -6,15 +6,9 @@ use super::error::FilesError;
 use super::file::{FileId, NewStoredFile, StoredFile};
 
 pub trait FileRepository: Clone + Send + Sync + 'static {
-	fn create(
-		&self,
-		file: NewStoredFile,
-	) -> impl Future<Output = Result<StoredFile, FilesError>> + Send;
+	fn create(&self, file: NewStoredFile) -> impl Future<Output = Result<StoredFile, FilesError>> + Send;
 
-	fn find_active_by_id(
-		&self,
-		id: FileId,
-	) -> impl Future<Output = Result<Option<StoredFile>, FilesError>> + Send;
+	fn find_active_by_id(&self, id: FileId) -> impl Future<Output = Result<Option<StoredFile>, FilesError>> + Send;
 
 	fn list_active(&self) -> impl Future<Output = Result<Vec<StoredFile>, FilesError>> + Send;
 

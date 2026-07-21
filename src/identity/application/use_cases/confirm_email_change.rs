@@ -34,8 +34,9 @@ mod tests {
 	async fn swaps_the_address_and_records_history() {
 		let h = harness();
 		let user = confirmed_user(&h, "alice", "a@example.com").await;
-		let request =
-			RequestEmailChange { new_email: Email::parse("new@example.com").unwrap() };
+		let request = RequestEmailChange {
+			new_email: Email::parse("new@example.com").unwrap(),
+		};
 		h.service.request_email_change(user.id, request).await.unwrap();
 		let token = h.mailer.last_token().unwrap();
 

@@ -16,7 +16,10 @@ mod tests {
 	async fn removes_only_the_presented_session() {
 		let h = harness();
 		let user = confirmed_user(&h, "alice", "a@example.com").await;
-		let creds = || Credentials { username: "alice".into(), password: "password123".into() };
+		let creds = || Credentials {
+			username: "alice".into(),
+			password: "password123".into(),
+		};
 		let (_, first) = h.service.login(creds()).await.unwrap();
 		h.service.login(creds()).await.unwrap();
 		assert_eq!(h.sessions.count(), 2);

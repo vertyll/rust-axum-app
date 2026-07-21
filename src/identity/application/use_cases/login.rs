@@ -8,8 +8,7 @@ impl<P: IdentityPorts> IdentityService<P> {
 	pub async fn login(&self, cmd: Credentials) -> Result<(User, AuthTokens), IdentityError> {
 		// All lookup failures collapse into `InvalidCredentials` so responses
 		// do not reveal whether a username exists.
-		let username =
-			Username::parse(cmd.username).map_err(|_| IdentityError::InvalidCredentials)?;
+		let username = Username::parse(cmd.username).map_err(|_| IdentityError::InvalidCredentials)?;
 		let user = self
 			.users
 			.find_by_username(&username)
@@ -34,7 +33,10 @@ mod tests {
 	use crate::identity::domain::IdentityError;
 
 	fn creds(username: &str, password: &str) -> Credentials {
-		Credentials { username: username.into(), password: password.into() }
+		Credentials {
+			username: username.into(),
+			password: password.into(),
+		}
 	}
 
 	#[tokio::test]
@@ -42,8 +44,7 @@ mod tests {
 		let h = harness();
 		let user = confirmed_user(&h, "alice", "a@example.com").await;
 
-		let (logged_in, tokens) =
-			h.service.login(creds("alice", "password123")).await.unwrap();
+		let (logged_in, tokens) = h.service.login(creds("alice", "password123")).await.unwrap();
 		assert_eq!(logged_in.id, user.id);
 		assert_eq!(h.sessions.count(), 1);
 		assert!(tokens.access_token.starts_with("access|"));
@@ -64,7 +65,10 @@ mod tests {
 	#[tokio::test]
 	async fn rejects_unconfirmed_and_inactive_accounts() {
 		let h = harness();
-		h.service.create_user(register_cmd("fresh", "f@example.com")).await.unwrap();
+		h.service
+			.create_user(register_cmd("fresh", "f@example.com"))
+			.await
+			.unwrap();
 		let unconfirmed = h.service.login(creds("fresh", "password123")).await.unwrap_err();
 		assert!(matches!(unconfirmed, IdentityError::EmailNotConfirmed));
 

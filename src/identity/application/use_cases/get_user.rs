@@ -15,7 +15,11 @@ mod tests {
 	#[tokio::test]
 	async fn finds_by_id_or_reports_missing() {
 		let h = harness();
-		let user = h.service.create_user(register_cmd("alice", "a@example.com")).await.unwrap();
+		let user = h
+			.service
+			.create_user(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
 		assert_eq!(h.service.get_user(user.id).await.unwrap().id, user.id);
 
 		let missing = h.service.get_user(UserId(999)).await.unwrap_err();

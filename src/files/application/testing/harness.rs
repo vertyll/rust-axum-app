@@ -9,7 +9,11 @@ type Harness = (FilesService<InMemoryFiles, FakeStorage>, InMemoryFiles, FakeSto
 pub(crate) fn files_harness() -> Harness {
 	let repository = InMemoryFiles::default();
 	let storage = FakeStorage::default();
-	(FilesService::new(repository.clone(), storage.clone()), repository, storage)
+	(
+		FilesService::new(repository.clone(), storage.clone()),
+		repository,
+		storage,
+	)
 }
 
 pub(crate) fn upload_cmd(name: &str, bytes: &[u8]) -> UploadFile {

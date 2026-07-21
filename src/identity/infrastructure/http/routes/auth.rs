@@ -15,8 +15,8 @@ use crate::identity::domain::IdentityError;
 use crate::identity::infrastructure::http::error::ApiError;
 use crate::identity::infrastructure::http::extract::Auth;
 use crate::identity::infrastructure::http::requests::{
-	ChangeEmailRequest, ChangePasswordRequest, ForgotPasswordRequest, LoginRequest,
-	RegisterRequest, ResetPasswordRequest, TokenQuery,
+	ChangeEmailRequest, ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, RegisterRequest,
+	ResetPasswordRequest, TokenQuery,
 };
 use crate::identity::infrastructure::http::responses::{AccessTokenResponse, AuthResponse};
 
@@ -52,7 +52,10 @@ async fn register<P: IdentityPorts>(
 	let (user, tokens) = identity.register(request.into_command()?).await?;
 
 	cookies.add(refresh_cookie(tokens.refresh_token, identity.refresh_ttl_seconds()));
-	Ok(Json(AuthResponse { user: user.into(), access_token: tokens.access_token }))
+	Ok(Json(AuthResponse {
+		user: user.into(),
+		access_token: tokens.access_token,
+	}))
 }
 
 async fn login<P: IdentityPorts>(
@@ -64,7 +67,10 @@ async fn login<P: IdentityPorts>(
 	let (user, tokens) = identity.login(request.into()).await?;
 
 	cookies.add(refresh_cookie(tokens.refresh_token, identity.refresh_ttl_seconds()));
-	Ok(Json(AuthResponse { user: user.into(), access_token: tokens.access_token }))
+	Ok(Json(AuthResponse {
+		user: user.into(),
+		access_token: tokens.access_token,
+	}))
 }
 
 async fn refresh_token<P: IdentityPorts>(
@@ -144,7 +150,9 @@ async fn request_email_change<P: IdentityPorts>(
 	Json(request): Json<ChangeEmailRequest>,
 ) -> Result<(), ApiError> {
 	request.validate()?;
-	identity.request_email_change(claims.user_id(), request.into_command()?).await?;
+	identity
+		.request_email_change(claims.user_id(), request.into_command()?)
+		.await?;
 	Ok(())
 }
 

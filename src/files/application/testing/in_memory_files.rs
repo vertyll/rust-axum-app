@@ -23,7 +23,13 @@ impl InMemoryFiles {
 
 	/// Reads a row even when it is soft-deleted.
 	pub fn get_any(&self, id: FileId) -> Option<StoredFile> {
-		self.state.lock().unwrap().files.iter().find(|file| file.id == id).cloned()
+		self.state
+			.lock()
+			.unwrap()
+			.files
+			.iter()
+			.find(|file| file.id == id)
+			.cloned()
 	}
 }
 
@@ -57,7 +63,11 @@ impl FileRepository for InMemoryFiles {
 
 	async fn find_active_by_id(&self, id: FileId) -> Result<Option<StoredFile>, FilesError> {
 		let state = self.state.lock().unwrap();
-		Ok(state.files.iter().find(|file| file.id == id && !file.is_deleted()).cloned())
+		Ok(state
+			.files
+			.iter()
+			.find(|file| file.id == id && !file.is_deleted())
+			.cloned())
 	}
 
 	async fn list_active(&self) -> Result<Vec<StoredFile>, FilesError> {

@@ -11,20 +11,12 @@ pub trait UserRepository: Clone + Send + Sync + 'static {
 	/// Persists a new account atomically (user row + role links).
 	fn create(&self, user: NewUser) -> impl Future<Output = Result<User, IdentityError>> + Send;
 
-	fn find_by_id(
-		&self,
-		id: UserId,
-	) -> impl Future<Output = Result<Option<User>, IdentityError>> + Send;
+	fn find_by_id(&self, id: UserId) -> impl Future<Output = Result<Option<User>, IdentityError>> + Send;
 
-	fn find_by_email(
-		&self,
-		email: &Email,
-	) -> impl Future<Output = Result<Option<User>, IdentityError>> + Send;
+	fn find_by_email(&self, email: &Email) -> impl Future<Output = Result<Option<User>, IdentityError>> + Send;
 
-	fn find_by_username(
-		&self,
-		username: &Username,
-	) -> impl Future<Output = Result<Option<User>, IdentityError>> + Send;
+	fn find_by_username(&self, username: &Username)
+	-> impl Future<Output = Result<Option<User>, IdentityError>> + Send;
 
 	fn list(&self) -> impl Future<Output = Result<Vec<User>, IdentityError>> + Send;
 

@@ -4,11 +4,7 @@ use crate::identity::application::service::IdentityService;
 use crate::identity::domain::{IdentityError, User, UserId, UserRepository};
 
 impl<P: IdentityPorts> IdentityService<P> {
-	pub async fn update_user(
-		&self,
-		id: UserId,
-		cmd: UpdateUserProfile,
-	) -> Result<User, IdentityError> {
+	pub async fn update_user(&self, id: UserId, cmd: UpdateUserProfile) -> Result<User, IdentityError> {
 		let mut user = self.get_user(id).await?;
 
 		if let Some(username) = cmd.username {
@@ -42,7 +38,11 @@ mod tests {
 	#[tokio::test]
 	async fn renames_and_persists() {
 		let h = harness();
-		let user = h.service.create_user(register_cmd("alice", "a@example.com")).await.unwrap();
+		let user = h
+			.service
+			.create_user(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
 
 		let cmd = UpdateUserProfile {
 			username: Some(Username::parse("renamed").unwrap()),
@@ -55,8 +55,15 @@ mod tests {
 	#[tokio::test]
 	async fn rejects_username_taken_by_someone_else_but_allows_own() {
 		let h = harness();
-		let alice = h.service.create_user(register_cmd("alice", "a@example.com")).await.unwrap();
-		h.service.create_user(register_cmd("bob", "b@example.com")).await.unwrap();
+		let alice = h
+			.service
+			.create_user(register_cmd("alice", "a@example.com"))
+			.await
+			.unwrap();
+		h.service
+			.create_user(register_cmd("bob", "b@example.com"))
+			.await
+			.unwrap();
 
 		let taken = UpdateUserProfile {
 			username: Some(Username::parse("bob").unwrap()),
