@@ -6,7 +6,7 @@ impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
 	/// Removes both the bytes and the metadata row.
 	pub async fn delete(&self, id: FileId) -> Result<(), FilesError> {
 		let file = self.get(id).await?;
-		self.storage.remove(&file.path).await?;
+		self.storage.remove(&file.file_path).await?;
 		self.repository.delete(id).await
 	}
 }
@@ -20,7 +20,7 @@ mod tests {
 		let file = service.upload(upload_cmd("note.txt", b"hello")).await.unwrap();
 
 		service.delete(file.id).await.unwrap();
-		assert_eq!(storage.removed_paths(), vec![file.path]);
+		assert_eq!(storage.removed_paths(), vec![file.file_path]);
 		assert!(repository.get_any(file.id).is_none());
 	}
 }

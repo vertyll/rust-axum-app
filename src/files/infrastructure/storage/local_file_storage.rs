@@ -58,7 +58,7 @@ impl FileStorage for LocalFileStorage {
 
 		Ok(StoredObject {
 			url: format!("{}/{filename}", self.base_url),
-			path: full_path.to_string_lossy().into_owned(),
+			file_path: full_path.to_string_lossy().into_owned(),
 			filename,
 			metadata,
 		})
@@ -90,10 +90,10 @@ mod tests {
 
 		let object = storage.store(b"hello".to_vec(), "note.txt").await.unwrap();
 		assert!(object.url.starts_with("/uploads/"));
-		assert!(tokio::fs::metadata(&object.path).await.is_ok());
+		assert!(tokio::fs::metadata(&object.file_path).await.is_ok());
 
-		storage.remove(&object.path).await.unwrap();
-		assert!(tokio::fs::metadata(&object.path).await.is_err());
+		storage.remove(&object.file_path).await.unwrap();
+		assert!(tokio::fs::metadata(&object.file_path).await.is_err());
 
 		tokio::fs::remove_dir_all(&dir).await.ok();
 	}

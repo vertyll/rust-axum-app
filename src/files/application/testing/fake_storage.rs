@@ -25,11 +25,11 @@ impl FileStorage for FakeStorage {
 	}
 
 	async fn store(&self, data: Vec<u8>, original_name: &str) -> Result<StoredObject, FilesError> {
-		let path = format!("/fake/{original_name}");
-		self.stored.lock().unwrap().push(path.clone());
+		let file_path = format!("/fake/{original_name}");
+		self.stored.lock().unwrap().push(file_path.clone());
 		Ok(StoredObject {
 			filename: format!("generated-{original_name}"),
-			path,
+			file_path,
 			url: format!("/uploads/generated-{original_name}"),
 			metadata: serde_json::json!({ "bytes": data.len() }),
 		})

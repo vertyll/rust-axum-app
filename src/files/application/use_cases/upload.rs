@@ -14,12 +14,12 @@ impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
 
 		let size = cmd.data.len() as i64;
 		let object = self.storage.store(cmd.data, &cmd.original_name).await?;
-		let stored_path = object.path.clone();
+		let stored_path = object.file_path.clone();
 
 		let new_file = NewStoredFile {
 			filename: object.filename,
 			original_name: cmd.original_name,
-			path: object.path,
+			file_path: object.file_path,
 			mime_type: cmd.mime_type,
 			encoding: "binary".to_string(),
 			size,

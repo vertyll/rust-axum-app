@@ -19,7 +19,7 @@ impl FileRepository for ToastyFileRepository {
 		let record = toasty::create!(FileRecord {
 			filename: file.filename,
 			original_name: file.original_name,
-			path: file.path,
+			file_path: file.file_path,
 			mime_type: file.mime_type,
 			encoding: file.encoding,
 			size: file.size,
