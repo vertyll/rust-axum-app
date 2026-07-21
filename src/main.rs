@@ -1,96 +1,91 @@
-use crate::auth::repositories::refresh_token_repository::RefreshTokenRepository;
-use crate::auth::services::auth_service::{AuthService, AuthServiceTrait};
-use crate::auth::services::confirmation_token_service::{ConfirmationTokenService, ConfirmationTokenServiceTrait};
-use crate::auth::services::refresh_token_service::{RefreshTokenService, RefreshTokenServiceTrait};
-use crate::config::app_config::AppConfig;
-use crate::di::module;
-use crate::di::{AppConfigImpl, AppConfigTrait, DatabaseConnectionImpl, DatabaseConnectionTrait};
-use crate::emails::services::emails_service::{EmailsService, EmailsServiceTrait};
-use crate::files::repositories::files_repository::FilesRepository;
-use crate::files::services::files_service::{FilesService, FilesServiceTrait};
-use crate::roles::repositories::roles_repository::RolesRepository;
-use crate::roles::repositories::user_roles_repository::UserRolesRepository;
-use crate::roles::services::roles_service::RolesService;
-use crate::roles::services::user_roles_service::{UserRolesService, UserRolesServiceTrait};
-use crate::users::repositories::users_repository::UsersRepository;
-use crate::users::services::users_service::{UsersService, UsersServiceTrait};
-use axum::Extension;
-use database::seeders;
-use migration::{Migrator, MigratorTrait};
-use sea_orm::DatabaseConnection;
-use std::net::SocketAddr;
 use std::sync::Arc;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use std::time::Duration;
 
-rust_i18n::i18n!("translations");
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
-mod app_module;
-mod auth;
-mod common;
-mod config;
-mod database;
-mod di;
-mod emails;
-mod files;
-mod i18n;
-mod roles;
-mod users;
+use rust_axum_app::bootstrap::{self, AppIdentityService, config::AppConfig};
 
 #[tokio::main]
-async fn main() {
-	dotenv::dotenv().ok();
+async fn main() -> anyhow::Result<()> {
+	dotenvy::dotenv().ok();
 
-	// Initialize logger
 	tracing_subscriber::registry()
-		.with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+		.with(
+			tracing_subscriber::EnvFilter::try_from_default_env()
+				.unwrap_or_else(|_| "info,tower_http=debug".into()),
+		)
 		.with(tracing_subscriber::fmt::layer())
 		.init();
 
-	// App configuration
-	let app_config = AppConfig::init().expect("Could not initialize the application configuration");
-	let app_config_arc = Arc::new(app_config.clone());
+	let config = AppConfig::load()?;
+	config.log_summary();
 
-	// Database connection
-	let db = database::connection::connect(&app_config.database)
-		.await
-		.expect("Could not connect to the database");
+	let db = toasty::Db::builder()
+		.models(toasty::models!(rust_axum_app::*))
+		.max_pool_size(config.database.max_connections as usize)
+		.connect(&config.database.url())
+		.await?;
 
-	// Run database migrations
-	Migrator::up(&db, None).await.expect("Could not upgrade the database");
+	// Dev convenience: CREATE TABLEs straight from the models; expected to
+	// fail once the schema exists (managed migrations: the `cli` binary).
+	if config.server.environment.is_development() {
+		if let Err(err) = db.push_schema().await {
+			tracing::warn!(
+				"push_schema skipped ({err}); if the schema is managed, run \
+				 `cargo run --bin cli -- migration apply`"
+			);
+		}
+	}
 
-	// Run seeders
-	seeders::run_seeders(&db).await.expect("Could not run seeders");
+	bootstrap::seed::seed_roles(&db).await?;
 
-	// Initialize services
-	let di_module = Arc::new(module::initialize_di(db.clone(), app_config_arc.clone()));
+	let services = bootstrap::build_services(db, &config)?;
+	spawn_session_cleanup(services.identity.clone());
 
-	// CRON jobs
-	// Run a job to clean expired tokens every 24 hours
-	spawn_token_cleanup_job(di_module.refresh_token_service.clone());
+	let app = bootstrap::router(&services, &config);
+	let address = format!("{}:{}", config.server.host, config.server.port);
+	let listener = tokio::net::TcpListener::bind(&address).await?;
+	tracing::info!("listening on http://{address}");
 
-	let app = app_module::configure(app_config_arc.clone(), di_module).await;
-
-	let addr = SocketAddr::from(([127, 0, 0, 1], app_config.server.app_port));
-	tracing::info!("Server is running on: http://{}", addr);
-
-	let listener = tokio::net::TcpListener::bind(addr)
-		.await
-		.expect("Could not bind to the address");
-
-	axum::serve(listener, app).await.expect("Server failed to start");
+	axum::serve(listener, app).with_graceful_shutdown(shutdown_signal()).await?;
+	Ok(())
 }
 
-// CRON jobs
-fn spawn_token_cleanup_job(refresh_token_service: Arc<dyn RefreshTokenServiceTrait>) {
+/// Deletes expired refresh sessions once a day.
+fn spawn_session_cleanup(identity: Arc<AppIdentityService>) {
 	tokio::spawn(async move {
-		let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(86400)); // 24 hours
+		let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
 		loop {
 			interval.tick().await;
-			if let Err(err) = refresh_token_service.clean_expired_tokens().await {
-				tracing::error!("Error cleaning expired tokens: {:?}", err);
-			} else {
-				tracing::info!("Successfully cleaned expired tokens");
+			match identity.clean_expired_sessions().await {
+				Ok(()) => tracing::debug!("expired refresh sessions cleaned"),
+				Err(err) => tracing::error!("session cleanup failed: {err}"),
 			}
 		}
 	});
+}
+
+async fn shutdown_signal() {
+	let ctrl_c = async {
+		tokio::signal::ctrl_c().await.expect("failed to install Ctrl+C handler");
+	};
+
+	#[cfg(unix)]
+	let terminate = async {
+		tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+			.expect("failed to install SIGTERM handler")
+			.recv()
+			.await;
+	};
+
+	#[cfg(not(unix))]
+	let terminate = std::future::pending::<()>();
+
+	tokio::select! {
+		() = ctrl_c => {},
+		() = terminate => {},
+	}
+
+	tracing::info!("shutdown signal received");
 }

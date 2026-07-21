@@ -1,5 +1,6 @@
 # Base stage with common dependencies
-FROM rust:1.85.0-slim AS base
+# Toasty 0.8 requires Rust 1.95+ (edition 2024).
+FROM rust:1.95-slim AS base
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     build-essential \
@@ -22,10 +23,12 @@ CMD ["cargo", "watch", "-q", "-c", "-w", "src/", "-x", "run"]
 FROM base AS builder
 WORKDIR /app
 # Copy manifests
-COPY Cargo.toml Cargo.lock ./
-# Create a dummy main.rs to build dependencies
-RUN mkdir -p src && \
+COPY Cargo.toml ./
+# Create dummy binaries to pre-build dependencies
+RUN mkdir -p src/bin && \
     echo "fn main() {println!(\"Dummy build\");}" > src/main.rs && \
+    echo "fn main() {}" > src/bin/cli.rs && \
+    echo "" > src/lib.rs && \
     cargo build --release && \
     rm -rf src
 
@@ -44,7 +47,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 # Copy the built binary from the builder stage
 COPY --from=builder /app/target/release/rust-axum-app .
-# Copy any necessary resources
+# Copy runtime resources (e-mail templates, translations, migration config)
 COPY --from=builder /app/resources ./resources
+COPY --from=builder /app/translations ./translations
+COPY --from=builder /app/Toasty.toml ./Toasty.toml
 
 CMD ["./rust-axum-app"]

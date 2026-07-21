@@ -1,0 +1,7 @@
+# Configuration for the migration CLI (`cargo run --bin cli`).
+
+[migration]
+path = "toasty"
+prefix_style = "Sequential"
+checksums = false
+statement_breakpoints = true
