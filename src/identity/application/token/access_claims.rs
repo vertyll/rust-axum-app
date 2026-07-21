@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::identity::domain::{RoleName, UserId};
 
 /// Claims carried by an access token. Part of the module's public API:
-/// the auth guard hands these to any protected handler (also in other
-/// modules).
+/// the auth guard hands these to any protected handler (also in other modules).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccessClaims {
 	pub sub: i64,

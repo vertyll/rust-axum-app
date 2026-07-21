@@ -1,6 +1,3 @@
-//! Toasty record of the files context. No ORM relation points at other
-//! modules — `deleted_by_user_id` is a plain id.
-
 use jiff::Timestamp;
 use toasty::stmt::Json;
 

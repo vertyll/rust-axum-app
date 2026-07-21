@@ -1,6 +1,3 @@
-//! Domain layer: the pure business model of the identity context.
-//! No Axum, no Toasty, no SMTP — only rules.
-
 pub mod error;
 pub mod role;
 pub mod session;

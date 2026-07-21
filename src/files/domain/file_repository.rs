@@ -20,7 +20,6 @@ pub trait FileRepository: Clone + Send + Sync + 'static {
 
 	fn update(&self, file: &StoredFile) -> impl Future<Output = Result<(), FilesError>> + Send;
 
-	/// Hard delete of the metadata row (bytes are removed by the storage
-	/// adapter beforehand).
+	/// Hard delete of the metadata row (bytes are removed by the storage adapter beforehand).
 	fn delete(&self, id: FileId) -> impl Future<Output = Result<(), FilesError>> + Send;
 }

@@ -1,5 +1,4 @@
 # Base stage with common dependencies
-# Toasty 0.8 requires Rust 1.95+ (edition 2024).
 FROM rust:1.95-slim AS base
 RUN apt-get update && apt-get install -y \
     libpq-dev \

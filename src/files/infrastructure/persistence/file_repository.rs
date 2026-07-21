@@ -1,5 +1,3 @@
-//! Toasty adapter for `FileRepository`.
-
 use super::file_record::FileRecord;
 use crate::files::domain::{FileId, FileRepository, FilesError, NewStoredFile, StoredFile};
 

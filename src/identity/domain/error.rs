@@ -1,8 +1,5 @@
 use thiserror::Error;
 
-/// All failures the identity module can produce. Adapters reduce their
-/// technology errors to the `*Failure` variants; only the HTTP adapter
-/// turns this enum into responses.
 #[derive(Debug, Error)]
 pub enum IdentityError {
 	#[error("invalid email address")]
@@ -37,14 +34,12 @@ pub enum IdentityError {
 	InvalidTokenType,
 	#[error("user not found")]
 	UserNotFound,
-
 	#[error("missing refresh token")]
 	RefreshTokenMissing,
 	#[error("invalid refresh token")]
 	RefreshTokenInvalid,
 	#[error("refresh token has expired")]
 	RefreshTokenExpired,
-
 	#[error("persistence failure: {0}")]
 	PersistenceFailure(String),
 	#[error("stored data is corrupt: {0}")]

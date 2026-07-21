@@ -1,7 +1,3 @@
-//! Inbound request DTOs, one file per struct: transport validation
-//! (`validator`), then `into_command` parses the domain value objects on
-//! the way in.
-
 mod change_email_request;
 mod change_password_request;
 mod forgot_password_request;

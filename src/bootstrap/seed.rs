@@ -1,5 +1,4 @@
-//! Database seeding. Runs at startup and is idempotent: if any role exists,
-//! it does nothing.
+//! Database seeding. Runs at startup and is idempotent: if any role exists, it does nothing.
 
 use crate::identity::domain::RoleName;
 use crate::identity::infrastructure::persistence::records::RoleRecord;

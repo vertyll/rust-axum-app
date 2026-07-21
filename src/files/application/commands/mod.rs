@@ -1,5 +1,3 @@
-//! Use-case inputs of the files context, one file per command.
-
 mod update_file_meta;
 mod upload_file;
 

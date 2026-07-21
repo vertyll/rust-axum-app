@@ -49,7 +49,7 @@ fn identity_response(err: IdentityError) -> Response {
 	use IdentityError as E;
 
 	match err {
-		// Business-rule violations, presented as field errors (old contract).
+		// Business-rule violations.
 		E::EmailTaken => field_error("email", "already_exists", "users.errors.user_already_exists"),
 		E::UsernameTaken => {
 			field_error("username", "already_exists", "users.errors.username_already_exists")

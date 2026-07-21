@@ -1,6 +1,3 @@
-//! User-administration endpoints. Note `/{id}`: axum 0.8 syntax — the old
-//! `/{:id}` registered a literal parameter named `:id`.
-
 use std::sync::Arc;
 
 use axum::extract::{Path, State};

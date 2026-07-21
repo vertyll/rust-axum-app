@@ -1,6 +1,3 @@
-//! Use-case inputs, one file per command. HTTP DTOs are mapped into these
-//! plain structs, so the application layer never sees the transport format.
-
 mod change_password;
 mod credentials;
 mod register_user;

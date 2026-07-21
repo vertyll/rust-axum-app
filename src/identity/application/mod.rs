@@ -1,6 +1,3 @@
-//! Application layer: use-case orchestration on top of the domain, plus the
-//! driven ports the use cases require.
-
 pub mod commands;
 pub mod ports;
 pub mod service;

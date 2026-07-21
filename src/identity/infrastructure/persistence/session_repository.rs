@@ -1,5 +1,3 @@
-//! Toasty adapter for the `SessionRepository` port.
-
 use jiff::Timestamp;
 
 use super::records::RefreshTokenRecord;

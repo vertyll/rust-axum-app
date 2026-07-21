@@ -1,5 +1,3 @@
-//! Route modules of the identity context, one file per resource.
-
 mod auth;
 mod users;
 

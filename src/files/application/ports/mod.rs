@@ -1,5 +1,3 @@
-//! Driven ports of the files context, one per file.
-
 mod file_storage;
 mod stored_object;
 

@@ -1,6 +1,3 @@
-//! Test doubles for the identity ports: in-memory adapters good enough to
-//! exercise every use case without a database, SMTP or real crypto.
-
 mod fake_hasher;
 mod fake_mailer;
 mod fake_tokens;

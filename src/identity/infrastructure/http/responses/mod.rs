@@ -1,6 +1,3 @@
-//! Outbound response DTOs, one file per struct. A response model cannot
-//! leak what it does not contain — unlike serializing the ORM entity.
-
 mod access_token_response;
 mod auth_response;
 mod user_response;

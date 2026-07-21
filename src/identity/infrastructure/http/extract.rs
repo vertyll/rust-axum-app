@@ -17,8 +17,7 @@ use crate::identity::application::service::IdentityService;
 use crate::identity::application::token::AccessClaims;
 use crate::identity::domain::{IdentityError, RoleName};
 
-/// Middleware guarding a router: requires a valid bearer token bound to an
-/// active, confirmed account.
+/// Middleware router guard: requires a valid bearer token bound to an active, confirmed account.
 pub async fn authenticate<P: IdentityPorts>(
 	State(identity): State<Arc<IdentityService<P>>>,
 	mut request: Request,

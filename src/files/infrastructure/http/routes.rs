@@ -1,6 +1,3 @@
-//! Files endpoints. Auth comes from the identity module's public guards;
-//! the composition root layers the `authenticate` middleware on top.
-
 use std::sync::Arc;
 
 use axum::extract::{Multipart, Path, Query, State};

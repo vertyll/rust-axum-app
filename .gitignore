@@ -1,13 +1,13 @@
 /target
 .env
 
-# Code editors
+### Code editors ###
 .idea
 .vscode
 
-# OS generated files
+### OS generated files ###
 .DS_Store
 Thumbs.db
 
-# File storage
+### File storage ###
 uploads

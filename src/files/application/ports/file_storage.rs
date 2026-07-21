@@ -1,7 +1,6 @@
 use super::StoredObject;
 use crate::files::domain::{FilesError, StorageKind};
 
-/// Byte storage for the files context.
 pub trait FileStorage: Clone + Send + Sync + 'static {
 	fn kind(&self) -> StorageKind;
 

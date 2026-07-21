@@ -108,7 +108,6 @@ pub fn router(services: &Services, config: &AppConfig) -> Router {
 		.nest("/api/auth", auth_routes)
 		.nest("/api/users", users_routes)
 		.nest("/api/files", files_routes)
-		// FILES_BASE_URL pointed here before, but nothing ever served it.
 		.nest_service("/uploads", ServeDir::new(&config.files.upload_dir))
 		.layer(from_fn(shared_infrastructure::i18n::middleware))
 		.layer(CookieManagerLayer::new())

@@ -1,4 +1,3 @@
-/// The result of writing bytes to a storage backend.
 #[derive(Debug, Clone)]
 pub struct StoredObject {
 	pub filename: String,

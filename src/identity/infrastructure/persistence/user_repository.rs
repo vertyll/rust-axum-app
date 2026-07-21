@@ -1,12 +1,3 @@
-//! Toasty adapter for `UserRepository`. `Db` is a cheap pool handle cloned
-//! per call; multi-row aggregate writes run inside one transaction that
-//! never leaves this adapter.
-//!
-//! Toasty's `Db` is a cheap-to-clone pool handle; executing a statement
-//! needs `&mut` access, so each method clones the handle locally.
-//! Multi-row aggregate writes run inside a Toasty transaction — the
-//! transaction never leaves this adapter.
-
 use std::collections::HashMap;
 
 use super::records::{EmailHistoryRecord, RoleRecord, UserRecord, UserRoleRecord};
@@ -177,8 +168,7 @@ impl UserRepository for ToastyUserRepository {
 }
 
 /// Writes the aggregate's mutable columns. Generic over the executor so the
-/// same statement runs standalone or inside `save_email_change`'s
-/// transaction.
+/// same statement runs standalone or inside `save_email_change`'s transaction.
 async fn apply_update<E>(executor: &mut E, user: &User) -> Result<(), IdentityError>
 where
 	E: toasty::Executor,

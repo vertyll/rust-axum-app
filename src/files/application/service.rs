@@ -1,4 +1,4 @@
-//! The files façade the use cases attach to; each use case lives in
+//! The files facade the use cases attach to; each use case lives in
 //! `use_cases/` as its own `impl` block. Two ports only, so they stay as
 //! two plain generic parameters instead of a bundle trait.
 

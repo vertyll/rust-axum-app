@@ -77,22 +77,22 @@ cargo run --bin cli -- snapshot        # capture current DB state
 
 ## API overview
 
-| Method | Path | Auth |
-| --- | --- | --- |
-| POST | `/api/auth/register` | — |
-| POST | `/api/auth/login` | — |
-| POST | `/api/auth/refresh-token` | refresh cookie |
-| GET  | `/api/auth/confirm-email?token=…` | — |
-| POST | `/api/auth/password/reset` | — |
-| POST | `/api/auth/confirm-password-reset` | — |
-| GET  | `/api/auth/confirm-email-change?token=…` | — |
-| POST | `/api/auth/logout`, `/logout-all` | bearer |
-| POST | `/api/auth/password/change`, `/email/change` | bearer |
-| GET  | `/api/users`, `/api/users/{id}` | bearer |
-| POST/PUT/DELETE | `/api/users…` | bearer + admin |
-| GET/POST | `/api/files`, `/api/files/{id}` | bearer |
-| PUT/DELETE, POST `/{id}/soft-delete` | `/api/files…` | bearer + admin |
-| GET | `/uploads/{file}` | — (static) |
+| Method                               | Path                                         | Auth           |
+|--------------------------------------|----------------------------------------------|----------------|
+| POST                                 | `/api/auth/register`                         | —              |
+| POST                                 | `/api/auth/login`                            | —              |
+| POST                                 | `/api/auth/refresh-token`                    | refresh cookie |
+| GET                                  | `/api/auth/confirm-email?token=…`            | —              |
+| POST                                 | `/api/auth/password/reset`                   | —              |
+| POST                                 | `/api/auth/confirm-password-reset`           | —              |
+| GET                                  | `/api/auth/confirm-email-change?token=…`     | —              |
+| POST                                 | `/api/auth/logout`, `/logout-all`            | bearer         |
+| POST                                 | `/api/auth/password/change`, `/email/change` | bearer         |
+| GET                                  | `/api/users`, `/api/users/{id}`              | bearer         |
+| POST/PUT/DELETE                      | `/api/users…`                                | bearer + admin |
+| GET/POST                             | `/api/files`, `/api/files/{id}`              | bearer         |
+| PUT/DELETE, POST `/{id}/soft-delete` | `/api/files…`                                | bearer + admin |
+| GET                                  | `/uploads/{file}`                            | — (static)     |
 
 Locale is negotiated per request from `Accept-Language` (`en`, `pl`).
 

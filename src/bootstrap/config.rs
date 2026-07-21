@@ -1,17 +1,6 @@
 //! Application configuration, loaded from environment variables by their
 //! exact names (see `.env.example`). Outside development, startup fails
 //! when the token secrets are unset instead of signing with placeholders.
-//!
-//! A small, explicit env-var loader replaces the `config` crate. Besides
-//! dropping a dependency, this fixes a silent bug in the previous setup:
-//! `config::Environment::with_prefix("APP").separator("_")` maps `APP_PORT`
-//! to the key `port`, which never matched the nested `server.app_port`
-//! struct path — so environment overrides were quietly ignored and the app
-//! always ran on defaults. Here every variable in `.env.example` is read
-//! by its exact name, with a typed default and a clear error on a bad value.
-//! Outside development the loader additionally refuses to boot when the
-//! token secrets are unset — signing JWTs with a compiled-in placeholder
-//! would be a silent security hole.
 
 use std::env;
 use std::fmt::Display;

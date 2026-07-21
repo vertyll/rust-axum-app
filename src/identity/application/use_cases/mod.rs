@@ -1,6 +1,3 @@
-//! One file per use case. Each file is a single `impl` block adding one
-//! public method to [`IdentityService`](super::IdentityService).
-
 mod authenticate;
 mod change_password;
 mod clean_expired_sessions;

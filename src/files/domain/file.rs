@@ -1,4 +1,4 @@
-//! Domain layer of the files context.
+//! Domain layer of the file's context.
 
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};

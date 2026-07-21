@@ -1,6 +1,3 @@
-//! Auth endpoints. Routers bake the concrete service in as state; the
-//! composition root decides which router sits behind the auth guard.
-
 use std::sync::Arc;
 
 use axum::extract::{Query, State};
@@ -70,8 +67,6 @@ async fn login<P: IdentityPorts>(
 	Ok(Json(AuthResponse { user: user.into(), access_token: tokens.access_token }))
 }
 
-/// Deliberately public: the old version demanded a still-valid access token
-/// here, making refresh impossible exactly when it is needed.
 async fn refresh_token<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	cookies: Cookies,

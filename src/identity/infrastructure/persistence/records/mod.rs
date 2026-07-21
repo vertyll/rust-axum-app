@@ -1,8 +1,3 @@
-//! Toasty records of the identity context, one per table. Records are a
-//! persistence detail — the flat, nullable-column shape the database wants;
-//! the domain shape is rebuilt in `to_domain`. No ORM relations point at
-//! other bounded contexts: cross-module references are ids only.
-
 mod email_history_record;
 mod refresh_token_record;
 mod role_record;
