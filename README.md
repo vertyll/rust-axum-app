@@ -35,13 +35,14 @@ src/
    concrete adapters: dependency injection is constructor calls plus two type aliases
    (`AppIdentityService`, `AppFilesService`), all resolved at compile time.
 
-Ports are traits with native `async fn` and are wired through **generics (static
-dispatch)** — no `async_trait`, no `Arc<dyn …>`, no per-call future boxing. Swapping an
-adapter (e.g. local storage → S3) is a one-line change in `bootstrap`.
-
-Transactions are an adapter detail scoped to a single aggregate: multi-row writes
-(user + role links, e-mail change + audit entry) are one repository-port method whose
-Toasty adapter runs one transaction. Nothing above the adapter sees a transaction.
+> [!NOTE]
+> Ports are traits with native `async fn` and are wired through **generics (static
+> dispatch)** — no `async_trait`, no `Arc<dyn …>`, no per-call future boxing. Swapping an
+> adapter (e.g. local storage → S3) is a one-line change in `bootstrap`.
+>
+> Transactions are an adapter detail scoped to a single aggregate: multi-row writes
+> (user + role links, e-mail change + audit entry) are one repository-port method whose
+> Toasty adapter runs one transaction. Nothing above the adapter sees a transaction.
 
 ## Running locally
 
