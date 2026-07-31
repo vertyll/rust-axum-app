@@ -45,7 +45,8 @@ Toasty adapter runs one transaction. Nothing above the adapter sees a transactio
 
 ## Running locally
 
-Requires **Rust 1.95+** (Toasty's MSRV) and Docker.
+> [!IMPORTANT]
+> Requires **Rust 1.95+** (Toasty's MSRV) and Docker.
 
 ```bash
 # 1. Infrastructure: PostgreSQL + maildev (SMTP sandbox at http://localhost:1080)
@@ -113,5 +114,3 @@ For a coverage report:
 cargo install cargo-llvm-cov
 cargo llvm-cov --html
 ```
-
-Integration tests against a real Postgres (e.g. via Testcontainers) are the natural next layer and are not included here.
