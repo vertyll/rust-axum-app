@@ -70,7 +70,6 @@ The API listens on `http://127.0.0.1:3000` (`APP_HOST`/`APP_PORT`).
 
 `cargo run` uses `push_schema` in development (plain CREATE TABLEs from the models).
 For managed, versioned migrations use the bundled CLI (files land in `toasty/`, configured by `Toasty.toml`):
-
 ```bash
 cargo run --bin cli -- migration generate --name init
 cargo run --bin cli -- migration apply
@@ -114,7 +113,6 @@ a database, an SMTP server or real cryptography. Adapter-level tests cover JWT r
 local file storage.
 
 For a coverage report:
-
 ```sh
 cargo install cargo-llvm-cov
 cargo llvm-cov --html
