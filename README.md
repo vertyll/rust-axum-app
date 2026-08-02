@@ -36,6 +36,7 @@ src/
    (`AppIdentityService`, `AppFilesService`), all resolved at compile time.
 
 > [!NOTE]
+>
 > Ports are traits with native `async fn` and are wired through **generics (static
 > dispatch)** — no `async_trait`, no `Arc<dyn …>`, no per-call future boxing. Swapping an
 > adapter (e.g. local storage → S3) is a one-line change in `bootstrap`.
@@ -47,7 +48,10 @@ src/
 ## Running locally
 
 > [!IMPORTANT]
-> Requires **Rust 1.95+** (Toasty's MSRV) and Docker.
+>
+> Requires:
+> - Rust 1.95+ (Toasty's MSRV).
+> - Docker.
 
 ```bash
 # 1. Infrastructure: PostgreSQL + maildev (SMTP sandbox at http://localhost:1080)
