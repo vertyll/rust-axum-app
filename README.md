@@ -1,6 +1,6 @@
 # Rust Axum App
 
-A modular monolith in Rust – Axum, structured as textbook hexagonal architecture (ports & adapters) with DDD layering.
+A modular monolith in Rust – Axum, hexagonal architecture with DDD layering.
 
 ## Architecture
 
