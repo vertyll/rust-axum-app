@@ -10,9 +10,9 @@ use crate::identity::infrastructure::http::error::ApiError;
 pub struct RegisterRequest {
 	#[validate(custom(function = "validate_username"))]
 	pub username: String,
-	#[validate(email)]
+	#[validate(email(message = "users.validators.email.invalid_format"))]
 	pub email: String,
-	#[validate(length(min = 8))]
+	#[validate(length(min = 8, message = "users.validators.password.too_short"))]
 	pub password: String,
 }
 

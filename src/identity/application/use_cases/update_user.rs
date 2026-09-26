@@ -8,19 +8,19 @@ impl<P: IdentityPorts> IdentityService<P> {
 		let mut user = self.get_user(id).await?;
 
 		if let Some(username) = cmd.username {
-			if let Some(existing) = self.users.find_by_username(&username).await? {
-				if existing.id != id {
-					return Err(IdentityError::UsernameTaken);
-				}
+			if let Some(existing) = self.users.find_by_username(&username).await?
+				&& existing.id != id
+			{
+				return Err(IdentityError::UsernameTaken);
 			}
 			user.username = username;
 		}
 
 		if let Some(email) = cmd.email {
-			if let Some(existing) = self.users.find_by_email(&email).await? {
-				if existing.id != id {
-					return Err(IdentityError::EmailTaken);
-				}
+			if let Some(existing) = self.users.find_by_email(&email).await?
+				&& existing.id != id
+			{
+				return Err(IdentityError::EmailTaken);
 			}
 			user.email = email;
 		}

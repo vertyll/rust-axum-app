@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
+use axum::extract::State;
 use axum::routing::get;
 use axum::{Json, Router};
 use validator::Validate;
@@ -13,6 +13,7 @@ use crate::identity::infrastructure::http::error::ApiError;
 use crate::identity::infrastructure::http::extract::{Auth, RequireAdmin};
 use crate::identity::infrastructure::http::requests::{RegisterRequest, UpdateUserRequest};
 use crate::identity::infrastructure::http::responses::UserResponse;
+use crate::shared_infrastructure::problem::{JsonBody, PathParam};
 
 pub fn users_router<P: IdentityPorts>(identity: Arc<IdentityService<P>>) -> Router {
 	Router::new()
@@ -32,7 +33,7 @@ async fn list_users<P: IdentityPorts>(
 async fn get_user<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	Auth(_claims): Auth,
-	Path(id): Path<i64>,
+	PathParam(id): PathParam<i64>,
 ) -> Result<Json<UserResponse>, ApiError> {
 	let user = identity.get_user(UserId(id)).await?;
 	Ok(Json(user.into()))
@@ -41,7 +42,7 @@ async fn get_user<P: IdentityPorts>(
 async fn create_user<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	RequireAdmin(_claims): RequireAdmin,
-	Json(request): Json<RegisterRequest>,
+	JsonBody(request): JsonBody<RegisterRequest>,
 ) -> Result<Json<UserResponse>, ApiError> {
 	request.validate()?;
 	let user = identity.create_user(request.into_command()?).await?;
@@ -51,8 +52,8 @@ async fn create_user<P: IdentityPorts>(
 async fn update_user<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	RequireAdmin(_claims): RequireAdmin,
-	Path(id): Path<i64>,
-	Json(request): Json<UpdateUserRequest>,
+	PathParam(id): PathParam<i64>,
+	JsonBody(request): JsonBody<UpdateUserRequest>,
 ) -> Result<Json<UserResponse>, ApiError> {
 	request.validate()?;
 	let user = identity.update_user(UserId(id), request.into_command()?).await?;
@@ -62,7 +63,7 @@ async fn update_user<P: IdentityPorts>(
 async fn delete_user<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	RequireAdmin(_claims): RequireAdmin,
-	Path(id): Path<i64>,
+	PathParam(id): PathParam<i64>,
 ) -> Result<(), ApiError> {
 	identity.deactivate_user(UserId(id)).await?;
 	Ok(())

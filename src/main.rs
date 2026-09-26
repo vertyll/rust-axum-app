@@ -26,18 +26,19 @@ async fn main() -> anyhow::Result<()> {
 
 	// Dev convenience: CREATE TABLEs straight from the models; expected to
 	// fail once the schema exists (managed migrations: the `cli` binary).
-	if config.server.environment.is_development() {
-		if let Err(err) = db.push_schema().await {
-			tracing::warn!(
-				"push_schema skipped ({err}); if the schema is managed, run \
-				 `cargo run --bin cli -- migration apply`"
-			);
-		}
+	if config.server.environment.is_development()
+		&& let Err(err) = db.push_schema().await
+	{
+		tracing::warn!(
+			"push_schema skipped ({err}); if the schema is managed, run \
+			 `cargo run --bin cli -- migration apply`"
+		);
 	}
 
 	bootstrap::seed::seed_roles(&db).await?;
 
 	let services = bootstrap::build_services(db, &config)?;
+	services.translations.synchronize().await?;
 	spawn_session_cleanup(services.identity.clone());
 
 	let app = bootstrap::router(&services, &config);

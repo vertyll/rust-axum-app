@@ -8,7 +8,7 @@ pub mod seed;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::middleware::{from_fn, from_fn_with_state};
+use axum::middleware::from_fn_with_state;
 use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -23,7 +23,11 @@ use crate::identity::infrastructure::email::{SmtpIdentityMailer, SmtpSettings};
 use crate::identity::infrastructure::http as identity_http;
 use crate::identity::infrastructure::persistence::{ToastySessionRepository, ToastyUserRepository};
 use crate::identity::infrastructure::security::{Argon2PasswordHasher, JwtTokenService};
-use crate::shared_infrastructure;
+use crate::shared_infrastructure::problem;
+use crate::translations::application::TranslationsService;
+use crate::translations::infrastructure::defaults;
+use crate::translations::infrastructure::http as translations_http;
+use crate::translations::infrastructure::persistence::ToastyTranslationRepository;
 use config::AppConfig;
 
 /// A pure type-level bundle: it only names which adapter satisfies each
@@ -45,9 +49,13 @@ pub type AppIdentityService = IdentityService<ProductionPorts>;
 /// The files service with the production adapters plugged in.
 pub type AppFilesService = FilesService<ToastyFileRepository, LocalFileStorage>;
 
+/// The translations service with the production adapters plugged in.
+pub type AppTranslationsService = TranslationsService<ToastyTranslationRepository>;
+
 pub struct Services {
 	pub identity: Arc<AppIdentityService>,
 	pub files: Arc<AppFilesService>,
+	pub translations: Arc<AppTranslationsService>,
 }
 
 /// Wires concrete adapters into the application services.
@@ -83,9 +91,12 @@ pub fn build_services(db: toasty::Db, config: &AppConfig) -> anyhow::Result<Serv
 		LocalFileStorage::new(&config.files.upload_dir, &config.files.base_url),
 	);
 
+	let translations = TranslationsService::new(ToastyTranslationRepository::new(db.clone()), defaults::shipped()?);
+
 	Ok(Services {
 		identity: Arc::new(identity),
 		files: Arc::new(files),
+		translations: Arc::new(translations),
 	})
 }
 
@@ -102,14 +113,22 @@ pub fn router(services: &Services, config: &AppConfig) -> Router {
 
 	let users_routes = identity_http::routes::users_router(services.identity.clone()).layer(auth_layer.clone());
 
-	let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer);
+	let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer.clone());
+
+	let translations_admin_routes =
+		translations_http::translations_admin_router(services.translations.clone()).layer(auth_layer);
 
 	Router::new()
 		.nest("/api/auth", auth_routes)
 		.nest("/api/users", users_routes)
 		.nest("/api/files", files_routes)
+		.nest(
+			"/api/translations",
+			translations_http::translations_public_router(services.translations.clone()),
+		)
+		.nest("/api/admin/translations", translations_admin_routes)
 		.nest_service("/uploads", ServeDir::new(&config.files.upload_dir))
-		.layer(from_fn(shared_infrastructure::i18n::middleware))
+		.fallback(problem::not_found)
 		.layer(CookieManagerLayer::new())
 		.layer(TraceLayer::new_for_http())
 }

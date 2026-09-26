@@ -5,9 +5,9 @@ use crate::identity::application::commands::ChangePassword;
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct ChangePasswordRequest {
-	#[validate(length(min = 8))]
+	#[validate(length(min = 8, message = "users.validators.password.too_short"))]
 	pub current_password: String,
-	#[validate(length(min = 8))]
+	#[validate(length(min = 8, message = "users.validators.password.too_short"))]
 	pub new_password: String,
 }
 

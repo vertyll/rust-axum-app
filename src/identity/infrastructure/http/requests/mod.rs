@@ -21,12 +21,12 @@ use std::borrow::Cow;
 use validator::ValidationError;
 
 use crate::identity::domain::Username;
-use crate::shared_infrastructure::i18n::translate;
 
 fn validate_username(username: &str) -> Result<(), ValidationError> {
 	if username.chars().count() < Username::MIN_LENGTH {
 		let mut error = ValidationError::new("too_short");
-		error.message = Some(Cow::Owned(translate("users.validators.username.too_short")));
+		error.message = Some(Cow::Borrowed("users.validators.username.too_short"));
+		error.add_param(Cow::Borrowed("min"), &Username::MIN_LENGTH);
 		return Err(error);
 	}
 	Ok(())

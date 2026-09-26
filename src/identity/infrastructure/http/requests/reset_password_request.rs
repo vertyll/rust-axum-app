@@ -6,7 +6,7 @@ use crate::identity::application::commands::ResetPassword;
 #[derive(Debug, Deserialize, Validate)]
 pub struct ResetPasswordRequest {
 	pub token: String,
-	#[validate(length(min = 8))]
+	#[validate(length(min = 8, message = "users.validators.password.too_short"))]
 	pub password: String,
 }
 

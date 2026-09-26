@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::{Multipart, Path, Query, State};
+use axum::extract::{Multipart, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use validator::Validate;
@@ -14,6 +14,7 @@ use crate::files::infrastructure::http::error::ApiError;
 use crate::files::infrastructure::http::requests::{UpdateFileRequest, UploadQuery};
 use crate::files::infrastructure::http::responses::FileResponse;
 use crate::identity::{Auth, RequireAdmin};
+use crate::shared_infrastructure::problem::{JsonBody, PathParam, QueryParams};
 
 pub fn files_router<R, S>(files: Arc<FilesService<R, S>>) -> Router
 where
@@ -39,7 +40,7 @@ where
 async fn get_file<R, S>(
 	State(files): Files<R, S>,
 	Auth(_claims): Auth,
-	Path(id): Path<i64>,
+	PathParam(id): PathParam<i64>,
 ) -> Result<Json<FileResponse>, ApiError>
 where
 	R: FileRepository,
@@ -51,7 +52,7 @@ where
 async fn upload_file<R, S>(
 	State(files): Files<R, S>,
 	Auth(_claims): Auth,
-	Query(query): Query<UploadQuery>,
+	QueryParams(query): QueryParams<UploadQuery>,
 	mut multipart: Multipart,
 ) -> Result<Json<FileResponse>, ApiError>
 where
@@ -96,8 +97,8 @@ where
 async fn update_file<R, S>(
 	State(files): Files<R, S>,
 	RequireAdmin(_claims): RequireAdmin,
-	Path(id): Path<i64>,
-	Json(request): Json<UpdateFileRequest>,
+	PathParam(id): PathParam<i64>,
+	JsonBody(request): JsonBody<UpdateFileRequest>,
 ) -> Result<Json<FileResponse>, ApiError>
 where
 	R: FileRepository,
@@ -110,7 +111,7 @@ where
 async fn delete_file<R, S>(
 	State(files): Files<R, S>,
 	RequireAdmin(_claims): RequireAdmin,
-	Path(id): Path<i64>,
+	PathParam(id): PathParam<i64>,
 ) -> Result<(), ApiError>
 where
 	R: FileRepository,
@@ -123,7 +124,7 @@ where
 async fn soft_delete_file<R, S>(
 	State(files): Files<R, S>,
 	RequireAdmin(claims): RequireAdmin,
-	Path(id): Path<i64>,
+	PathParam(id): PathParam<i64>,
 ) -> Result<(), ApiError>
 where
 	R: FileRepository,

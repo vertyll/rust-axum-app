@@ -12,10 +12,10 @@ impl<P: IdentityPorts> IdentityService<P> {
 			.await?
 			.ok_or(IdentityError::UserNotFound)?;
 
-		if let Some(existing) = self.users.find_by_email(&cmd.new_email).await? {
-			if existing.id != user_id {
-				return Err(IdentityError::EmailTaken);
-			}
+		if let Some(existing) = self.users.find_by_email(&cmd.new_email).await?
+			&& existing.id != user_id
+		{
+			return Err(IdentityError::EmailTaken);
 		}
 
 		let token =

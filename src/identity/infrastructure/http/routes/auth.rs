@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use tower_cookies::cookie::SameSite;
@@ -19,6 +19,7 @@ use crate::identity::infrastructure::http::requests::{
 	ResetPasswordRequest, TokenQuery,
 };
 use crate::identity::infrastructure::http::responses::{AccessTokenResponse, AuthResponse};
+use crate::shared_infrastructure::problem::{JsonBody, QueryParams};
 
 const REFRESH_COOKIE: &str = "refresh_token";
 
@@ -46,7 +47,7 @@ pub fn auth_protected_router<P: IdentityPorts>(identity: Arc<IdentityService<P>>
 async fn register<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	cookies: Cookies,
-	Json(request): Json<RegisterRequest>,
+	JsonBody(request): JsonBody<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, ApiError> {
 	request.validate()?;
 	let (user, tokens) = identity.register(request.into_command()?).await?;
@@ -61,7 +62,7 @@ async fn register<P: IdentityPorts>(
 async fn login<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	cookies: Cookies,
-	Json(request): Json<LoginRequest>,
+	JsonBody(request): JsonBody<LoginRequest>,
 ) -> Result<Json<AuthResponse>, ApiError> {
 	request.validate()?;
 	let (user, tokens) = identity.login(request.into()).await?;
@@ -110,7 +111,7 @@ async fn logout_all_devices<P: IdentityPorts>(
 
 async fn confirm_email<P: IdentityPorts>(
 	State(identity): Identity<P>,
-	Query(query): Query<TokenQuery>,
+	QueryParams(query): QueryParams<TokenQuery>,
 ) -> Result<(), ApiError> {
 	identity.confirm_email(&query.token).await?;
 	Ok(())
@@ -118,7 +119,7 @@ async fn confirm_email<P: IdentityPorts>(
 
 async fn request_password_reset<P: IdentityPorts>(
 	State(identity): Identity<P>,
-	Json(request): Json<ForgotPasswordRequest>,
+	JsonBody(request): JsonBody<ForgotPasswordRequest>,
 ) -> Result<(), ApiError> {
 	request.validate()?;
 	identity.request_password_reset(request.into_command()?).await?;
@@ -127,7 +128,7 @@ async fn request_password_reset<P: IdentityPorts>(
 
 async fn confirm_password_reset<P: IdentityPorts>(
 	State(identity): Identity<P>,
-	Json(request): Json<ResetPasswordRequest>,
+	JsonBody(request): JsonBody<ResetPasswordRequest>,
 ) -> Result<(), ApiError> {
 	request.validate()?;
 	identity.reset_password(request.into()).await?;
@@ -137,7 +138,7 @@ async fn confirm_password_reset<P: IdentityPorts>(
 async fn change_password<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	Auth(claims): Auth,
-	Json(request): Json<ChangePasswordRequest>,
+	JsonBody(request): JsonBody<ChangePasswordRequest>,
 ) -> Result<(), ApiError> {
 	request.validate()?;
 	identity.change_password(claims.user_id(), request.into()).await?;
@@ -147,7 +148,7 @@ async fn change_password<P: IdentityPorts>(
 async fn request_email_change<P: IdentityPorts>(
 	State(identity): Identity<P>,
 	Auth(claims): Auth,
-	Json(request): Json<ChangeEmailRequest>,
+	JsonBody(request): JsonBody<ChangeEmailRequest>,
 ) -> Result<(), ApiError> {
 	request.validate()?;
 	identity
@@ -158,7 +159,7 @@ async fn request_email_change<P: IdentityPorts>(
 
 async fn confirm_email_change<P: IdentityPorts>(
 	State(identity): Identity<P>,
-	Query(query): Query<TokenQuery>,
+	QueryParams(query): QueryParams<TokenQuery>,
 ) -> Result<(), ApiError> {
 	identity.confirm_email_change(&query.token).await?;
 	Ok(())

@@ -48,7 +48,6 @@ WORKDIR /app
 COPY --from=builder /app/target/release/rust-axum-app .
 # Copy runtime resources (e-mail templates, translations, migration config)
 COPY --from=builder /app/resources ./resources
-COPY --from=builder /app/translations ./translations
 COPY --from=builder /app/Toasty.toml ./Toasty.toml
 
 CMD ["./rust-axum-app"]

@@ -11,7 +11,7 @@ pub struct UpdateFileRequest {
 	pub mime_type: Option<String>,
 	pub encoding: Option<String>,
 	pub size: Option<i64>,
-	#[validate(length(min = 1))]
+	#[validate(length(min = 1, message = "files.validators.file.storage_type.invalid"))]
 	pub storage_type: Option<String>,
 	pub url: Option<String>,
 }

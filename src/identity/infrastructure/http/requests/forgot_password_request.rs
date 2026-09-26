@@ -7,7 +7,7 @@ use crate::identity::infrastructure::http::error::ApiError;
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct ForgotPasswordRequest {
-	#[validate(email)]
+	#[validate(email(message = "users.validators.email.invalid_format"))]
 	pub email: String,
 }
 

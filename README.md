@@ -4,7 +4,7 @@ A modular monolith in Rust – Axum, hexagonal architecture with DDD layering.
 
 ## Architecture
 
-Two bounded contexts, each an independent module with the same three layers:
+Three bounded contexts, each an independent module with the same three layers:
 
 ```
 src/
@@ -17,7 +17,11 @@ src/
 │   ├── domain/                  # StoredFile, StorageKind, FileRepository port
 │   ├── application/             # FilesService; FileStorage port
 │   └── infrastructure/          # Toasty persistence, local-FS storage, axum HTTP
-├── shared_infrastructure/       # shared technical infrastructure: i18n only
+├── translations/                # ICU MessageFormat catalogue (defaults in translations/*.json)
+│   ├── domain/                  # Translation, Language, ICU syntax checks, TranslationRepository port
+│   ├── application/             # TranslationsService: catalogue, admin edits, startup synchronization
+│   └── infrastructure/          # shipped defaults, Toasty persistence, axum HTTP
+├── shared_infrastructure/       # shared technical infrastructure: RFC 9457 problem documents only
 ├── bootstrap/                   # composition root: config, seeding, wiring, router
 ├── main.rs                      # server binary
 └── bin/cli.rs                   # migration CLI (toasty-cli)
@@ -28,12 +32,12 @@ src/
 1. Within a module, dependencies point inward only: `infrastructure → application → domain`.
    The domain imports no framework, ORM or IO types.
 2. Across modules, dependencies are one-directional and go through the module's public
-   API (`mod.rs` re-exports): `files` uses identity's `Auth`/`RequireAdmin` guards and
-   `AccessClaims`; `identity` knows nothing about `files`. There are no cross-module ORM
+   API (`mod.rs` re-exports): `files` and `translations` use identity's `Auth`/`RequireAdmin`
+   guards and `AccessClaims`; `identity` knows nothing about either. There are no cross-module ORM
    relations — foreign contexts are referenced by plain ids.
 3. Composition root: `bootstrap` sees everything and is imported by nothing. It is the only place naming
-   concrete adapters: dependency injection is constructor calls plus two type aliases
-   (`AppIdentityService`, `AppFilesService`), all resolved at compile time.
+   concrete adapters: dependency injection is constructor calls plus three type aliases
+   (`AppIdentityService`, `AppFilesService`, `AppTranslationsService`), all resolved at compile time.
 
 > [!NOTE]
 >
@@ -53,7 +57,7 @@ src/
 
 ```bash
 # 1. Infrastructure: PostgreSQL + maildev (SMTP sandbox at http://localhost:1080)
-docker compose -f docker-compose.dev.yml up -d db mail-dev
+docker compose -f docker-compose.dev.yml up -d db maildev
 
 # 2. Configuration
 cp .env.example .env
@@ -69,7 +73,7 @@ The API listens on `http://127.0.0.1:3000`.
 Command `cargo run` uses `push_schema` in development (plain CREATE TABLEs from the models).
 For managed, versioned migrations use the bundled CLI (files land in `toasty/`, configured by `Toasty.toml`):
 ```bash
-cargo run --bin cli -- migration generate --name init
+cargo run --bin cli -- migration generate --name <name>
 cargo run --bin cli -- migration apply
 cargo run --bin cli -- snapshot        # capture current DB state
 ```
@@ -92,8 +96,30 @@ cargo run --bin cli -- snapshot        # capture current DB state
 | GET/POST                             | `/api/files`, `/api/files/{id}`              | bearer         |
 | PUT/DELETE, POST `/{id}/soft-delete` | `/api/files…`                                | bearer + admin |
 | GET                                  | `/uploads/{file}`                            | — (static)     |
+| GET                                  | `/api/translations/{pl\|en}`                 | —              |
+| GET, PUT `/{key}`                    | `/api/admin/translations`                    | bearer + admin |
+| DELETE                               | `/api/admin/translations/{key}/customization` | bearer + admin |
 
-Locale is negotiated per request from `Accept-Language`.
+Responses carry plain data. Every error — including a malformed body, a bad path parameter and an unknown route — is an
+RFC 9457 document (`application/problem+json`) holding a message key rather than prose:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "errors.validation",
+  "code": "errors.validation",
+  "errors": { "username": ["users.validators.username.too_short"], "password": ["users.validators.password.too_short"] },
+  "args": { "username": { "min": 3 }, "password": { "min": 8 } }
+}
+```
+
+A client renders `code` and each key in `errors` with the ICU MessageFormat catalogue from `/api/translations/{language}`,
+passing `args` (keyed by field in a validation problem). The defaults ship in `translations/{pl,en}.json` and are
+synchronized into the `translations` table at startup: new keys are added, changed defaults adopted and obsolete keys
+dropped, while an admin's override survives until it is reset. An edited message must parse as ICU MessageFormat
+(plural and select need an `other` branch) and may use only the arguments of its default.
 
 ## Configuration
 

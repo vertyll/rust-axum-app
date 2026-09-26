@@ -10,7 +10,7 @@ use crate::identity::infrastructure::http::error::ApiError;
 pub struct UpdateUserRequest {
 	#[validate(custom(function = "validate_username"))]
 	pub username: Option<String>,
-	#[validate(email)]
+	#[validate(email(message = "users.validators.email.invalid_format"))]
 	pub email: Option<String>,
 }
 

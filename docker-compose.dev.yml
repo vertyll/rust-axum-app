@@ -1,9 +1,11 @@
+name: rust-axum-app
+
 services:
   db:
-    image: postgres:18-alpine
-    restart: always
+    image: docker.io/library/postgres:18-alpine
+    restart: unless-stopped
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: "${DB_USERNAME:-postgres}"
       POSTGRES_PASSWORD: "${DB_PASSWORD:-postgres}"
@@ -15,14 +17,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
-  mail-dev:
-    image: maildev/maildev:latest
-    restart: always
+  maildev:
+    image: docker.io/maildev/maildev:3.0.0
+    restart: unless-stopped
     ports:
-      - "1025:1025"
-      - "1080:1080"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:1080:1080"
 
 volumes:
   postgres-data:

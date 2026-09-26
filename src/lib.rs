@@ -5,6 +5,8 @@
 //! * [`identity`] — users, credentials, sessions, roles, e-mail confirmation
 //!   and password flows.
 //! * [`files`] — file upload, storage and metadata.
+//! * [`translations`] — the ICU MessageFormat catalogue clients render
+//!   message keys with; defaults ship in `translations/*.json`.
 //!
 //! Each module is layered the same way:
 //!
@@ -29,11 +31,10 @@
 //! * [`bootstrap`] is the composition root: it may see every module, wires
 //!   concrete adapters into the application services (static-dispatch DI)
 //!   and assembles the Axum router. Nothing imports `bootstrap`.
-//! * [`shared_infrastructure`] holds shared technical infrastructure (i18n only) that any layer may use.
+//! * [`shared_infrastructure`] holds shared technical infrastructure (RFC 9457 problem documents only) that any layer may use.
 
 pub mod bootstrap;
 pub mod files;
 pub mod identity;
 pub mod shared_infrastructure;
-
-rust_i18n::i18n!("translations", fallback = "en");
+pub mod translations;
