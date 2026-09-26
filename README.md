@@ -31,7 +31,7 @@ src/
    API (`mod.rs` re-exports): `files` uses identity's `Auth`/`RequireAdmin` guards and
    `AccessClaims`; `identity` knows nothing about `files`. There are no cross-module ORM
    relations — foreign contexts are referenced by plain ids.
-3. `bootstrap` sees everything and is imported by nothing. It is the only place naming
+3. Composition root: `bootstrap` sees everything and is imported by nothing. It is the only place naming
    concrete adapters: dependency injection is constructor calls plus two type aliases
    (`AppIdentityService`, `AppFilesService`), all resolved at compile time.
 
@@ -49,9 +49,7 @@ src/
 
 > [!IMPORTANT]
 >
-> Requires:
-> - Rust 1.95+ (Toasty's MSRV).
-> - Docker.
+> Requires: Rust 1.95+ (Toasty's MSRV), Docker.
 
 ```bash
 # 1. Infrastructure: PostgreSQL + maildev (SMTP sandbox at http://localhost:1080)
@@ -64,11 +62,11 @@ cp .env.example .env
 cargo run
 ```
 
-The API listens on `http://127.0.0.1:3000` (`APP_HOST`/`APP_PORT`).
+The API listens on `http://127.0.0.1:3000`.
 
 ### Migrations
 
-`cargo run` uses `push_schema` in development (plain CREATE TABLEs from the models).
+Command `cargo run` uses `push_schema` in development (plain CREATE TABLEs from the models).
 For managed, versioned migrations use the bundled CLI (files land in `toasty/`, configured by `Toasty.toml`):
 ```bash
 cargo run --bin cli -- migration generate --name init
@@ -95,7 +93,7 @@ cargo run --bin cli -- snapshot        # capture current DB state
 | PUT/DELETE, POST `/{id}/soft-delete` | `/api/files…`                                | bearer + admin |
 | GET                                  | `/uploads/{file}`                            | — (static)     |
 
-Locale is negotiated per request from `Accept-Language` (`en`, `pl`).
+Locale is negotiated per request from `Accept-Language`.
 
 ## Configuration
 
@@ -106,7 +104,7 @@ token secrets are unset, and on startup it logs one structured line of the effec
 
 ## Tests
 
-`cargo test` runs the unit suite. The domain layer is tested directly — the aggregates are pure functions of `now`, so 
+Command `cargo test` runs the unit suite. The domain layer is tested directly — the aggregates are pure functions of `now`, so 
 no mocking is needed. Every application use case runs against in-memory fake adapters plugged into the same ports as 
 production, so the full flows (registration, login, token refresh, e-mail change, upload compensation) execute without 
 a database, an SMTP server or real cryptography. Adapter-level tests cover JWT round-trips, Argon2 hashing and the 
