@@ -1,5 +1,5 @@
-ARG RUST_IMAGE=rust:1.95-slim-bookworm
-ARG RUNTIME_IMAGE=debian:bookworm-slim
+ARG RUST_IMAGE=rust:1.98-slim-trixie
+ARG RUNTIME_IMAGE=debian:trixie-slim
 
 FROM ${RUST_IMAGE} AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev \
@@ -18,7 +18,7 @@ COPY toasty/ toasty/
 RUN touch src/main.rs src/lib.rs src/bin/cli.rs && cargo build --release --locked
 
 FROM ${RUNTIME_IMAGE} AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends libssl3 ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends libssl3t64 ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 1001 app && useradd --system --uid 1001 --gid app app
 WORKDIR /app
