@@ -70,7 +70,7 @@ where
 		FilesError::UploadFailed
 	})? {
 		if field.name() == Some("file") {
-			let original_name = field.file_name().unwrap_or("unknown").to_string();
+			let original_name = field.file_name().ok_or(FilesError::NoFileUploaded)?.to_string();
 			let mime_type = field.content_type().unwrap_or("application/octet-stream").to_string();
 			let data = field
 				.bytes()

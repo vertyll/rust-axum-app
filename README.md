@@ -125,8 +125,9 @@ dropped, while an admin's override survives until it is reset. An edited message
 
 Environment variables are the single source of truth (12-factor): `dotenvy` loads `.env` locally, the platform injects 
 them in production. There is deliberately no TOML layer — a second configuration source adds precedence rules, and 
-config files in a repository are the classic way secrets leak. Outside local the app refuses to boot when the 
-token secrets are unset, and on startup it logs one structured line of the effective configuration with secrets redacted.
+config files in a repository are the classic way secrets leak. Defaults exist only for local development: outside local
+the app refuses to boot while the public URL, database connection, SMTP host, sender address or token secrets are
+unset, and on startup it logs one structured line of the effective configuration with secrets redacted.
 
 ## Tests
 

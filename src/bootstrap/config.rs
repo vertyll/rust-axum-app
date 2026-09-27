@@ -159,13 +159,23 @@ impl AppConfig {
 		);
 	}
 
-	/// Production must not run on placeholder secrets — fail at boot instead.
+	/// Outside `local` every deployment-specific value has to come from the
+	/// environment; a local default (localhost, placeholder secret) would
+	/// otherwise start the service against the wrong database, mail server or
+	/// public URL.
 	fn validate(&self) -> Result<()> {
 		if self.server.environment.is_local() {
 			return Ok(());
 		}
 
 		let required = [
+			"APP_URL",
+			"DB_HOST",
+			"DB_USERNAME",
+			"DB_PASSWORD",
+			"DB_NAME",
+			"SMTP_HOST",
+			"EMAIL_FROM",
 			"JWT_ACCESS_TOKEN_SECRET",
 			"JWT_REFRESH_TOKEN_SECRET",
 			"CONFIRMATION_TOKEN_SECRET",

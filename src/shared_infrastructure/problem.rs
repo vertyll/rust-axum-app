@@ -31,7 +31,8 @@ pub struct Problem {
 	#[serde(rename = "type")]
 	problem_type: &'static str,
 	title: &'static str,
-	status: u16,
+	#[serde(serialize_with = "status_code")]
+	status: StatusCode,
 	detail: String,
 	code: String,
 	#[serde(skip_serializing_if = "Map::is_empty")]
@@ -46,7 +47,7 @@ impl Problem {
 		Self {
 			problem_type: "about:blank",
 			title: status.canonical_reason().unwrap_or_default(),
-			status: status.as_u16(),
+			status,
 			detail: code.clone(),
 			code,
 			args: Map::new(),
@@ -105,10 +106,13 @@ impl Problem {
 
 impl IntoResponse for Problem {
 	fn into_response(self) -> Response {
-		let status = StatusCode::from_u16(self.status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-		let body = serde_json::to_vec(&self).unwrap_or_default();
-		(status, [(header::CONTENT_TYPE, PROBLEM_JSON)], body).into_response()
+		let body = serde_json::to_vec(&self).expect("a problem document is plain data and always serializes");
+		(self.status, [(header::CONTENT_TYPE, PROBLEM_JSON)], body).into_response()
 	}
+}
+
+fn status_code<S: serde::Serializer>(status: &StatusCode, serializer: S) -> Result<S::Ok, S::Error> {
+	serializer.serialize_u16(status.as_u16())
 }
 
 impl From<JsonRejection> for Problem {
