@@ -1,0 +1,28 @@
+### Global / Git ###
+.git/
+.gitignore
+.dockerignore
+.github/
+README.md
+LICENSE
+
+### Build outputs ###
+**/target/
+
+### Development & IDEs ###
+**/.idea/
+**/.vscode/
+**/*.iml
+**/*.log
+**/.env*
+
+### Runtime data ###
+uploads/
+
+### OS ###
+**/.DS_Store
+**/Thumbs.db
+
+### Docker ###
+**/Dockerfile
+**/docker-compose*.yml
