@@ -24,15 +24,14 @@ async fn main() -> anyhow::Result<()> {
 		.connect(&config.database.url())
 		.await?;
 
-	// Dev convenience: CREATE TABLEs straight from the models; expected to
-	// fail once the schema exists (managed migrations: the `cli` binary).
 	if config.server.environment.is_local()
 		&& let Err(err) = db.push_schema().await
 	{
-		tracing::warn!(
-			"push_schema skipped ({err}); if the schema is managed, run \
-			 `cargo run --bin cli -- migration apply`"
-		);
+		if err.to_string().contains("already exists") {
+			tracing::debug!("schema already present, push_schema skipped");
+		} else {
+			tracing::warn!("push_schema failed ({err}); run `cargo run --bin cli -- migration apply`");
+		}
 	}
 
 	bootstrap::seed::seed_roles(&db).await?;
