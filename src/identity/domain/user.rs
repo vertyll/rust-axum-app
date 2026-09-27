@@ -18,8 +18,6 @@ use std::fmt;
 use super::error::IdentityError;
 use super::role::RoleName;
 
-// Value objects
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UserId(pub i64);
 
@@ -132,8 +130,6 @@ pub struct PendingEmailChange {
 	pub token: StoredToken,
 	pub new_email: Email,
 }
-
-// Aggregate
 
 /// A user account that has not been persisted yet (no identity assigned).
 #[derive(Debug, Clone)]

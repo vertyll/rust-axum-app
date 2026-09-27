@@ -1,5 +1,4 @@
-//! Local-filesystem adapter for `FileStorage`; all IO through `tokio::fs`
-//! (the previous implementation mixed blocking `std::fs` into handlers).
+//! Local-filesystem adapter for `FileStorage`; all IO goes through `tokio::fs`.
 
 use std::ffi::OsStr;
 use std::io::ErrorKind;

@@ -1,11 +1,7 @@
-//! Async SMTP + Tera 2 adapter for `IdentityMailer`. Templates load once at
-//! startup; broken templates fail loudly instead of an empty fallback set.
-//!
-//! Uses lettre's *async* transport — the previous implementation called the
-//! blocking `SmtpTransport` from async handlers, freezing a runtime worker
-//! for the whole SMTP round-trip. Templates are rendered with Tera 2
-//! (loaded once at startup; startup now fails loudly on broken templates
-//! instead of silently falling back to an empty template set).
+//! Async SMTP + Tera 2 adapter for `IdentityMailer`. Mail goes through
+//! lettre's async transport, so an SMTP round-trip never blocks a runtime
+//! worker. Templates load once at startup, and a broken template fails the
+//! startup.
 
 use std::sync::Arc;
 use std::time::Duration;
