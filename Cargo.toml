@@ -2,7 +2,7 @@
 name = "rust-axum-app"
 version = "0.2.0"
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.98"
 authors = ["Mikołaj Gawron <gawrmiko@gmail.com>"]
 description = "Rust Axum App — modular monolith (hexagonal architecture) on Toasty ORM"
 default-run = "rust-axum-app"
@@ -24,25 +24,24 @@ unsafe_code = "forbid"
 
 [dependencies]
 anyhow = "1.0"
-argon2 = "0.5.3"
+argon2 = "0.6.0"
 axum = { version = "0.8.9", features = ["multipart", "macros"] }
 dotenvy = "0.15.7"
 jiff = { version = "0.2", features = ["serde"] }
-jsonwebtoken = { version = "10.4", features = ["rust_crypto"] }
-lettre = { version = "0.11.22", features = [
+jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
+lettre = { version = "0.11.23", features = [
 	"builder",
 	"smtp-transport",
 	"tokio1",
 	"tokio1-native-tls",
 ] }
-rand_core = { version = "0.6.4", features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-swc_icu_messageformat_parser = "37"
-tera = { version = "2.0", features = ["glob_fs"] }
+swc_icu_messageformat_parser = "38"
+tera = { version = "2.4", features = ["glob_fs"] }
 thiserror = "2.0"
-toasty = { version = "0.8", features = ["postgresql", "jiff", "serde"] }
-toasty-cli = "0.8"
+toasty = { version = "0.11", features = ["postgresql", "jiff", "serde"] }
+toasty-cli = "0.11"
 tokio = { version = "1", features = [
 	"rt-multi-thread",
 	"macros",
@@ -53,8 +52,8 @@ tokio = { version = "1", features = [
 	"signal",
 ] }
 tower-cookies = "0.11"
-tower-http = { version = "0.7", features = ["fs", "trace"] }
+tower-http = { version = "0.7.1", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "fast-rng"] }
-validator = { version = "0.20", features = ["derive"] }
+validator = { version = "0.21", features = ["derive"] }
