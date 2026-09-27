@@ -57,12 +57,12 @@ src/
 
 ```bash
 # 1. Infrastructure: PostgreSQL + maildev (SMTP sandbox at http://localhost:1080)
-docker compose -f docker-compose.dev.yml up -d db maildev
+docker compose -f docker-compose.local.yml up -d db maildev
 
 # 2. Configuration
 cp .env.example .env
 
-# 3. Run — in development the schema is pushed straight from the models
+# 3. Run — locally the schema is pushed straight from the models
 cargo run
 ```
 
@@ -70,7 +70,7 @@ The API listens on `http://127.0.0.1:3000`.
 
 ### Migrations
 
-Command `cargo run` uses `push_schema` in development (plain CREATE TABLEs from the models).
+Command `cargo run` uses `push_schema` locally (plain CREATE TABLEs from the models).
 For managed, versioned migrations use the bundled CLI (files land in `toasty/`, configured by `Toasty.toml`):
 ```bash
 cargo run --bin cli -- migration generate --name <name>
@@ -80,24 +80,24 @@ cargo run --bin cli -- snapshot        # capture current DB state
 
 ## API overview
 
-| Method                               | Path                                         | Auth           |
-|--------------------------------------|----------------------------------------------|----------------|
-| POST                                 | `/api/auth/register`                         | —              |
-| POST                                 | `/api/auth/login`                            | —              |
-| POST                                 | `/api/auth/refresh-token`                    | refresh cookie |
-| GET                                  | `/api/auth/confirm-email?token=…`            | —              |
-| POST                                 | `/api/auth/password/reset`                   | —              |
-| POST                                 | `/api/auth/confirm-password-reset`           | —              |
-| GET                                  | `/api/auth/confirm-email-change?token=…`     | —              |
-| POST                                 | `/api/auth/logout`, `/logout-all`            | bearer         |
-| POST                                 | `/api/auth/password/change`, `/email/change` | bearer         |
-| GET                                  | `/api/users`, `/api/users/{id}`              | bearer         |
-| POST/PUT/DELETE                      | `/api/users…`                                | bearer + admin |
-| GET/POST                             | `/api/files`, `/api/files/{id}`              | bearer         |
-| PUT/DELETE, POST `/{id}/soft-delete` | `/api/files…`                                | bearer + admin |
-| GET                                  | `/uploads/{file}`                            | — (static)     |
-| GET                                  | `/api/translations/{pl\|en}`                 | —              |
-| GET, PUT `/{key}`                    | `/api/admin/translations`                    | bearer + admin |
+| Method                               | Path                                          | Auth           |
+|--------------------------------------|-----------------------------------------------|----------------|
+| POST                                 | `/api/auth/register`                          | —              |
+| POST                                 | `/api/auth/login`                             | —              |
+| POST                                 | `/api/auth/refresh-token`                     | refresh cookie |
+| GET                                  | `/api/auth/confirm-email?token=…`             | —              |
+| POST                                 | `/api/auth/password/reset`                    | —              |
+| POST                                 | `/api/auth/confirm-password-reset`            | —              |
+| GET                                  | `/api/auth/confirm-email-change?token=…`      | —              |
+| POST                                 | `/api/auth/logout`, `/logout-all`             | bearer         |
+| POST                                 | `/api/auth/password/change`, `/email/change`  | bearer         |
+| GET                                  | `/api/users`, `/api/users/{id}`               | bearer         |
+| POST/PUT/DELETE                      | `/api/users…`                                 | bearer + admin |
+| GET/POST                             | `/api/files`, `/api/files/{id}`               | bearer         |
+| PUT/DELETE, POST `/{id}/soft-delete` | `/api/files…`                                 | bearer + admin |
+| GET                                  | `/uploads/{file}`                             | — (static)     |
+| GET                                  | `/api/translations/{pl\|en}`                  | —              |
+| GET, PUT `/{key}`                    | `/api/admin/translations`                     | bearer + admin |
 | DELETE                               | `/api/admin/translations/{key}/customization` | bearer + admin |
 
 Responses carry plain data. Every error — including a malformed body, a bad path parameter and an unknown route — is an
@@ -125,7 +125,7 @@ dropped, while an admin's override survives until it is reset. An edited message
 
 Environment variables are the single source of truth (12-factor): `dotenvy` loads `.env` locally, the platform injects 
 them in production. There is deliberately no TOML layer — a second configuration source adds precedence rules, and 
-config files in a repository are the classic way secrets leak. Outside development the app refuses to boot when the 
+config files in a repository are the classic way secrets leak. Outside local the app refuses to boot when the 
 token secrets are unset, and on startup it logs one structured line of the effective configuration with secrets redacted.
 
 ## Tests

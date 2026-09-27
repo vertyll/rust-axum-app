@@ -1,5 +1,5 @@
 //! Application configuration, loaded from environment variables by their
-//! exact names (see `.env.example`). Outside development, startup fails
+//! exact names (see `.env.example`). Outside local, startup fails
 //! when the token secrets are unset instead of signing with placeholders.
 
 use std::env;
@@ -19,13 +19,13 @@ pub struct AppConfig {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Environment {
-	Development,
+	Local,
 	Production,
 }
 
 impl Environment {
-	pub fn is_development(self) -> bool {
-		self == Environment::Development
+	pub fn is_local(self) -> bool {
+		self == Environment::Local
 	}
 }
 
@@ -34,9 +34,9 @@ impl FromStr for Environment {
 
 	fn from_str(value: &str) -> Result<Self> {
 		match value.to_ascii_lowercase().as_str() {
-			"development" | "dev" => Ok(Environment::Development),
-			"production" | "prod" => Ok(Environment::Production),
-			other => bail!("unknown APP_ENVIRONMENT: {other} (use development|production)"),
+			"local" => Ok(Environment::Local),
+			"production" => Ok(Environment::Production),
+			other => bail!("unknown APP_ENVIRONMENT: {other} (use local|production)"),
 		}
 	}
 }
@@ -103,7 +103,7 @@ impl AppConfig {
 			server: ServerConfig {
 				host: env_or("APP_HOST", "127.0.0.1"),
 				port: env_parse("APP_PORT", 3000)?,
-				environment: env_parse("APP_ENVIRONMENT", Environment::Development)?,
+				environment: env_parse("APP_ENVIRONMENT", Environment::Local)?,
 				url: env_or("APP_URL", "http://localhost:3000"),
 			},
 			database: DatabaseConfig {
@@ -161,7 +161,7 @@ impl AppConfig {
 
 	/// Production must not run on placeholder secrets — fail at boot instead.
 	fn validate(&self) -> Result<()> {
-		if self.server.environment.is_development() {
+		if self.server.environment.is_local() {
 			return Ok(());
 		}
 
@@ -172,7 +172,7 @@ impl AppConfig {
 		];
 		for key in required {
 			if env::var(key).map(|value| value.trim().is_empty()).unwrap_or(true) {
-				bail!("{key} must be set when APP_ENVIRONMENT is not development");
+				bail!("{key} must be set when APP_ENVIRONMENT is not local");
 			}
 		}
 

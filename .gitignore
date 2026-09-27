@@ -1,13 +1,19 @@
-/target
-.env
+### IDE ###
+.idea/
+.vscode/
+*.iml
 
-### Code editors ###
-.idea
-.vscode
-
-### OS generated files ###
+### OS ###
 .DS_Store
 Thumbs.db
 
+### Environment ###
+.env
+.env.*
+!.env.example
+
+### Cargo ###
+/target
+
 ### File storage ###
-uploads
+/uploads

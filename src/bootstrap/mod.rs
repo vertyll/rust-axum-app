@@ -7,8 +7,10 @@ pub mod seed;
 
 use std::sync::Arc;
 
+use axum::Json;
 use axum::Router;
 use axum::middleware::from_fn_with_state;
+use axum::routing::get;
 use tower_cookies::CookieManagerLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -128,7 +130,12 @@ pub fn router(services: &Services, config: &AppConfig) -> Router {
 		)
 		.nest("/api/admin/translations", translations_admin_routes)
 		.nest_service("/uploads", ServeDir::new(&config.files.upload_dir))
+		.route("/health", get(health))
 		.fallback(problem::not_found)
 		.layer(CookieManagerLayer::new())
 		.layer(TraceLayer::new_for_http())
+}
+
+async fn health() -> Json<serde_json::Value> {
+	Json(serde_json::json!({ "status": "UP" }))
 }

@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
 	// Dev convenience: CREATE TABLEs straight from the models; expected to
 	// fail once the schema exists (managed migrations: the `cli` binary).
-	if config.server.environment.is_development()
+	if config.server.environment.is_local()
 		&& let Err(err) = db.push_schema().await
 	{
 		tracing::warn!(
