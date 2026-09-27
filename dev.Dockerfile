@@ -43,11 +43,15 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+RUN groupadd --system --gid 1001 app && useradd --system --uid 1001 --gid app app
+
 WORKDIR /app
 # Copy the built binary from the builder stage
 COPY --from=builder /app/target/release/rust-axum-app .
-# Copy runtime resources (e-mail templates, translations, migration config)
+# Copy runtime resources (e-mail templates, migration config)
 COPY --from=builder /app/resources ./resources
 COPY --from=builder /app/Toasty.toml ./Toasty.toml
+RUN mkdir -p uploads && chown app:app uploads
 
+USER app
 CMD ["./rust-axum-app"]
