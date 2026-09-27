@@ -17,6 +17,7 @@ pub struct FileRecord {
 	pub size: i64,
 	pub storage_type: String,
 	pub url: String,
+	#[column(type = text)]
 	pub metadata: Json<serde_json::Value>,
 	pub deleted_at: Option<Timestamp>,
 	#[index]
