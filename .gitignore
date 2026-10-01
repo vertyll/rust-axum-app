@@ -17,3 +17,6 @@ Thumbs.db
 
 ### File storage ###
 /uploads
+
+### SonarQube ###
+.scannerwork/
