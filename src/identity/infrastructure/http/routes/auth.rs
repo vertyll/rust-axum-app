@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use axum::extract::{Query, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, Method, StatusCode, header};
 use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -17,7 +17,7 @@ use crate::identity::application::AuthSession;
 use crate::identity::application::ports::IdentityPorts;
 use crate::identity::application::service::IdentityService;
 use crate::identity::infrastructure::http::error::ApiError;
-use crate::identity::infrastructure::http::extract::{SESSION_KEY, store};
+use crate::identity::infrastructure::http::extract::{SESSION_KEY, sent_from_this_origin, store};
 use crate::identity::infrastructure::http::responses::SessionResponse;
 use crate::identity::infrastructure::keycloak::pkce::{self, SignInTransaction};
 
@@ -148,7 +148,15 @@ async fn current_session(session: Session) -> Result<Response, ApiError> {
 	})
 }
 
-async fn logout<P: IdentityPorts>(State(state): State<AuthState<P>>, session: Session) -> Result<StatusCode, ApiError> {
+async fn logout<P: IdentityPorts>(
+	State(state): State<AuthState<P>>,
+	method: Method,
+	headers: HeaderMap,
+	session: Session,
+) -> Result<StatusCode, ApiError> {
+	if !sent_from_this_origin(&method, &headers) {
+		return Ok(StatusCode::FORBIDDEN);
+	}
 	if let Some(signed_in) = session.get::<AuthSession>(SESSION_KEY).await.map_err(store)? {
 		state.identity.sign_out(&signed_in).await;
 	}

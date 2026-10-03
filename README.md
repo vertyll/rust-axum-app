@@ -89,9 +89,10 @@ realm has `admin@rust-axum-app.local` (`ADMIN`) and `user@rust-axum-app.local`, 
   PKCE, after which it holds only the `RUST_AXUM_APP_SESSION` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when
   `SESSION_COOKIE_SECURE=true`). The tokens stay in the session, which `tower-sessions` keeps in Redis, so the
   application holds no state of its own.
-- The auth guard takes the access token from `Authorization: Bearer` or from the session — refreshing it when it is about
-  to expire; refresh tokens rotate and concurrent requests share one refresh; a cross-site write gets no token — and
-  verifies its signature against Keycloak's published keys, the issuer, the expiry and the audience (`rust-axum-app`).
+- The auth guard takes the access token from `Authorization: Bearer` or from the session — refreshing it when it is
+  about to expire; refresh tokens rotate and concurrent requests share one refresh; a cross-site write gets no token and
+  a cross-site logout is refused — and verifies its signature against Keycloak's published keys, the issuer, the expiry
+  and the audience (`rust-axum-app`).
 - The account is mirrored into `users` (with its realm roles) on every authenticated request that changes it.
 - The terms and the privacy policy are served at `/legal/terms.html` and `/legal/privacy.html`.
 

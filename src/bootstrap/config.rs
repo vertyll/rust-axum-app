@@ -71,8 +71,7 @@ impl DatabaseConfig {
 
 #[derive(Debug, Clone)]
 pub struct KeycloakConfig {
-	pub server_url: String,
-	pub realm: String,
+	pub realm_url: String,
 	pub client_id: String,
 	pub client_secret: String,
 	pub audience: String,
@@ -120,8 +119,7 @@ impl AppConfig {
 				max_connections: env_parse("DB_MAX_CONNECTIONS", 10)?,
 			},
 			keycloak: KeycloakConfig {
-				server_url: env_or("KEYCLOAK_SERVER_URL", "http://localhost:9000"),
-				realm: env_or("KEYCLOAK_REALM", "rust-axum-app"),
+				realm_url: env_or("KEYCLOAK_REALM_URL", "http://localhost:9000/realms/rust-axum-app"),
 				client_id: env_or("KEYCLOAK_CLIENT_ID", "rust-axum-app"),
 				client_secret: env_or("KEYCLOAK_CLIENT_SECRET", "rust-axum-app-local-secret"),
 				audience: env_or("KEYCLOAK_AUDIENCE", "rust-axum-app"),
@@ -157,7 +155,7 @@ impl AppConfig {
 			host = %self.server.host,
 			port = self.server.port,
 			database = %format_args!("{}:{}/{}", self.database.host, self.database.port, self.database.name),
-			keycloak = %format_args!("{}/realms/{}", self.keycloak.server_url, self.keycloak.realm),
+			keycloak = %self.keycloak.realm_url,
 			smtp_host = %self.emails.smtp_host,
 			uploads_dir = %self.files.upload_dir,
 			"configuration loaded"
@@ -181,7 +179,7 @@ impl AppConfig {
 			"DB_NAME",
 			"SMTP_HOST",
 			"EMAIL_FROM",
-			"KEYCLOAK_SERVER_URL",
+			"KEYCLOAK_REALM_URL",
 			"KEYCLOAK_CLIENT_SECRET",
 			"AUTH_CALLBACK_URL",
 			"AUTH_POST_LOGIN_URL",

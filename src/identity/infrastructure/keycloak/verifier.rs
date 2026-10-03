@@ -28,7 +28,7 @@ pub struct JwksTokenVerifier {
 impl JwksTokenVerifier {
 	pub fn new(settings: &KeycloakSettings) -> Result<Self, IdentityError> {
 		let mut validation = Validation::new(Algorithm::RS256);
-		validation.set_issuer(&[settings.realm_url()]);
+		validation.set_issuer(&[settings.realm_url.as_str()]);
 		validation.set_audience(&[settings.audience.as_str()]);
 		validation.set_required_spec_claims(&["exp", "sub", "iss", "aud"]);
 		Self::with_validation(settings.endpoint("certs"), validation)

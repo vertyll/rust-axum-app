@@ -32,7 +32,7 @@ pub async fn authenticate<P: IdentityPorts>(
 ) -> Result<Response, ApiError> {
 	let token = match bearer_token(request.headers()) {
 		Some(token) => token,
-		None if sent_by_same_origin(request.method(), request.headers()) => session_token(&identity, &session)
+		None if sent_from_this_origin(request.method(), request.headers()) => session_token(&identity, &session)
 			.await?
 			.ok_or(IdentityError::Unauthenticated)?,
 		None => return Err(IdentityError::Unauthenticated.into()),
@@ -68,9 +68,10 @@ async fn session_token<P: IdentityPorts>(
 	}
 }
 
-/// A cross-site write is not given the session's token: `SameSite=Lax` keeps
-/// the cookie off cross-site requests, and this also covers sibling subdomains.
-fn sent_by_same_origin(method: &Method, headers: &HeaderMap) -> bool {
+/// A cross-site write is not given the session's token and cannot sign out:
+/// `SameSite=Lax` keeps the cookie off cross-site requests, and this also covers
+/// sibling subdomains.
+pub(crate) fn sent_from_this_origin(method: &Method, headers: &HeaderMap) -> bool {
 	if matches!(*method, Method::GET | Method::HEAD | Method::OPTIONS) {
 		return true;
 	}
@@ -128,7 +129,7 @@ impl<S: Send + Sync> FromRequestParts<S> for RequireAdmin {
 mod tests {
 	use axum::http::{HeaderMap, HeaderValue, Method, header};
 
-	use super::{bearer_token, sent_by_same_origin};
+	use super::{bearer_token, sent_from_this_origin};
 
 	#[test]
 	fn extracts_bearer_value() {
@@ -149,8 +150,12 @@ mod tests {
 	fn only_cross_site_writes_lose_the_session_token() {
 		let mut cross_site = HeaderMap::new();
 		cross_site.insert("sec-fetch-site", HeaderValue::from_static("cross-site"));
-		assert!(sent_by_same_origin(&Method::GET, &cross_site));
-		assert!(!sent_by_same_origin(&Method::POST, &cross_site));
-		assert!(sent_by_same_origin(&Method::POST, &HeaderMap::new()));
+		assert!(sent_from_this_origin(&Method::GET, &cross_site));
+		assert!(!sent_from_this_origin(&Method::POST, &cross_site));
+		assert!(sent_from_this_origin(&Method::POST, &HeaderMap::new()));
+
+		let mut same_site = HeaderMap::new();
+		same_site.insert("sec-fetch-site", HeaderValue::from_static("same-site"));
+		assert!(!sent_from_this_origin(&Method::POST, &same_site));
 	}
 }

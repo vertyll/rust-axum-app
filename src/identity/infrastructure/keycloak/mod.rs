@@ -10,8 +10,7 @@ pub use verifier::JwksTokenVerifier;
 /// Where the realm is and how this application is registered in it.
 #[derive(Debug, Clone)]
 pub struct KeycloakSettings {
-	pub server_url: String,
-	pub realm: String,
+	pub realm_url: String,
 	pub client_id: String,
 	pub client_secret: String,
 	pub audience: String,
@@ -19,11 +18,7 @@ pub struct KeycloakSettings {
 }
 
 impl KeycloakSettings {
-	pub fn realm_url(&self) -> String {
-		format!("{}/realms/{}", self.server_url, self.realm)
-	}
-
 	pub fn endpoint(&self, name: &str) -> String {
-		format!("{}/protocol/openid-connect/{name}", self.realm_url())
+		format!("{}/protocol/openid-connect/{name}", self.realm_url)
 	}
 }

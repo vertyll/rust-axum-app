@@ -185,8 +185,7 @@ mod tests {
 		tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
 		let client = HttpKeycloakClient::new(KeycloakSettings {
-			server_url: format!("http://{address}"),
-			realm: "test".into(),
+			realm_url: format!("http://{address}/realms/test"),
 			client_id: "client".into(),
 			client_secret: "secret".into(),
 			audience: "client".into(),

@@ -145,8 +145,7 @@ pub fn router(services: &Services, config: &AppConfig, store: RedisStore<RedisPo
 
 fn keycloak_settings(config: &AppConfig) -> KeycloakSettings {
 	KeycloakSettings {
-		server_url: config.keycloak.server_url.clone(),
-		realm: config.keycloak.realm.clone(),
+		realm_url: config.keycloak.realm_url.clone(),
 		client_id: config.keycloak.client_id.clone(),
 		client_secret: config.keycloak.client_secret.clone(),
 		audience: config.keycloak.audience.clone(),
