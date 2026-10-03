@@ -1,108 +1,146 @@
-//! The application service the use cases attach to. One façade type, wired
-//! once in the composition root; every use case lives in `use_cases/` as
-//! its own `impl` block, so this file holds only state and shared helpers.
+//! The identity application service: sign-in through Keycloak, session
+//! refresh and the mirror of Keycloak accounts the rest of the app joins to.
 
-use jiff::{SignedDuration, Timestamp};
-use uuid::Uuid;
+use crate::identity::application::ports::{IdentityPorts, KeycloakClient, TokenVerifier};
+use crate::identity::application::session::{AuthSession, Caller, TokenPair};
+use crate::identity::domain::{IdentityError, KeycloakIdentity, NewUser, User, UserId, UserRepository};
 
-use super::commands::RegisterUser;
-use super::ports::{IdentityMailer, IdentityPorts, PasswordHasher, TokenService};
-use super::token::{AuthTokens, TokenKind};
-use crate::identity::domain::{
-	IdentityError, NewUser, RefreshSession, SessionRepository, StoredToken, User, UserRepository,
-};
-
-/// Fields are typed through the [`IdentityPorts`] type family, so there is
-/// exactly one generic parameter; `pub(super)` keeps them reachable from
-/// the sibling `use_cases` files and invisible outside the layer.
 #[derive(Clone)]
 pub struct IdentityService<P: IdentityPorts> {
-	pub(super) users: P::Users,
-	pub(super) sessions: P::Sessions,
-	pub(super) hasher: P::Hasher,
-	pub(super) tokens: P::Tokens,
-	pub(super) mailer: P::Mailer,
-	pub(super) refresh_ttl_seconds: i64,
+	users: P::Users,
+	keycloak: P::Keycloak,
+	verifier: P::Verifier,
 }
 
 impl<P: IdentityPorts> IdentityService<P> {
-	pub fn new(
-		users: P::Users,
-		sessions: P::Sessions,
-		hasher: P::Hasher,
-		tokens: P::Tokens,
-		mailer: P::Mailer,
-		refresh_ttl_seconds: i64,
-	) -> Self {
+	pub fn new(users: P::Users, keycloak: P::Keycloak, verifier: P::Verifier) -> Self {
 		Self {
 			users,
-			sessions,
-			hasher,
-			tokens,
-			mailer,
-			refresh_ttl_seconds,
+			keycloak,
+			verifier,
 		}
 	}
 
-	pub fn refresh_ttl_seconds(&self) -> i64 {
-		self.refresh_ttl_seconds
+	/// Redeems the code, then mirrors the account; a session Keycloak opened
+	/// for an account that could not be stored is revoked again.
+	pub async fn sign_in(&self, code: &str, code_verifier: &str) -> Result<AuthSession, IdentityError> {
+		let tokens = self.keycloak.exchange(code, code_verifier).await?;
+		let session = self.open(tokens, IdentityError::SignInRejected).await?;
+		if let Err(err) = self.sync(&session.identity).await {
+			self.keycloak.revoke(&session.refresh_token).await;
+			return Err(err);
+		}
+		tracing::info!(keycloak_id = %session.identity.keycloak_id, "signed in");
+		Ok(session)
 	}
 
-	pub(super) async fn open_session(&self, user: &User) -> Result<AuthTokens, IdentityError> {
-		let session = RefreshSession::issue(
-			user.id,
-			Uuid::new_v4().to_string(),
-			self.refresh_ttl_seconds,
-			Timestamp::now(),
-		);
-		self.sessions.create(&session).await?;
+	pub async fn refresh(&self, session: &AuthSession) -> Result<AuthSession, IdentityError> {
+		let tokens = self.keycloak.refresh(&session.refresh_token).await?;
+		self.open(tokens, IdentityError::SessionExpired).await
+	}
 
-		Ok(AuthTokens {
-			access_token: self.tokens.sign_access(user)?,
-			refresh_token: session.token,
+	pub async fn sign_out(&self, session: &AuthSession) {
+		self.keycloak.revoke(&session.refresh_token).await;
+		tracing::info!(keycloak_id = %session.identity.keycloak_id, "signed out");
+	}
+
+	/// Verifies an access token and resolves the local account behind it.
+	pub async fn authenticate(&self, access_token: &str) -> Result<Caller, IdentityError> {
+		let verified = self.verifier.verify(access_token).await?;
+		let user = self.sync(&verified.identity).await?;
+		Ok(Caller::from(&user))
+	}
+
+	pub async fn get_user(&self, id: UserId) -> Result<User, IdentityError> {
+		self.users.find_by_id(id).await?.ok_or(IdentityError::UserNotFound)
+	}
+
+	pub async fn list_users(&self) -> Result<Vec<User>, IdentityError> {
+		self.users.list().await
+	}
+
+	async fn sync(&self, identity: &KeycloakIdentity) -> Result<User, IdentityError> {
+		match self.users.find_by_keycloak_id(&identity.keycloak_id).await? {
+			Some(mut user) => {
+				if user.mirror(identity) {
+					self.users.update(&user).await?;
+				}
+				Ok(user)
+			}
+			None => self.users.create(NewUser::from(identity)).await,
+		}
+	}
+
+	async fn open(&self, tokens: TokenPair, on_rejection: IdentityError) -> Result<AuthSession, IdentityError> {
+		let verified = self
+			.verifier
+			.verify(&tokens.access_token)
+			.await
+			.map_err(|err| match err {
+				IdentityError::InvalidToken => on_rejection,
+				other => other,
+			})?;
+		Ok(AuthSession {
+			identity: verified.identity,
+			access_token: tokens.access_token,
+			refresh_token: tokens.refresh_token,
+			access_token_expires_at: verified.expires_at,
 		})
 	}
+}
 
-	pub(super) fn confirmation_token(&self, value: &str) -> StoredToken {
-		// jiff arithmetic is fallible only for calendar spans; an absolute
-		// duration saturates at the range end, like `RefreshSession::issue`.
-		let ttl = SignedDuration::from_secs(self.tokens.confirmation_ttl_seconds());
-		let expires_at = Timestamp::now().checked_add(ttl).unwrap_or(Timestamp::MAX);
-		StoredToken::new(value, expires_at)
+#[cfg(test)]
+mod tests {
+	use crate::identity::application::testing::{Harness, identity};
+	use crate::identity::domain::{IdentityError, RoleName, UserRepository};
+
+	#[tokio::test]
+	async fn signing_in_creates_the_account_once() {
+		let harness = Harness::new();
+		let first = harness.service.sign_in("code", "verifier").await.unwrap();
+		harness.service.sign_in("code", "verifier").await.unwrap();
+
+		assert_eq!(first.refresh_token, "refresh-1");
+		assert_eq!(harness.users.list().await.unwrap().len(), 1);
 	}
 
-	/// Shared by the `register` and `create_user` use cases.
-	pub(super) async fn create_account(&self, cmd: RegisterUser) -> Result<User, IdentityError> {
-		if self.users.find_by_email(&cmd.email).await?.is_some() {
-			return Err(IdentityError::EmailTaken);
-		}
-		if self.users.find_by_username(&cmd.username).await?.is_some() {
-			return Err(IdentityError::UsernameTaken);
-		}
+	#[tokio::test]
+	async fn a_failed_account_write_revokes_the_new_session() {
+		let harness = Harness::new();
+		harness.users.fail_writes();
 
-		let password_hash = self.hasher.hash(cmd.password).await?;
-		let mut user = self
-			.users
-			.create(NewUser::register(cmd.username, cmd.email, password_hash))
-			.await?;
+		let result = harness.service.sign_in("code", "verifier").await;
 
-		let token = self
-			.tokens
-			.sign_confirmation(TokenKind::EmailConfirmation, user.id, &user.email, None)?;
-		user.start_email_confirmation(self.confirmation_token(&token));
-		self.users.update(&user).await?;
+		assert!(matches!(result, Err(IdentityError::PersistenceFailure(_))));
+		assert_eq!(harness.keycloak.revoked(), vec!["refresh-1".to_string()]);
+	}
 
-		// E-mail after commit, best-effort: rolling registration back on an
-		// SMTP failure would couple a network call into persistence (the
-		// production-grade fix is an outbox).
-		if let Err(err) = self
-			.mailer
-			.send_email_confirmation(&user.email, &user.username, &token)
-			.await
-		{
-			tracing::error!(user_id = %user.id, "failed to send confirmation e-mail: {err}");
-		}
+	#[tokio::test]
+	async fn a_token_keycloak_rejects_ends_the_sign_in() {
+		let harness = Harness::new();
+		harness.verifier.reject_all();
 
-		Ok(user)
+		let result = harness.service.sign_in("code", "verifier").await;
+
+		assert!(matches!(result, Err(IdentityError::SignInRejected)));
+	}
+
+	#[tokio::test]
+	async fn authenticating_mirrors_role_changes() {
+		let harness = Harness::new();
+		harness.service.sign_in("code", "verifier").await.unwrap();
+		harness.verifier.issue(identity(vec![RoleName::Admin]));
+
+		let caller = harness.service.authenticate("access").await.unwrap();
+
+		assert!(caller.has_role(RoleName::Admin));
+		assert!(harness.users.list().await.unwrap()[0].has_role(RoleName::Admin));
+	}
+
+	#[tokio::test]
+	async fn an_unknown_user_is_not_found() {
+		let harness = Harness::new();
+		let result = harness.service.get_user(crate::identity::domain::UserId(42)).await;
+		assert!(matches!(result, Err(IdentityError::UserNotFound)));
 	}
 }

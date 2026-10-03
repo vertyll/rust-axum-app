@@ -24,21 +24,18 @@ unsafe_code = "forbid"
 
 [dependencies]
 anyhow = "1.0"
-argon2 = "0.6.0"
 axum = { version = "0.8.9", features = ["multipart", "macros"] }
+base64 = "0.23"
 dotenvy = "0.15.7"
+fred = "10"
 jiff = { version = "0.2", features = ["serde"] }
 jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
-lettre = { version = "0.11.23", features = [
-	"builder",
-	"smtp-transport",
-	"tokio1",
-	"tokio1-native-tls",
-] }
+rand = "0.10"
+reqwest = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.11"
 swc_icu_messageformat_parser = "38"
-tera = { version = "2.4", features = ["glob_fs"] }
 thiserror = "2.0"
 toasty = { version = "0.11", features = ["postgresql", "jiff", "serde"] }
 toasty-cli = "0.11"
@@ -51,7 +48,8 @@ tokio = { version = "1", features = [
 	"io-util",
 	"signal",
 ] }
-tower-cookies = "0.11"
+tower-sessions = "0.14"
+tower-sessions-redis-store = "0.16"
 tower-http = { version = "0.7.1", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

@@ -130,6 +130,6 @@ where
 	R: FileRepository,
 	S: FileStorage,
 {
-	files.soft_delete(FileId(id), claims.sub).await?;
+	files.soft_delete(FileId(id), claims.user_id.0).await?;
 	Ok(())
 }

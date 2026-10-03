@@ -1,6 +1,6 @@
 //! Application configuration, loaded from environment variables by their
-//! exact names (see `.env.example`). Outside local, startup fails
-//! when the token secrets are unset instead of signing with placeholders.
+//! exact names (see `.env.example`). Outside local, startup fails when a
+//! deployment-specific value is unset instead of falling back to a local one.
 
 use std::env;
 use std::fmt::Display;
@@ -12,7 +12,8 @@ use anyhow::{Context, Result, bail};
 pub struct AppConfig {
 	pub server: ServerConfig,
 	pub database: DatabaseConfig,
-	pub security: SecurityConfig,
+	pub keycloak: KeycloakConfig,
+	pub sessions: SessionsConfig,
 	pub files: FilesConfig,
 	pub emails: EmailsConfig,
 }
@@ -69,16 +70,21 @@ impl DatabaseConfig {
 }
 
 #[derive(Debug, Clone)]
-pub struct TokenConfig {
-	pub secret: String,
-	pub expires_in_seconds: i64,
+pub struct KeycloakConfig {
+	pub server_url: String,
+	pub realm: String,
+	pub client_id: String,
+	pub client_secret: String,
+	pub audience: String,
+	pub callback_url: String,
+	pub post_login_url: String,
 }
 
 #[derive(Debug, Clone)]
-pub struct SecurityConfig {
-	pub access_token: TokenConfig,
-	pub refresh_token: TokenConfig,
-	pub confirmation_token: TokenConfig,
+pub struct SessionsConfig {
+	pub redis_url: String,
+	pub cookie_secure: bool,
+	pub inactivity_timeout_seconds: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -94,7 +100,6 @@ pub struct EmailsConfig {
 	pub smtp_username: String,
 	pub smtp_password: String,
 	pub from: String,
-	pub templates_dir: String,
 }
 
 impl AppConfig {
@@ -114,19 +119,19 @@ impl AppConfig {
 				name: env_or("DB_NAME", "rust_axum_app"),
 				max_connections: env_parse("DB_MAX_CONNECTIONS", 10)?,
 			},
-			security: SecurityConfig {
-				access_token: TokenConfig {
-					secret: env_or("JWT_ACCESS_TOKEN_SECRET", "secret"),
-					expires_in_seconds: env_parse("JWT_ACCESS_TOKEN_EXPIRES_IN", 3_600)?,
-				},
-				refresh_token: TokenConfig {
-					secret: env_or("JWT_REFRESH_TOKEN_SECRET", "secret"),
-					expires_in_seconds: env_parse("JWT_REFRESH_TOKEN_EXPIRES_IN", 2_592_000)?,
-				},
-				confirmation_token: TokenConfig {
-					secret: env_or("CONFIRMATION_TOKEN_SECRET", "secret"),
-					expires_in_seconds: env_parse("CONFIRMATION_TOKEN_EXPIRES_IN", 86_400)?,
-				},
+			keycloak: KeycloakConfig {
+				server_url: env_or("KEYCLOAK_SERVER_URL", "http://localhost:9000"),
+				realm: env_or("KEYCLOAK_REALM", "rust-axum-app"),
+				client_id: env_or("KEYCLOAK_CLIENT_ID", "rust-axum-app"),
+				client_secret: env_or("KEYCLOAK_CLIENT_SECRET", "rust-axum-app-local-secret"),
+				audience: env_or("KEYCLOAK_AUDIENCE", "rust-axum-app"),
+				callback_url: env_or("AUTH_CALLBACK_URL", "http://localhost:3000/api/auth/callback"),
+				post_login_url: env_or("AUTH_POST_LOGIN_URL", "http://localhost:3000/api/auth/session"),
+			},
+			sessions: SessionsConfig {
+				redis_url: env_or("REDIS_URL", "redis://localhost:6379"),
+				cookie_secure: env_parse("SESSION_COOKIE_SECURE", false)?,
+				inactivity_timeout_seconds: env_parse("SESSION_INACTIVITY_TIMEOUT", 36_000)?,
 			},
 			files: FilesConfig {
 				upload_dir: env_or("FILES_UPLOAD_DIR", "uploads"),
@@ -137,8 +142,7 @@ impl AppConfig {
 				smtp_port: env_parse("SMTP_PORT", 1025)?,
 				smtp_username: env_or("SMTP_USERNAME", ""),
 				smtp_password: env_or("SMTP_PASSWORD", ""),
-				from: env_or("EMAIL_FROM", "app@example.com"),
-				templates_dir: env_or("EMAIL_TEMPLATES_DIR", "resources/templates/emails"),
+				from: env_or("EMAIL_FROM", "no-reply@rust-axum-app.local"),
 			},
 		};
 
@@ -153,6 +157,7 @@ impl AppConfig {
 			host = %self.server.host,
 			port = self.server.port,
 			database = %format_args!("{}:{}/{}", self.database.host, self.database.port, self.database.name),
+			keycloak = %format_args!("{}/realms/{}", self.keycloak.server_url, self.keycloak.realm),
 			smtp_host = %self.emails.smtp_host,
 			uploads_dir = %self.files.upload_dir,
 			"configuration loaded"
@@ -161,8 +166,8 @@ impl AppConfig {
 
 	/// Outside `local` every deployment-specific value has to come from the
 	/// environment; a local default (localhost, placeholder secret) would
-	/// otherwise start the service against the wrong database, mail server or
-	/// public URL.
+	/// otherwise start the service against the wrong database, Keycloak, mail
+	/// server or public URL.
 	fn validate(&self) -> Result<()> {
 		if self.server.environment.is_local() {
 			return Ok(());
@@ -176,9 +181,12 @@ impl AppConfig {
 			"DB_NAME",
 			"SMTP_HOST",
 			"EMAIL_FROM",
-			"JWT_ACCESS_TOKEN_SECRET",
-			"JWT_REFRESH_TOKEN_SECRET",
-			"CONFIRMATION_TOKEN_SECRET",
+			"KEYCLOAK_SERVER_URL",
+			"KEYCLOAK_CLIENT_SECRET",
+			"AUTH_CALLBACK_URL",
+			"AUTH_POST_LOGIN_URL",
+			"REDIS_URL",
+			"SESSION_COOKIE_SECURE",
 		];
 		for key in required {
 			if env::var(key).map(|value| value.trim().is_empty()).unwrap_or(true) {

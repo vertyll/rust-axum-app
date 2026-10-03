@@ -1,10 +1,7 @@
-use std::sync::Arc;
-use std::time::Duration;
-
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-use rust_axum_app::bootstrap::{self, AppIdentityService, config::AppConfig};
+use rust_axum_app::bootstrap::{self, config::AppConfig};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -38,9 +35,9 @@ async fn main() -> anyhow::Result<()> {
 
 	let services = bootstrap::build_services(db, &config)?;
 	services.translations.synchronize().await?;
-	spawn_session_cleanup(services.identity.clone());
 
-	let app = bootstrap::router(&services, &config);
+	let store = bootstrap::session_store(&config).await?;
+	let app = bootstrap::router(&services, &config, store);
 	let address = format!("{}:{}", config.server.host, config.server.port);
 	let listener = tokio::net::TcpListener::bind(&address).await?;
 	tracing::info!("listening on http://{address}");
@@ -49,20 +46,6 @@ async fn main() -> anyhow::Result<()> {
 		.with_graceful_shutdown(shutdown_signal())
 		.await?;
 	Ok(())
-}
-
-/// Deletes expired refresh sessions once a day.
-fn spawn_session_cleanup(identity: Arc<AppIdentityService>) {
-	tokio::spawn(async move {
-		let mut interval = tokio::time::interval(Duration::from_secs(24 * 60 * 60));
-		loop {
-			interval.tick().await;
-			match identity.clean_expired_sessions().await {
-				Ok(()) => tracing::debug!("expired refresh sessions cleaned"),
-				Err(err) => tracing::error!("session cleanup failed: {err}"),
-			}
-		}
-	});
 }
 
 async fn shutdown_signal() {

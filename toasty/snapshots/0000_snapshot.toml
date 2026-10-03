@@ -230,7 +230,7 @@ auto_increment = true
 
 [[schema.tables.columns]]
 id = { table = 3, index = 1 }
-name = "username"
+name = "keycloak_id"
 ty = "String"
 storage_ty = "Text"
 
@@ -242,79 +242,24 @@ storage_ty = "Text"
 
 [[schema.tables.columns]]
 id = { table = 3, index = 3 }
-name = "password_hash"
+name = "first_name"
 ty = "String"
 storage_ty = "Text"
 
 [[schema.tables.columns]]
 id = { table = 3, index = 4 }
-name = "is_email_confirmed"
-ty = "Bool"
-storage_ty = "Boolean"
+name = "last_name"
+ty = "String"
+storage_ty = "Text"
 
 [[schema.tables.columns]]
 id = { table = 3, index = 5 }
-name = "is_active"
-ty = "Bool"
-storage_ty = "Boolean"
-
-[[schema.tables.columns]]
-id = { table = 3, index = 6 }
-name = "email_confirmation_token"
-ty = "String"
-storage_ty = "Text"
-nullable = true
-
-[[schema.tables.columns]]
-id = { table = 3, index = 7 }
-name = "email_confirmation_token_expiry"
-ty = "Timestamp"
-storage_ty = { Timestamp = 6 }
-nullable = true
-
-[[schema.tables.columns]]
-id = { table = 3, index = 8 }
-name = "email_change_token"
-ty = "String"
-storage_ty = "Text"
-nullable = true
-
-[[schema.tables.columns]]
-id = { table = 3, index = 9 }
-name = "email_change_token_expiry"
-ty = "Timestamp"
-storage_ty = { Timestamp = 6 }
-nullable = true
-
-[[schema.tables.columns]]
-id = { table = 3, index = 10 }
-name = "password_reset_token"
-ty = "String"
-storage_ty = "Text"
-nullable = true
-
-[[schema.tables.columns]]
-id = { table = 3, index = 11 }
-name = "password_reset_token_expiry"
-ty = "Timestamp"
-storage_ty = { Timestamp = 6 }
-nullable = true
-
-[[schema.tables.columns]]
-id = { table = 3, index = 12 }
-name = "pending_email"
-ty = "String"
-storage_ty = "Text"
-nullable = true
-
-[[schema.tables.columns]]
-id = { table = 3, index = 13 }
 name = "created_at"
 ty = "Timestamp"
 storage_ty = { Timestamp = 6 }
 
 [[schema.tables.columns]]
-id = { table = 3, index = 14 }
+id = { table = 3, index = 6 }
 name = "updated_at"
 ty = "Timestamp"
 storage_ty = { Timestamp = 6 }
@@ -329,7 +274,7 @@ primary_key = true
 
 [[schema.tables.indices]]
 id = { table = 3, index = 1 }
-name = "index_users_by_username"
+name = "index_users_by_keycloak_id"
 on = 3
 columns = [{ column = { table = 3, index = 1 }, op = "Eq", scope = "Partition" }]
 unique = true
@@ -343,7 +288,7 @@ unique = true
 
 [[schema.tables]]
 id = 4
-name = "refresh_tokens"
+name = "translations"
 primary_key = { columns = [{ table = 4, index = 0 }], index = { table = 4, index = 0 } }
 
 [[schema.tables.columns]]
@@ -355,37 +300,55 @@ auto_increment = true
 
 [[schema.tables.columns]]
 id = { table = 4, index = 1 }
-name = "token"
+name = "message_key"
 ty = "String"
 storage_ty = "Text"
 
 [[schema.tables.columns]]
 id = { table = 4, index = 2 }
-name = "expires_at"
-ty = "Timestamp"
-storage_ty = { Timestamp = 6 }
+name = "message_pl"
+ty = "String"
+storage_ty = "Text"
 
 [[schema.tables.columns]]
 id = { table = 4, index = 3 }
-name = "user_id"
-ty = "I64"
-storage_ty = { Integer = 8 }
+name = "message_en"
+ty = "String"
+storage_ty = "Text"
 
 [[schema.tables.columns]]
 id = { table = 4, index = 4 }
+name = "default_pl"
+ty = "String"
+storage_ty = "Text"
+
+[[schema.tables.columns]]
+id = { table = 4, index = 5 }
+name = "default_en"
+ty = "String"
+storage_ty = "Text"
+
+[[schema.tables.columns]]
+id = { table = 4, index = 6 }
+name = "customized"
+ty = "Bool"
+storage_ty = "Boolean"
+
+[[schema.tables.columns]]
+id = { table = 4, index = 7 }
 name = "created_at"
 ty = "Timestamp"
 storage_ty = { Timestamp = 6 }
 
 [[schema.tables.columns]]
-id = { table = 4, index = 5 }
+id = { table = 4, index = 8 }
 name = "updated_at"
 ty = "Timestamp"
 storage_ty = { Timestamp = 6 }
 
 [[schema.tables.indices]]
 id = { table = 4, index = 0 }
-name = "index_refresh_tokens_by_id"
+name = "index_translations_by_id"
 on = 4
 columns = [{ column = { table = 4, index = 0 }, op = "Eq", scope = "Partition" }]
 unique = true
@@ -393,75 +356,7 @@ primary_key = true
 
 [[schema.tables.indices]]
 id = { table = 4, index = 1 }
-name = "index_refresh_tokens_by_token"
+name = "index_translations_by_message_key"
 on = 4
 columns = [{ column = { table = 4, index = 1 }, op = "Eq", scope = "Partition" }]
 unique = true
-
-[[schema.tables.indices]]
-id = { table = 4, index = 2 }
-name = "index_refresh_tokens_by_user_id"
-on = 4
-columns = [{ column = { table = 4, index = 3 }, op = "Eq", scope = "Partition" }]
-
-[[schema.tables]]
-id = 5
-name = "users_email_history"
-primary_key = { columns = [{ table = 5, index = 0 }], index = { table = 5, index = 0 } }
-
-[[schema.tables.columns]]
-id = { table = 5, index = 0 }
-name = "id"
-ty = "I64"
-storage_ty = { Integer = 8 }
-auto_increment = true
-
-[[schema.tables.columns]]
-id = { table = 5, index = 1 }
-name = "old_email"
-ty = "String"
-storage_ty = "Text"
-
-[[schema.tables.columns]]
-id = { table = 5, index = 2 }
-name = "new_email"
-ty = "String"
-storage_ty = "Text"
-
-[[schema.tables.columns]]
-id = { table = 5, index = 3 }
-name = "email_change_at"
-ty = "Timestamp"
-storage_ty = { Timestamp = 6 }
-
-[[schema.tables.columns]]
-id = { table = 5, index = 4 }
-name = "user_id"
-ty = "I64"
-storage_ty = { Integer = 8 }
-
-[[schema.tables.columns]]
-id = { table = 5, index = 5 }
-name = "created_at"
-ty = "Timestamp"
-storage_ty = { Timestamp = 6 }
-
-[[schema.tables.columns]]
-id = { table = 5, index = 6 }
-name = "updated_at"
-ty = "Timestamp"
-storage_ty = { Timestamp = 6 }
-
-[[schema.tables.indices]]
-id = { table = 5, index = 0 }
-name = "index_users_email_history_by_id"
-on = 5
-columns = [{ column = { table = 5, index = 0 }, op = "Eq", scope = "Partition" }]
-unique = true
-primary_key = true
-
-[[schema.tables.indices]]
-id = { table = 5, index = 1 }
-name = "index_users_email_history_by_user_id"
-on = 5
-columns = [{ column = { table = 5, index = 4 }, op = "Eq", scope = "Partition" }]

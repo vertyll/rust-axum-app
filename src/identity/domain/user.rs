@@ -1,19 +1,7 @@
-//! The `User` aggregate: identity business rules as methods, pure by
-//! construction — `now` is always an argument and crypto stays behind
-//! application ports, so every rule tests without a DB, clock, or keys.
-//! construction — `now` is always an argument and crypto stays behind
-//! application ports, so every rule tests without a DB, clock, or keys.
-//!
-//! All identity business rules live here as methods on the aggregate:
-//! confirming an e-mail, starting/completing a password reset or e-mail
-//! change, deactivating an account. The methods are pure — the current time
-//! is always passed in as an argument, and cryptographic concerns (hashing,
-//! JWT signatures) stay behind application-layer ports. That keeps every
-//! rule unit-testable without a database, a clock or a key.
+use std::fmt;
 
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 
 use super::error::IdentityError;
 use super::role::RoleName;
@@ -23,23 +11,43 @@ pub struct UserId(pub i64);
 
 impl fmt::Display for UserId {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		self.0.fmt(f)
+		write!(f, "{}", self.0)
 	}
 }
 
-/// A syntactically valid e-mail address.
+/// The subject Keycloak gives an account; the join between the two systems.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct KeycloakId(String);
+
+impl KeycloakId {
+	pub fn new(value: impl Into<String>) -> Self {
+		Self(value.into())
+	}
+
+	pub fn as_str(&self) -> &str {
+		&self.0
+	}
+}
+
+impl fmt::Display for KeycloakId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.write_str(&self.0)
+	}
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
 pub struct Email(String);
 
 impl Email {
 	pub fn parse(value: impl Into<String>) -> Result<Self, IdentityError> {
-		let value = value.into();
-		// Structural minimum only; full validation happens at the HTTP edge.
-		let mut parts = value.splitn(2, '@');
-		match (parts.next(), parts.next()) {
-			(Some(local), Some(host)) if !local.is_empty() && host.contains('.') => Ok(Self(value)),
-			_ => Err(IdentityError::InvalidEmail),
+		let value = value.into().trim().to_lowercase();
+		let valid = value
+			.split_once('@')
+			.is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.') && !domain.starts_with('.'));
+		if valid {
+			Ok(Self(value))
+		} else {
+			Err(IdentityError::InvalidEmail)
 		}
 	}
 
@@ -54,335 +62,120 @@ impl fmt::Display for Email {
 	}
 }
 
-/// A username of at least three characters.
+/// What a verified Keycloak access token says about its holder.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct Username(String);
-
-impl Username {
-	pub const MIN_LENGTH: usize = 3;
-
-	pub fn parse(value: impl Into<String>) -> Result<Self, IdentityError> {
-		let value = value.into();
-		if value.chars().count() < Self::MIN_LENGTH {
-			return Err(IdentityError::UsernameTooShort);
-		}
-		Ok(Self(value))
-	}
-
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-}
-
-impl fmt::Display for Username {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.write_str(&self.0)
-	}
-}
-
-/// An already-hashed password. The domain never sees plaintext passwords;
-/// hashing and verification go through the `PasswordHasher` port.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PasswordHash(String);
-
-impl PasswordHash {
-	pub fn new(hash: impl Into<String>) -> Self {
-		Self(hash.into())
-	}
-
-	pub fn as_str(&self) -> &str {
-		&self.0
-	}
-}
-
-/// A single-use token paired with its expiry — "token without expiry" is
-/// unrepresentable (the DB stores two nullable columns).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StoredToken {
-	pub value: String,
-	pub expires_at: Timestamp,
-}
-
-impl StoredToken {
-	pub fn new(value: impl Into<String>, expires_at: Timestamp) -> Self {
-		Self {
-			value: value.into(),
-			expires_at,
-		}
-	}
-
-	fn verify(&self, presented: &str, now: Timestamp) -> Result<(), IdentityError> {
-		if self.value != presented {
-			return Err(IdentityError::InvalidToken);
-		}
-		if now > self.expires_at {
-			return Err(IdentityError::ExpiredToken);
-		}
-		Ok(())
-	}
-}
-
-/// A pending e-mail change: the confirmation token plus the address that
-/// will become active once the token is confirmed.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PendingEmailChange {
-	pub token: StoredToken,
-	pub new_email: Email,
-}
-
-/// A user account that has not been persisted yet (no identity assigned).
-#[derive(Debug, Clone)]
-pub struct NewUser {
-	pub username: Username,
+pub struct KeycloakIdentity {
+	pub keycloak_id: KeycloakId,
 	pub email: Email,
-	pub password_hash: PasswordHash,
+	pub first_name: String,
+	pub last_name: String,
 	pub roles: Vec<RoleName>,
 }
 
-impl NewUser {
-	/// Registers a new account with the default role.
-	pub fn register(username: Username, email: Email, password_hash: PasswordHash) -> Self {
+#[derive(Debug, Clone)]
+pub struct NewUser {
+	pub keycloak_id: KeycloakId,
+	pub email: Email,
+	pub first_name: String,
+	pub last_name: String,
+	pub roles: Vec<RoleName>,
+}
+
+impl From<&KeycloakIdentity> for NewUser {
+	fn from(identity: &KeycloakIdentity) -> Self {
 		Self {
-			username,
-			email,
-			password_hash,
-			roles: vec![RoleName::User],
+			keycloak_id: identity.keycloak_id.clone(),
+			email: identity.email.clone(),
+			first_name: identity.first_name.clone(),
+			last_name: identity.last_name.clone(),
+			roles: identity.roles.clone(),
 		}
 	}
 }
 
+/// An account mirrored from Keycloak. Keycloak owns the credentials; this
+/// copy exists so the application can join its own data to a person.
 #[derive(Debug, Clone)]
 pub struct User {
 	pub id: UserId,
-	pub username: Username,
+	pub keycloak_id: KeycloakId,
 	pub email: Email,
-	pub password_hash: PasswordHash,
-	pub is_email_confirmed: bool,
-	pub is_active: bool,
-	pub email_confirmation: Option<StoredToken>,
-	pub password_reset: Option<StoredToken>,
-	pub email_change: Option<PendingEmailChange>,
+	pub first_name: String,
+	pub last_name: String,
 	pub roles: Vec<RoleName>,
 	pub created_at: Timestamp,
 	pub updated_at: Timestamp,
 }
 
 impl User {
-	/// An account may authenticate only when active and confirmed.
-	pub fn ensure_can_authenticate(&self) -> Result<(), IdentityError> {
-		if !self.is_active {
-			return Err(IdentityError::AccountInactive);
-		}
-		if !self.is_email_confirmed {
-			return Err(IdentityError::EmailNotConfirmed);
-		}
-		Ok(())
-	}
-
 	pub fn has_role(&self, role: RoleName) -> bool {
 		self.roles.contains(&role)
 	}
 
-	pub fn start_email_confirmation(&mut self, token: StoredToken) {
-		self.email_confirmation = Some(token);
-	}
-
-	pub fn confirm_email(&mut self, presented: &str, now: Timestamp) -> Result<(), IdentityError> {
-		if self.is_email_confirmed {
-			return Err(IdentityError::EmailAlreadyConfirmed);
+	/// Mirrors the identity; answers whether anything changed, so an
+	/// unchanged account costs no write.
+	pub fn mirror(&mut self, identity: &KeycloakIdentity) -> bool {
+		let changed = self.email != identity.email
+			|| self.first_name != identity.first_name
+			|| self.last_name != identity.last_name
+			|| self.roles != identity.roles;
+		if changed {
+			self.email = identity.email.clone();
+			self.first_name = identity.first_name.clone();
+			self.last_name = identity.last_name.clone();
+			self.roles = identity.roles.clone();
 		}
-		self.email_confirmation
-			.as_ref()
-			.ok_or(IdentityError::InvalidToken)?
-			.verify(presented, now)?;
-
-		self.is_email_confirmed = true;
-		self.email_confirmation = None;
-		Ok(())
-	}
-
-	pub fn start_password_reset(&mut self, token: StoredToken) {
-		self.password_reset = Some(token);
-	}
-
-	pub fn complete_password_reset(
-		&mut self,
-		presented: &str,
-		new_hash: PasswordHash,
-		now: Timestamp,
-	) -> Result<(), IdentityError> {
-		self.password_reset
-			.as_ref()
-			.ok_or(IdentityError::InvalidToken)?
-			.verify(presented, now)?;
-
-		self.password_hash = new_hash;
-		self.password_reset = None;
-		Ok(())
-	}
-
-	/// Direct password change; the application layer verifies the current
-	/// password through the hasher port before calling this.
-	pub fn set_password(&mut self, new_hash: PasswordHash) {
-		self.password_hash = new_hash;
-	}
-
-	pub fn start_email_change(&mut self, new_email: Email, token: StoredToken) -> Result<(), IdentityError> {
-		if new_email == self.email {
-			return Err(IdentityError::SameEmailAsCurrent);
-		}
-		self.email_change = Some(PendingEmailChange { token, new_email });
-		Ok(())
-	}
-
-	/// Confirms a pending e-mail change; returns the previous address so the
-	/// caller can record it in the change history.
-	pub fn complete_email_change(&mut self, presented: &str, now: Timestamp) -> Result<Email, IdentityError> {
-		let pending = self.email_change.as_ref().ok_or(IdentityError::InvalidToken)?;
-		pending.token.verify(presented, now)?;
-
-		let previous = std::mem::replace(&mut self.email, pending.new_email.clone());
-		self.email_change = None;
-		Ok(previous)
-	}
-
-	/// "Deleting" a user is a business-level deactivation, never a row delete.
-	pub fn deactivate(&mut self) {
-		self.is_active = false;
+		changed
 	}
 }
+
 #[cfg(test)]
 mod tests {
-	use jiff::Timestamp;
-
 	use super::*;
-	use crate::identity::domain::role::RoleName;
+
+	fn identity(email: &str, roles: Vec<RoleName>) -> KeycloakIdentity {
+		KeycloakIdentity {
+			keycloak_id: KeycloakId::new("subject"),
+			email: Email::parse(email).unwrap(),
+			first_name: "Ada".into(),
+			last_name: "Lovelace".into(),
+			roles,
+		}
+	}
 
 	fn user() -> User {
+		let identity = identity("ada@rust-axum-app.local", vec![RoleName::User]);
 		User {
 			id: UserId(1),
-			username: Username::parse("alice").unwrap(),
-			email: Email::parse("alice@example.com").unwrap(),
-			password_hash: PasswordHash::new("hash"),
-			is_email_confirmed: false,
-			is_active: true,
-			email_confirmation: None,
-			password_reset: None,
-			email_change: None,
-			roles: vec![RoleName::User],
+			keycloak_id: identity.keycloak_id,
+			email: identity.email,
+			first_name: identity.first_name,
+			last_name: identity.last_name,
+			roles: identity.roles,
 			created_at: Timestamp::UNIX_EPOCH,
 			updated_at: Timestamp::UNIX_EPOCH,
 		}
 	}
 
-	fn valid(value: &str) -> StoredToken {
-		StoredToken::new(value, Timestamp::MAX)
-	}
-
-	fn expired(value: &str) -> StoredToken {
-		StoredToken::new(value, Timestamp::UNIX_EPOCH)
+	#[test]
+	fn email_is_normalised_and_checked() {
+		assert_eq!(Email::parse(" Ada@Example.COM ").unwrap().as_str(), "ada@example.com");
+		assert!(Email::parse("no-at-sign").is_err());
+		assert!(Email::parse("ada@localhost").is_err());
 	}
 
 	#[test]
-	fn email_requires_local_part_and_dotted_host() {
-		assert!(Email::parse("alice@example.com").is_ok());
-		for bad in ["", "alice", "@example.com", "alice@localhost"] {
-			assert!(matches!(Email::parse(bad), Err(IdentityError::InvalidEmail)), "{bad}");
-		}
-	}
-
-	#[test]
-	fn username_enforces_minimum_length() {
-		assert!(Username::parse("abc").is_ok());
-		assert!(matches!(Username::parse("ab"), Err(IdentityError::UsernameTooShort)));
-	}
-
-	#[test]
-	fn register_assigns_default_role() {
-		let new = NewUser::register(
-			Username::parse("alice").unwrap(),
-			Email::parse("alice@example.com").unwrap(),
-			PasswordHash::new("hash"),
-		);
-		assert_eq!(new.roles, vec![RoleName::User]);
-	}
-
-	#[test]
-	fn confirm_email_happy_path_clears_token() {
+	fn mirroring_an_unchanged_identity_reports_no_change() {
 		let mut user = user();
-		user.start_email_confirmation(valid("token"));
-		user.confirm_email("token", Timestamp::now()).unwrap();
-		assert!(user.is_email_confirmed);
-		assert!(user.email_confirmation.is_none());
+		assert!(!user.mirror(&identity("ada@rust-axum-app.local", vec![RoleName::User])));
 	}
 
 	#[test]
-	fn confirm_email_rejects_wrong_expired_and_repeated() {
+	fn mirroring_takes_the_new_email_and_roles() {
 		let mut user = user();
-		user.start_email_confirmation(valid("token"));
-		let wrong = user.confirm_email("other", Timestamp::now()).unwrap_err();
-		assert!(matches!(wrong, IdentityError::InvalidToken));
-
-		user.email_confirmation = Some(expired("token"));
-		let late = user.confirm_email("token", Timestamp::now()).unwrap_err();
-		assert!(matches!(late, IdentityError::ExpiredToken));
-
-		user.is_email_confirmed = true;
-		let again = user.confirm_email("token", Timestamp::now()).unwrap_err();
-		assert!(matches!(again, IdentityError::EmailAlreadyConfirmed));
-	}
-
-	#[test]
-	fn password_reset_replaces_hash_once() {
-		let mut user = user();
-		user.start_password_reset(valid("reset"));
-		user.complete_password_reset("reset", PasswordHash::new("new"), Timestamp::now())
-			.unwrap();
-		assert_eq!(user.password_hash, PasswordHash::new("new"));
-		assert!(user.password_reset.is_none());
-
-		let repeat = user
-			.complete_password_reset("reset", PasswordHash::new("newer"), Timestamp::now())
-			.unwrap_err();
-		assert!(matches!(repeat, IdentityError::InvalidToken));
-	}
-
-	#[test]
-	fn email_change_swaps_address_and_returns_previous() {
-		let mut user = user();
-		let new_email = Email::parse("new@example.com").unwrap();
-		user.start_email_change(new_email.clone(), valid("change")).unwrap();
-
-		let previous = user.complete_email_change("change", Timestamp::now()).unwrap();
-		assert_eq!(previous.as_str(), "alice@example.com");
-		assert_eq!(user.email, new_email);
-		assert!(user.email_change.is_none());
-	}
-
-	#[test]
-	fn email_change_rejects_current_address() {
-		let mut user = user();
-		let same = user.email.clone();
-		let err = user.start_email_change(same, valid("change")).unwrap_err();
-		assert!(matches!(err, IdentityError::SameEmailAsCurrent));
-	}
-
-	#[test]
-	fn authentication_requires_active_confirmed_account() {
-		let mut user = user();
-		assert!(matches!(
-			user.ensure_can_authenticate(),
-			Err(IdentityError::EmailNotConfirmed)
-		));
-
-		user.is_email_confirmed = true;
-		assert!(user.ensure_can_authenticate().is_ok());
-
-		user.deactivate();
-		assert!(matches!(
-			user.ensure_can_authenticate(),
-			Err(IdentityError::AccountInactive)
-		));
+		assert!(user.mirror(&identity("ada@new.example", vec![RoleName::Admin])));
+		assert_eq!(user.email.as_str(), "ada@new.example");
+		assert!(user.has_role(RoleName::Admin));
+		assert!(!user.has_role(RoleName::User));
 	}
 }

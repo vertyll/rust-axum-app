@@ -1,10 +1,9 @@
-use super::{IdentityMailer, PasswordHasher, TokenService};
-use crate::identity::domain::{SessionRepository, UserRepository};
+use super::{KeycloakClient, TokenVerifier};
+use crate::identity::domain::UserRepository;
 
+/// A type-level bundle naming which adapter satisfies each port.
 pub trait IdentityPorts: Clone + Send + Sync + 'static {
 	type Users: UserRepository;
-	type Sessions: SessionRepository;
-	type Hasher: PasswordHasher;
-	type Tokens: TokenService;
-	type Mailer: IdentityMailer;
+	type Keycloak: KeycloakClient;
+	type Verifier: TokenVerifier;
 }

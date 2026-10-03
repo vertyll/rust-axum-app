@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use super::records::{EmailHistoryRecord, RoleRecord, UserRecord, UserRoleRecord};
-use crate::identity::domain::{Email, IdentityError, NewUser, RoleName, User, UserId, UserRepository, Username};
+use super::records::{RoleRecord, UserRecord, UserRoleRecord};
+use crate::identity::domain::{IdentityError, KeycloakId, NewUser, RoleName, User, UserId, UserRepository};
 
 #[derive(Clone)]
 pub struct ToastyUserRepository {
@@ -23,7 +23,9 @@ impl ToastyUserRepository {
 		.await
 		.map_err(persistence)?;
 
-		Ok(roles.iter().filter_map(|role| role.name.parse().ok()).collect())
+		let mut names: Vec<RoleName> = roles.iter().filter_map(|role| role.name.parse().ok()).collect();
+		names.sort_by_key(|role| role.as_str());
+		Ok(names)
 	}
 
 	async fn map_one(db: &mut toasty::Db, record: Option<UserRecord>) -> Result<Option<User>, IdentityError> {
@@ -43,31 +45,16 @@ impl UserRepository for ToastyUserRepository {
 		let mut tx = db.transaction().await.map_err(persistence)?;
 
 		let record = toasty::create!(UserRecord {
-			username: user.username.as_str(),
+			keycloak_id: user.keycloak_id.as_str(),
 			email: user.email.as_str(),
-			password_hash: user.password_hash.as_str(),
+			first_name: user.first_name.as_str(),
+			last_name: user.last_name.as_str(),
 		})
 		.exec(&mut tx)
 		.await
 		.map_err(persistence)?;
 
-		for role in &user.roles {
-			let role_record = RoleRecord::filter_by_name(role.as_str())
-				.first()
-				.exec(&mut tx)
-				.await
-				.map_err(persistence)?
-				.ok_or_else(|| IdentityError::PersistenceFailure(format!("role '{role}' is not seeded")))?;
-
-			toasty::create!(UserRoleRecord {
-				user_id: record.id,
-				role_id: role_record.id
-			})
-			.exec(&mut tx)
-			.await
-			.map_err(persistence)?;
-		}
-
+		link_roles(&mut tx, record.id, &user.roles).await?;
 		tx.commit().await.map_err(persistence)?;
 
 		record.to_domain(user.roles)
@@ -83,19 +70,9 @@ impl UserRepository for ToastyUserRepository {
 		Self::map_one(&mut db, record).await
 	}
 
-	async fn find_by_email(&self, email: &Email) -> Result<Option<User>, IdentityError> {
+	async fn find_by_keycloak_id(&self, keycloak_id: &KeycloakId) -> Result<Option<User>, IdentityError> {
 		let mut db = self.db.clone();
-		let record = UserRecord::filter_by_email(email.as_str())
-			.first()
-			.exec(&mut db)
-			.await
-			.map_err(persistence)?;
-		Self::map_one(&mut db, record).await
-	}
-
-	async fn find_by_username(&self, username: &Username) -> Result<Option<User>, IdentityError> {
-		let mut db = self.db.clone();
-		let record = UserRecord::filter_by_username(username.as_str())
+		let record = UserRecord::filter_by_keycloak_id(keycloak_id.as_str())
 			.first()
 			.exec(&mut db)
 			.await
@@ -125,7 +102,8 @@ impl UserRepository for ToastyUserRepository {
 		records
 			.into_iter()
 			.map(|record| {
-				let roles = roles_by_user.remove(&record.id).unwrap_or_default();
+				let mut roles = roles_by_user.remove(&record.id).unwrap_or_default();
+				roles.sort_by_key(|role| role.as_str());
 				record.to_domain(roles)
 			})
 			.collect()
@@ -133,55 +111,48 @@ impl UserRepository for ToastyUserRepository {
 
 	async fn update(&self, user: &User) -> Result<(), IdentityError> {
 		let mut db = self.db.clone();
-		apply_update(&mut db, user).await
-	}
-
-	async fn save_email_change(&self, user: &User, previous_email: &Email) -> Result<(), IdentityError> {
-		let mut db = self.db.clone();
 		let mut tx = db.transaction().await.map_err(persistence)?;
 
-		apply_update(&mut tx, user).await?;
-
-		toasty::create!(EmailHistoryRecord {
-			user_id: user.id.0,
-			old_email: previous_email.as_str(),
-			new_email: user.email.as_str(),
-			email_change_at: jiff::Timestamp::now(),
+		toasty::update!(UserRecord::filter_by_id(user.id.0) {
+			email: user.email.as_str(),
+			first_name: user.first_name.as_str(),
+			last_name: user.last_name.as_str(),
 		})
 		.exec(&mut tx)
 		.await
 		.map_err(persistence)?;
 
+		UserRoleRecord::filter_by_user_id(user.id.0)
+			.delete()
+			.exec(&mut tx)
+			.await
+			.map_err(persistence)?;
+		link_roles(&mut tx, user.id.0, &user.roles).await?;
+
 		tx.commit().await.map_err(persistence)
 	}
 }
 
-/// Writes the aggregate's mutable columns. Generic over the executor so the
-/// same statement runs standalone or inside `save_email_change`'s transaction.
-async fn apply_update<E>(executor: &mut E, user: &User) -> Result<(), IdentityError>
+async fn link_roles<E>(executor: &mut E, user_id: i64, roles: &[RoleName]) -> Result<(), IdentityError>
 where
 	E: toasty::Executor,
 {
-	let email_change = user.email_change.as_ref();
+	for role in roles {
+		let role_record = RoleRecord::filter_by_name(role.as_str())
+			.first()
+			.exec(executor)
+			.await
+			.map_err(persistence)?
+			.ok_or_else(|| IdentityError::PersistenceFailure(format!("role '{role}' is not seeded")))?;
 
-	toasty::update!(UserRecord::filter_by_id(user.id.0) {
-		username: user.username.as_str(),
-		email: user.email.as_str(),
-		password_hash: user.password_hash.as_str(),
-		is_email_confirmed: user.is_email_confirmed,
-		is_active: user.is_active,
-		email_confirmation_token: user.email_confirmation.as_ref().map(|t| t.value.clone()),
-		email_confirmation_token_expiry: user.email_confirmation.as_ref().map(|t| t.expires_at),
-		password_reset_token: user.password_reset.as_ref().map(|t| t.value.clone()),
-		password_reset_token_expiry: user.password_reset.as_ref().map(|t| t.expires_at),
-		email_change_token: email_change.map(|c| c.token.value.clone()),
-		email_change_token_expiry: email_change.map(|c| c.token.expires_at),
-		pending_email: email_change.map(|c| c.new_email.as_str().to_string()),
-	})
-	.exec(executor)
-	.await
-	.map_err(persistence)?;
-
+		toasty::create!(UserRoleRecord {
+			user_id: user_id,
+			role_id: role_record.id
+		})
+		.exec(executor)
+		.await
+		.map_err(persistence)?;
+	}
 	Ok(())
 }
 

@@ -2,8 +2,8 @@
 //!
 //! # Modules (bounded contexts)
 //!
-//! * [`identity`] — users, credentials, sessions, roles, e-mail confirmation
-//!   and password flows.
+//! * [`identity`] — accounts mirrored from Keycloak, browser sessions on
+//!   Keycloak's hosted pages, roles and the auth guards.
 //! * [`files`] — file upload, storage and metadata.
 //! * [`translations`] — the ICU MessageFormat catalogue clients render
 //!   message keys with; defaults ship in `translations/*.json`.
@@ -15,9 +15,9 @@
 //! ├── domain/          pure business model: entities, value objects,
 //! │                    domain rules, repository ports. No framework/IO types.
 //! ├── application/     use cases orchestrating the domain. Defines the
-//! │                    driven ports (hasher, token service, mailer, storage).
-//! └── infrastructure/  adapters: Toasty persistence, Argon2, JWT, SMTP,
-//!                      local FS storage, Axum HTTP (routes, DTOs, guards).
+//! │                    driven ports (Keycloak client, token verifier, storage).
+//! └── infrastructure/  adapters: Toasty persistence, Keycloak, JWKS, local FS
+//!                      storage, Axum HTTP (routes, DTOs, guards).
 //! ```
 //!
 //! # Dependency rules
