@@ -1,3 +1,11 @@
+<p align="center">
+    <img alt="" src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white">
+    <img alt="" src="https://img.shields.io/badge/Tokio-463F5F?style=for-the-badge">
+    <img alt="" src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white">
+    <img alt="" src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white">
+    <img alt="" src="https://img.shields.io/badge/Keycloak-00b8e3?style=for-the-badge&logo=keycloak&logoColor=4D4D4D">
+</p>
+
 ## Project Assumptions
 
 Modular monolith in Rust with hexagonal architecture and Domain-Driven Design layering: three bounded contexts
