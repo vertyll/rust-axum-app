@@ -11,13 +11,12 @@ use axum::Json;
 use axum::Router;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
+use fred::prelude::{ClientLike, Config as RedisConfig, Pool as RedisPool};
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use tower_sessions::cookie::SameSite;
 use tower_sessions::cookie::time::Duration;
 use tower_sessions::{Expiry, SessionManagerLayer};
-use tower_sessions_redis_store::RedisStore;
-use tower_sessions_redis_store::fred::prelude::{ClientLike, Config as RedisConfig, Pool as RedisPool};
 
 use crate::files::application::FilesService;
 use crate::files::infrastructure::http as files_http;
@@ -26,8 +25,11 @@ use crate::files::infrastructure::storage::LocalFileStorage;
 use crate::identity::application::IdentityService;
 use crate::identity::application::ports::IdentityPorts;
 use crate::identity::infrastructure::http as identity_http;
-use crate::identity::infrastructure::keycloak::{HttpKeycloakClient, JwksTokenVerifier, KeycloakSettings};
+use crate::identity::infrastructure::keycloak::{
+	HttpKeycloakClient, JwksTokenVerifier, KeycloakSettings, SharedRefreshes,
+};
 use crate::identity::infrastructure::persistence::ToastyUserRepository;
+use crate::identity::infrastructure::session_store::RedisSessionStore;
 use crate::shared_infrastructure::problem;
 use crate::translations::application::TranslationsService;
 use crate::translations::infrastructure::defaults;
@@ -62,12 +64,15 @@ pub struct Services {
 }
 
 /// Wires concrete adapters into the application services.
-pub fn build_services(db: toasty::Db, config: &AppConfig) -> anyhow::Result<Services> {
+pub fn build_services(db: toasty::Db, config: &AppConfig, redis: RedisPool) -> anyhow::Result<Services> {
 	let keycloak = keycloak_settings(config);
 
 	let identity: AppIdentityService = IdentityService::new(
 		ToastyUserRepository::new(db.clone()),
-		HttpKeycloakClient::new(keycloak.clone())?,
+		HttpKeycloakClient::new(
+			keycloak.clone(),
+			SharedRefreshes::new(redis, &config.sessions.redis_key_prefix),
+		)?,
 		JwksTokenVerifier::new(&keycloak)?,
 	);
 
@@ -85,17 +90,17 @@ pub fn build_services(db: toasty::Db, config: &AppConfig) -> anyhow::Result<Serv
 	})
 }
 
-/// Connects the session store: browser sessions live in Redis, so the
-/// application holds no state of its own between requests.
-pub async fn session_store(config: &AppConfig) -> anyhow::Result<RedisStore<RedisPool>> {
+/// Connects to Redis, which holds the browser sessions and coordinates token
+/// refreshes, so the application holds no state of its own between requests.
+pub async fn redis(config: &AppConfig) -> anyhow::Result<RedisPool> {
 	let pool = RedisPool::new(RedisConfig::from_url(&config.sessions.redis_url)?, None, None, None, 1)?;
 	pool.init().await?;
-	Ok(RedisStore::new(pool))
+	Ok(pool)
 }
 
 /// Assembles the HTTP router. The composition root decides which routers
 /// sit behind the auth guard; the modules only provide their routes.
-pub fn router(services: &Services, config: &AppConfig, store: RedisStore<RedisPool>) -> Router {
+pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Router {
 	let auth_layer = from_fn_with_state(
 		services.identity.clone(),
 		identity_http::authenticate::<ProductionPorts>,
@@ -106,7 +111,7 @@ pub fn router(services: &Services, config: &AppConfig, store: RedisStore<RedisPo
 		post_login_url: config.keycloak.post_login_url.clone(),
 	};
 
-	let sessions = SessionManagerLayer::new(store)
+	let sessions = SessionManagerLayer::new(RedisSessionStore::new(redis, &config.sessions.redis_key_prefix))
 		.with_name("RUST_AXUM_APP_SESSION")
 		.with_http_only(true)
 		.with_same_site(SameSite::Lax)

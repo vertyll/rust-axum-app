@@ -82,6 +82,7 @@ pub struct KeycloakConfig {
 #[derive(Debug, Clone)]
 pub struct SessionsConfig {
 	pub redis_url: String,
+	pub redis_key_prefix: String,
 	pub cookie_secure: bool,
 	pub inactivity_timeout_seconds: i64,
 }
@@ -128,6 +129,7 @@ impl AppConfig {
 			},
 			sessions: SessionsConfig {
 				redis_url: env_or("REDIS_URL", "redis://localhost:6379"),
+				redis_key_prefix: env_or("REDIS_KEY_PREFIX", "rust-axum-app"),
 				cookie_secure: env_parse("SESSION_COOKIE_SECURE", false)?,
 				inactivity_timeout_seconds: env_parse("SESSION_INACTIVITY_TIMEOUT", 36_000)?,
 			},

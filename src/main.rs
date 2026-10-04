@@ -33,11 +33,11 @@ async fn main() -> anyhow::Result<()> {
 
 	bootstrap::seed::seed_roles(&db).await?;
 
-	let services = bootstrap::build_services(db, &config)?;
+	let redis = bootstrap::redis(&config).await?;
+	let services = bootstrap::build_services(db, &config, redis.clone())?;
 	services.translations.synchronize().await?;
 
-	let store = bootstrap::session_store(&config).await?;
-	let app = bootstrap::router(&services, &config, store);
+	let app = bootstrap::router(&services, &config, redis);
 	let address = format!("{}:{}", config.server.host, config.server.port);
 	let listener = tokio::net::TcpListener::bind(&address).await?;
 	tracing::info!("listening on http://{address}");

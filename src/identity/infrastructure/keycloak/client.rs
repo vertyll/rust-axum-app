@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use tokio::sync::OnceCell;
 
-use super::KeycloakSettings;
+use super::{KeycloakSettings, SharedRefreshes};
 use crate::identity::application::ports::KeycloakClient;
 use crate::identity::application::session::TokenPair;
 use crate::identity::domain::IdentityError;
@@ -18,16 +18,18 @@ type SharedRefresh = Arc<OnceCell<Result<TokenPair, IdentityError>>>;
 /// Keycloak's token endpoint over HTTP. A refresh is run once per refresh
 /// token: concurrent callers wait for it, and for thirty seconds a caller
 /// still holding the old token receives the same result, so a rotated
-/// refresh token is never presented twice.
+/// refresh token is never presented twice. Replicas agree on the same
+/// refresh through [`SharedRefreshes`].
 #[derive(Clone)]
 pub struct HttpKeycloakClient {
 	http: reqwest::Client,
 	settings: Arc<KeycloakSettings>,
 	refreshes: Arc<Mutex<HashMap<String, (Instant, SharedRefresh)>>>,
+	shared: SharedRefreshes,
 }
 
 impl HttpKeycloakClient {
-	pub fn new(settings: KeycloakSettings) -> Result<Self, IdentityError> {
+	pub fn new(settings: KeycloakSettings, shared: SharedRefreshes) -> Result<Self, IdentityError> {
 		let http = reqwest::Client::builder()
 			.timeout(TIMEOUT)
 			.build()
@@ -36,6 +38,7 @@ impl HttpKeycloakClient {
 			http,
 			settings: Arc::new(settings),
 			refreshes: Arc::default(),
+			shared,
 		})
 	}
 
@@ -116,7 +119,9 @@ impl KeycloakClient for HttpKeycloakClient {
 		let result = cell
 			.get_or_init(|| async move {
 				let form = [("grant_type", "refresh_token"), ("refresh_token", refresh_token)];
-				self.token(&form, IdentityError::SessionExpired).await
+				self.shared
+					.refresh(refresh_token, || self.token(&form, IdentityError::SessionExpired))
+					.await
 			})
 			.await
 			.clone();
@@ -164,7 +169,7 @@ mod tests {
 	use super::HttpKeycloakClient;
 	use crate::identity::application::ports::KeycloakClient;
 	use crate::identity::domain::IdentityError;
-	use crate::identity::infrastructure::keycloak::KeycloakSettings;
+	use crate::identity::infrastructure::keycloak::{KeycloakSettings, SharedRefreshes};
 
 	async fn keycloak(status: StatusCode, delay: Duration) -> (HttpKeycloakClient, Arc<AtomicUsize>) {
 		let calls = Arc::new(AtomicUsize::new(0));
@@ -184,13 +189,16 @@ mod tests {
 		let address = listener.local_addr().unwrap();
 		tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
-		let client = HttpKeycloakClient::new(KeycloakSettings {
-			realm_url: format!("http://{address}/realms/test"),
-			client_id: "client".into(),
-			client_secret: "secret".into(),
-			audience: "client".into(),
-			callback_url: "http://app.test/callback".into(),
-		})
+		let client = HttpKeycloakClient::new(
+			KeycloakSettings {
+				realm_url: format!("http://{address}/realms/test"),
+				client_id: "client".into(),
+				client_secret: "secret".into(),
+				audience: "client".into(),
+				callback_url: "http://app.test/callback".into(),
+			},
+			SharedRefreshes::in_process_only(),
+		)
 		.unwrap();
 		(client, calls)
 	}

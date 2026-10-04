@@ -2,9 +2,11 @@
 
 mod client;
 pub mod pkce;
+mod shared_refresh;
 mod verifier;
 
 pub use client::HttpKeycloakClient;
+pub use shared_refresh::SharedRefreshes;
 pub use verifier::JwksTokenVerifier;
 
 /// Where the realm is and how this application is registered in it.
