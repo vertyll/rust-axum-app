@@ -27,17 +27,21 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 
 ### Authentication:
 
-- Keycloak (realm `rust-axum-app`) handles sign-up, sign-in, email verification, password reset, two-factor
-  authentication and acceptance of the terms of use.
-- A browser signs in at `GET /api/auth/authorize` with the authorization code flow and PKCE, and then holds only the
-  `RUST_AXUM_APP_SESSION` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` in production). The tokens stay in the session,
-  stored in Redis.
-- Requests are authenticated with a bearer token or the session; the token's signature, issuer, expiry and audience
-  (`rust-axum-app`) are verified against Keycloak's published keys. Refresh tokens rotate on every use.
-- Locally, `docker-compose.local.yml` runs PostgreSQL, Redis, RedisInsight (`:5540`, connected to Redis), Keycloak on
-  `:9000` (admin/admin) and maildev. The realm from `keycloak/realm-export.json` has `admin@rust-axum-app.local`
-  (`ADMIN`) and `user@rust-axum-app.local`, both with the password `rust-axum-app-local`.
-- Copy `.env.example` to `.env` and run `cargo run` (`:3000`).
+- **Identity provider**: Keycloak (realm `rust-axum-app`) owns every page that touches a credential: sign-up, sign-in,
+  email verification, password reset, two-factor authentication and acceptance of the terms of use. The application
+  never sees a password.
+- **Pattern**: BFF. A browser signs in at `GET /api/auth/authorize` with the authorization code flow and PKCE; the
+  application keeps the tokens and the browser holds only the `RUST_AXUM_APP_SESSION` cookie (`HttpOnly`,
+  `SameSite=Lax`, `Secure` in production).
+- **Session store**: Redis (tower-sessions), so the application holds no state of its own.
+- **JWT**: the auth guard takes the access token from `Authorization: Bearer` or from the session and verifies its
+  signature against Keycloak's published keys, the issuer, the expiry and the audience (`rust-axum-app`).
+- **Token lifecycle**: access tokens live five minutes; every refresh returns a new refresh token and invalidates the
+  old one, and concurrent requests of one session share a single refresh. Signing out revokes the refresh token at
+  Keycloak.
+- **Cross-site requests**: `SameSite=Lax` plus `Sec-Fetch-Site`, so a write or a logout sent from another site is
+  refused.
+- **Accounts**: mirrored into PostgreSQL with their realm roles (`USER`, `ADMIN`) whenever they change.
 
 ### Core back-end:
 
