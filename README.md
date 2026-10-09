@@ -49,3 +49,11 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 - Docker for development environment.
 - Clippy for static code analysis.
 - rustfmt for code formatting.
+
+## Documentation
+
+- [Development Setup](./docs/development-setup.md) – running the infrastructure, the application, migrations and checks.
+- [Architecture](./docs/architecture.md) – modules, ports and adapters, endpoints, errors and translations.
+- [Authentication](./docs/authentication.md) – sign-in, tokens, sessions and refreshing.
+- Modules: [identity](./src/identity/README.md), [files](./src/files/README.md),
+  [translations](./src/translations/README.md).
