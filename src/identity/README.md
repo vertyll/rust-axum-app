@@ -25,3 +25,10 @@ application knows (`USER`, `ADMIN`) are kept; they are seeded at startup.
 
 When the copy cannot be written at sign-in, the new Keycloak session is revoked, so no one is signed in without an
 account.
+
+## Mechanisms
+
+- [Cross-site requests](docs/mechanisms/cross-site-requests.md) – Why a forged request from another site cannot act with
+  the user's session. CSRF tokens are not needed.
+- [Token refresh](docs/mechanisms/token-refresh.md) – How the session keeps a valid access token without signing the
+  user out when requests race.

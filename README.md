@@ -31,7 +31,7 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 - **Pattern**: BFF; the application keeps the tokens, the browser holds only a session cookie.
 - **Session store**: Redis (tower-sessions).
 - **JWT**: verified by the auth guard, from a Bearer header or from the session.
-- **Details**: [Authentication](./docs/authentication.md).
+- **Details**: [Authentication](docs/authentication.md).
 
 ### Core back-end:
 
@@ -52,10 +52,6 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 
 ## Documentation
 
-- [Glossary](./GLOSSARY.md) – every term the docs use, and where it is explained.
-- [Standards](./STANDARDS.md) – the RFCs and specifications the code implements or depends on.
-- [Development Setup](./docs/development-setup.md) – running the infrastructure, the application, migrations and checks.
-- [Architecture](./docs/architecture.md) – modules, ports and adapters, endpoints, errors and translations.
-- [Authentication](./docs/authentication.md) – sign-in, tokens, sessions and refreshing.
-- Modules: [identity](./src/identity/README.md), [files](./src/files/README.md),
-  [translations](./src/translations/README.md).
+- [Contents](CONTENTS.md) – every document in the repository, the module it belongs to, and what it covers.
+- [Glossary](GLOSSARY.md) – every term the docs use, and where it is explained.
+- [Standards](STANDARDS.md) – the RFCs and specifications the code implements or depends on.
