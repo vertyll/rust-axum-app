@@ -35,9 +35,12 @@ The session lives in Redis (tower-sessions, keys under `rust-axum-app`) and expi
 (`SESSION_INACTIVITY_TIMEOUT`). Access tokens live five minutes, and the session's token is refreshed when less than 30
 seconds of it is left.
 
-Keycloak rotates refresh tokens: every refresh returns a new one and invalidates the old one, and replaying a spent one
-ends the session. Two requests of one session refreshing at once would therefore sign the user out, so a refresh runs
-once per refresh token:
+> [!IMPORTANT]
+>
+> Keycloak rotates refresh tokens: every refresh returns a new one and invalidates the old one, and replaying a spent
+> one ends the session. Two requests of one session refreshing at once would therefore sign the user out.
+
+A refresh therefore runs once per refresh token:
 
 - within one instance, `HttpKeycloakClient` lets the first request refresh and hands its result to the others;
 - across instances, `SharedRefreshes` takes a lock in Redis; the instance holding it refreshes and leaves the new tokens
@@ -53,9 +56,9 @@ one.
 
 ## Cross-site requests
 
-The cookie is `SameSite=Lax`, which keeps it off cross-site writes. The middleware adds a second check: an unsafe request
-whose `Sec-Fetch-Site` is neither `same-origin` nor `none` is not given the session's token, and a logout from another
-site is refused with `403`. CSRF tokens are therefore not used.
+The cookie is `SameSite=Lax`, which keeps it off cross-site writes. The middleware adds a second check: an unsafe
+request whose `Sec-Fetch-Site` is neither `same-origin` nor `none` is not given the session's token, and a logout from
+another site is refused with `403`. CSRF tokens are therefore not used.
 
 ## Code
 

@@ -31,9 +31,9 @@ at compile time with no container and no trait objects. Adding a port to `identi
 
 ## Routes
 
-The routes are declared in each module's `infrastructure/http/routes`, and `bootstrap::router` nests them under their
-paths: `/api/auth`, `/api/users`, `/api/files`, `/api/translations` and `/api/admin/translations`, plus `/uploads`,
-`/legal` and `/health`. There is no OpenAPI description; the routes and their extractors are the reference.
+The routes are declared in each module's `infrastructure/http/routes`, and `bootstrap::router` nests each module's
+router under its path and decides which sit behind the auth guard. There is no OpenAPI description; the routes and
+their extractors are the reference.
 
 A handler states what it needs through its extractor: `Auth` for a signed-in caller, `RequireAdmin` for the `ADMIN`
 role.

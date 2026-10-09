@@ -28,8 +28,10 @@ Keycloak imports `keycloak/realm-export.json` on its first start, with two accou
 | `admin@rust-axum-app.local` | `rust-axum-app-local` | `USER`, `ADMIN` |
 | `user@rust-axum-app.local`  | `rust-axum-app-local` | `USER`          |
 
-The realm lives in the `keycloak-data` volume afterwards, so a change to the export file only takes effect after
-`docker compose -f docker-compose.local.yml down -v`.
+> [!NOTE]
+>
+> The realm lives in the `keycloak-data` volume afterwards, so a change to the export file only takes effect after
+> `docker compose -f docker-compose.local.yml down -v`.
 
 ## Run the application
 
@@ -43,10 +45,8 @@ nothing has to be set; `.env.example` lists them all, and a `.env` next to it is
 On start, in the `local` environment, the application pushes the schema to the database, seeds the roles and fills the
 translation catalogue from `translations/`. It listens on `http://localhost:3000`.
 
-| Address                                    | What                                  |
-|--------------------------------------------|---------------------------------------|
-| `http://localhost:3000/api/auth/authorize` | sign in; lands on `/api/auth/session` |
-| `http://localhost:3000/health`             | health                                |
+Open `http://localhost:3000/api/auth/authorize` in a browser to sign in; the session cookie then authorizes every
+call from that browser.
 
 ## Migrations
 
@@ -57,8 +57,12 @@ cargo run --bin cli -- migration generate --name <name>
 cargo run --bin cli -- migration apply
 ```
 
-Locally the schema is pushed on start, so `apply` is only needed when that push fails. Outside `local` nothing is pushed
-and the image carries neither the CLI nor the migrations: apply them against the target database before deploying.
+Locally the schema is pushed on start, so `apply` is only needed when that push fails.
+
+> [!WARNING]
+>
+> Outside `local` nothing is pushed, and the image carries neither the CLI nor the migrations: apply them against the
+> target database before deploying.
 
 ## Checks
 
