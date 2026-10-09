@@ -52,6 +52,7 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 
 ## Documentation
 
+- [Glossary](./GLOSSARY.md) – the terms, the standards they come from, and where each is explained.
 - [Development Setup](./docs/development-setup.md) – running the infrastructure, the application, migrations and checks.
 - [Architecture](./docs/architecture.md) – modules, ports and adapters, endpoints, errors and translations.
 - [Authentication](./docs/authentication.md) – sign-in, tokens, sessions and refreshing.
