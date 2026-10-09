@@ -6,6 +6,27 @@ application is a BFF: it runs the sign-in, keeps the tokens on the server and gi
 
 ## Signing in
 
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as rust-axum-app
+    participant K as Keycloak
+    participant R as Redis
+
+    B->>A: GET /api/auth/authorize
+    A-->>B: 302 to Keycloak, with state and the PKCE challenge
+    B->>K: sign in on Keycloak's page
+    K-->>B: 302 to /api/auth/callback?code&state
+    B->>A: GET /api/auth/callback?code&state
+    A->>K: code + client secret + PKCE verifier
+    K-->>A: access, refresh and ID token
+    A->>R: store the tokens in the session
+    A-->>B: 302 to AUTH_POST_LOGIN_URL, Set-Cookie with the session id
+    B->>A: API call + session cookie
+    A->>R: read the session
+    Note over A: the request is authorized by the session's access token
+```
+
 1. The browser opens `GET /api/auth/authorize`. The application stores a fresh `state` and PKCE verifier in the session
    and redirects to Keycloak with the challenge. Optional parameters pass through: `register=true` opens the sign-up
    page, and `kc_action` starts one of `CONFIGURE_TOTP`, `UPDATE_PASSWORD` or `delete_credential`. The
