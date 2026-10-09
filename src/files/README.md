@@ -12,7 +12,7 @@ Stores uploaded files and their metadata: the bytes on a storage, the metadata i
 A stored file records which storage holds it (`StorageKind`). Only the local disk exists today; another storage is a
 new variant and a new `FileStorage` adapter, nothing else.
 
-## Behaviour
+## Behavior
 
 - **Upload** writes the bytes under a new UUID name, keeping the original name only as metadata, so two uploads never
   collide and a name from the client never becomes a path.

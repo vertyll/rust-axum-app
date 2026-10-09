@@ -8,7 +8,7 @@ The application is one binary made of three modules, each split into the same th
 |-------------------------------------------------|-------------------------------------------------------------------------------|
 | [`identity`](../src/identity/README.md)         | sign-in, sessions, token verification and the accounts mirrored from Keycloak |
 | [`files`](../src/files/README.md)               | uploads stored on the local disk, with their metadata in PostgreSQL           |
-| [`translations`](../src/translations/README.md) | the message catalogue, its defaults and the admin overrides                   |
+| [`translations`](../src/translations/README.md) | the message catalog, its defaults and the admin overrides                     |
 
 | Layer            | Holds                                                                           |
 |------------------|---------------------------------------------------------------------------------|
@@ -46,12 +46,12 @@ Every refusal is an RFC 9457 problem document (`application/problem+json`, built
 | Field                     | Holds                                                                 |
 |---------------------------|-----------------------------------------------------------------------|
 | `type`, `title`, `status` | `about:blank`, the status's reason phrase, the HTTP status            |
-| `code`                    | a key of the translation catalogue, e.g. `errors.not_found`           |
+| `code`                    | a key of the translation catalog, e.g. `errors.not_found`             |
 | `detail`                  | the same key as `code`                                                |
 | `args`                    | the ICU arguments for that key; in a validation error, keyed by field |
 | `errors`                  | in a validation error, the message keys of each invalid field         |
 
-The client translates: it loads the catalogue from `GET /api/translations/{language}` and formats `code` with `args` as
+The client translates: it loads the catalog from `GET /api/translations/{language}` and formats `code` with `args` as
 an ICU MessageFormat message, in its reader's language. A new error is therefore a new key in `translations/en.json`
 and `pl.json`, never a sentence in the code. Each module maps its domain errors to keys in
 `infrastructure/http/error.rs`.

@@ -43,7 +43,7 @@ Configuration comes only from environment variables. Every one has a local defau
 nothing has to be set; `.env.example` lists them all, and a `.env` next to it is read when present.
 
 On start, in the `local` environment, the application pushes the schema to the database, seeds the roles and fills the
-translation catalogue from `translations/`. It listens on `http://localhost:3000`.
+translation catalog from `translations/`. It listens on `http://localhost:3000`.
 
 Open `http://localhost:3000/api/auth/authorize` in a browser to sign in; the session cookie then authorizes every
 call from that browser.
