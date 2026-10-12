@@ -2,7 +2,7 @@
 name = "rust-axum-app"
 version = "0.2.0"
 edition = "2024"
-rust-version = "1.98"
+rust-version = "1.99"
 authors = ["Mikołaj Gawron <gawrmiko@gmail.com>"]
 description = "Rust Axum App — modular monolith (hexagonal architecture) on Toasty ORM"
 default-run = "rust-axum-app"
@@ -21,6 +21,10 @@ path = "src/bin/cli.rs"
 
 [lints.rust]
 unsafe_code = "forbid"
+
+[lints.clippy]
+# Every module is a directory with its own `mod.rs`; a module written as `foo.rs` next to `foo/` would mix the styles.
+self_named_module_files = "warn"
 
 [dependencies]
 anyhow = "1.0"

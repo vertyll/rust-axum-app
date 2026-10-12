@@ -1,0 +1,5 @@
+# The Rust every check and every build uses, here and in CI: raising it is a change of its own, so new lints of a new
+# release never surprise a build. The Dockerfile builds with the same version.
+[toolchain]
+channel = "1.99"
+components = ["rustfmt", "clippy"]

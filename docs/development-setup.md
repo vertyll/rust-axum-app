@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Docker or Podman, with Compose
-- Rust 1.98 or newer (edition 2024)
+- Rust 1.99 (edition 2024), the version `rust-toolchain.toml` pins; `rustup install` fetches it
 
 ## Start the infrastructure
 
