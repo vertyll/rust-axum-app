@@ -1,7 +1,7 @@
 use jiff::{SignedDuration, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use crate::identity::domain::{Email, KeycloakId, KeycloakIdentity, RoleName, User, UserId};
+use crate::identity::domain::{Email, Grants, KeycloakId, KeycloakIdentity, Permission, RoleName, User, UserId};
 
 #[derive(Debug, Clone)]
 pub struct TokenPair {
@@ -42,30 +42,38 @@ impl std::fmt::Debug for AuthSession {
     }
 }
 
-/// The authenticated caller handed to protected handlers, also in other modules.
+/// The authenticated caller handed to protected handlers, also in other
+/// modules, with what their roles grant.
 #[derive(Debug, Clone)]
 pub struct Caller {
     pub user_id: UserId,
     pub keycloak_id: KeycloakId,
     pub email: Email,
     pub roles: Vec<RoleName>,
+    pub grants: Grants,
 }
 
 impl Caller {
     #[must_use]
-    pub fn has_role(&self, role: RoleName) -> bool {
-        self.roles.contains(&role)
-    }
-}
-
-impl From<&User> for Caller {
-    fn from(user: &User) -> Self {
+    pub fn new(user: &User, grants: Grants) -> Self {
         Self {
             user_id: user.id,
             keycloak_id: user.keycloak_id.clone(),
             email: user.email.clone(),
             roles: user.roles.clone(),
+            grants,
         }
+    }
+
+    #[must_use]
+    pub fn has_role(&self, role: &RoleName) -> bool {
+        self.roles.contains(role)
+    }
+
+    /// Whether the caller's roles grant `P`.
+    #[must_use]
+    pub fn may<P: Permission>(&self) -> bool {
+        self.grants.allows(P::NAME)
     }
 }
 
@@ -80,7 +88,7 @@ mod tests {
                 email: Email::parse("ada@rust-axum-app.local").unwrap(),
                 first_name: String::new(),
                 last_name: String::new(),
-                roles: vec![RoleName::User],
+                roles: vec![RoleName::parse(RoleName::USER).unwrap()],
             },
             access_token: "access".into(),
             refresh_token: "refresh".into(),

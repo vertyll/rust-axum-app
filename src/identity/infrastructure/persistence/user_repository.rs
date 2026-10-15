@@ -25,7 +25,7 @@ impl ToastyUserRepository {
         .map_err(persistence)?;
 
         let mut names: Vec<RoleName> = roles.iter().filter_map(|role| role.name.parse().ok()).collect();
-        names.sort_by_key(|role| role.as_str());
+        names.sort();
         Ok(names)
     }
 
@@ -96,7 +96,7 @@ impl UserRepository for ToastyUserRepository {
         let mut roles_by_user: HashMap<i64, Vec<RoleName>> = HashMap::new();
         for link in &links {
             if let Some(role) = role_names.get(&link.role_id) {
-                roles_by_user.entry(link.user_id).or_default().push(*role);
+                roles_by_user.entry(link.user_id).or_default().push(role.clone());
             }
         }
 
@@ -104,7 +104,7 @@ impl UserRepository for ToastyUserRepository {
             .into_iter()
             .map(|record| {
                 let mut roles = roles_by_user.remove(&record.id).unwrap_or_default();
-                roles.sort_by_key(|role| role.as_str());
+                roles.sort();
                 record.to_domain(roles)
             })
             .collect()

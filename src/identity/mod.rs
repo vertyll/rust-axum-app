@@ -6,6 +6,8 @@ pub mod domain;
 pub mod infrastructure;
 
 pub use application::Caller;
+pub use application::permissions::CATALOGUE;
+pub use domain::permission::{Catalogue, Declared, Permission, StockRole};
 pub use domain::role::RoleName;
 pub use domain::user::UserId;
-pub use infrastructure::http::{Auth, RequireAdmin};
+pub use infrastructure::http::{Auth, Permitted};

@@ -42,7 +42,8 @@ cargo run
 Configuration comes only from environment variables. Every one has a local default matching the containers above, so
 nothing has to be set; `.env.example` lists them all, and a `.env` next to it is read when present.
 
-On start, in the `local` environment, the application pushes the schema to the database, seeds the roles and fills the
+On start, in the `local` environment, the application pushes the schema to the database, registers every module's
+permissions with the stock roles `admin` and `user`, and fills the
 translation catalog from `translations/`. It listens on `http://localhost:3000`.
 
 Open `http://localhost:3000/api/auth/authorize` in a browser to sign in; the session cookie then authorizes every

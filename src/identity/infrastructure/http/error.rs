@@ -8,17 +8,30 @@ use crate::identity::domain::IdentityError;
 use crate::shared_infrastructure::problem::{self, Problem};
 
 #[derive(Debug)]
-pub struct ApiError(pub IdentityError);
+pub enum ApiError {
+    Identity(IdentityError),
+    Validation(validator::ValidationErrors),
+}
 
 impl From<IdentityError> for ApiError {
     fn from(err: IdentityError) -> Self {
-        Self(err)
+        Self::Identity(err)
+    }
+}
+
+impl From<validator::ValidationErrors> for ApiError {
+    fn from(errors: validator::ValidationErrors) -> Self {
+        Self::Validation(errors)
     }
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        identity_problem(self.0).into_response()
+        match self {
+            ApiError::Identity(err) => identity_problem(err),
+            ApiError::Validation(errors) => Problem::validation(&errors),
+        }
+        .into_response()
     }
 }
 
@@ -30,8 +43,20 @@ fn identity_problem(err: IdentityError) -> Problem {
         E::InvalidToken => unauthorized("auth.errors.invalid_token"),
         E::SignInRejected => unauthorized("auth.errors.sign_in_rejected"),
         E::SessionExpired => unauthorized("auth.errors.session_expired"),
-        E::AdminRoleRequired => Problem::new(StatusCode::FORBIDDEN, "auth.errors.admin_role_required"),
+        E::PermissionDenied(permission) => {
+            Problem::new(StatusCode::FORBIDDEN, "auth.errors.permission_denied").with_arg("permission", permission)
+        }
         E::UserNotFound => Problem::new(StatusCode::NOT_FOUND, "auth.errors.user_not_found"),
+        E::InvalidRoleName => Problem::field("name", "roles.validators.name.invalid_format"),
+        E::RoleNotFound => Problem::new(StatusCode::NOT_FOUND, "roles.errors.not_found"),
+        E::RoleAlreadyExists => Problem::new(StatusCode::CONFLICT, "roles.errors.already_exists"),
+        E::UnknownPermission(name) => Problem::field("permissions", "roles.validators.permissions.unknown")
+            .with_field_arg("permissions", "permission", name),
+        E::LastUnrestrictedRole => Problem::new(StatusCode::CONFLICT, "roles.errors.last_unrestricted_role"),
+        E::SystemRole => Problem::new(StatusCode::CONFLICT, "roles.errors.system_role"),
+        E::UnrestrictedRole => Problem::new(StatusCode::CONFLICT, "roles.errors.unrestricted_role"),
+        E::RoleStillAssigned => Problem::new(StatusCode::CONFLICT, "roles.errors.still_assigned"),
+        E::LastUnrestrictedHolder => Problem::new(StatusCode::CONFLICT, "roles.errors.last_unrestricted_holder"),
         E::IdentityProviderUnavailable(detail) => {
             tracing::error!("identity provider unavailable: {detail}");
             Problem::new(
@@ -75,7 +100,10 @@ mod tests {
         let cases = [
             (IdentityError::Unauthenticated, StatusCode::UNAUTHORIZED),
             (IdentityError::SessionExpired, StatusCode::UNAUTHORIZED),
-            (IdentityError::AdminRoleRequired, StatusCode::FORBIDDEN),
+            (IdentityError::PermissionDenied("USERS_VIEW"), StatusCode::FORBIDDEN),
+            (IdentityError::RoleAlreadyExists, StatusCode::CONFLICT),
+            (IdentityError::LastUnrestrictedRole, StatusCode::CONFLICT),
+            (IdentityError::InvalidRoleName, StatusCode::BAD_REQUEST),
             (IdentityError::UserNotFound, StatusCode::NOT_FOUND),
             (
                 IdentityError::IdentityProviderUnavailable("down".into()),
@@ -87,7 +115,7 @@ mod tests {
             ),
         ];
         for (err, status) in cases {
-            assert_eq!(ApiError(err).into_response().status(), status);
+            assert_eq!(ApiError::from(err).into_response().status(), status);
         }
     }
 }

@@ -1,16 +1,19 @@
 //! In-memory adapters for the identity ports, so use cases run without
 //! Keycloak or a database.
 
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use jiff::{SignedDuration, Timestamp};
 
 use crate::identity::application::IdentityService;
-use crate::identity::application::ports::{IdentityPorts, KeycloakClient, TokenVerifier};
+use crate::identity::application::permissions::CATALOGUE;
+use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, TokenVerifier};
 use crate::identity::application::session::{TokenPair, VerifiedToken};
 use crate::identity::domain::{
-    Email, IdentityError, KeycloakId, KeycloakIdentity, NewUser, RoleName, User, UserId, UserRepository,
+    Email, IdentityError, KeycloakId, KeycloakIdentity, NewUser, RegisteredPermission, Role, RoleName, RoleRepository,
+    User, UserId, UserRepository,
 };
 
 pub(crate) fn identity(roles: Vec<RoleName>) -> KeycloakIdentity {
@@ -131,7 +134,7 @@ pub(crate) struct FakeVerifier {
 impl Default for FakeVerifier {
     fn default() -> Self {
         Self {
-            identity: Arc::new(Mutex::new(identity(vec![RoleName::User]))),
+            identity: Arc::new(Mutex::new(identity(vec![RoleName::parse(RoleName::USER).unwrap()]))),
             rejecting: Arc::default(),
         }
     }
@@ -159,31 +162,142 @@ impl TokenVerifier for FakeVerifier {
     }
 }
 
+#[derive(Clone, Default)]
+pub(crate) struct InMemoryRoles {
+    roles: Arc<Mutex<BTreeMap<RoleName, Role>>>,
+    permissions: Arc<Mutex<Vec<RegisteredPermission>>>,
+}
+
+impl RoleRepository for InMemoryRoles {
+    async fn list(&self) -> Result<Vec<Role>, IdentityError> {
+        Ok(self.roles.lock().unwrap().values().cloned().collect())
+    }
+
+    async fn find(&self, name: &RoleName) -> Result<Option<Role>, IdentityError> {
+        Ok(self.roles.lock().unwrap().get(name).cloned())
+    }
+
+    async fn find_many(&self, names: &[RoleName]) -> Result<Vec<Role>, IdentityError> {
+        let roles = self.roles.lock().unwrap();
+        Ok(names.iter().filter_map(|name| roles.get(name).cloned()).collect())
+    }
+
+    async fn create(&self, role: &Role) -> Result<(), IdentityError> {
+        self.roles.lock().unwrap().insert(role.name.clone(), role.clone());
+        Ok(())
+    }
+
+    async fn update(&self, role: &Role) -> Result<(), IdentityError> {
+        self.create(role).await
+    }
+
+    async fn delete(&self, name: &RoleName) -> Result<(), IdentityError> {
+        self.roles.lock().unwrap().remove(name);
+        Ok(())
+    }
+
+    async fn permissions(&self) -> Result<Vec<RegisteredPermission>, IdentityError> {
+        let mut permissions = self.permissions.lock().unwrap().clone();
+        permissions.sort();
+        Ok(permissions)
+    }
+
+    async fn register(&self, declared: &[RegisteredPermission]) -> Result<(), IdentityError> {
+        *self.permissions.lock().unwrap() = declared.to_vec();
+        for role in self.roles.lock().unwrap().values_mut() {
+            role.permissions
+                .retain(|name| declared.iter().any(|permission| &permission.name == name));
+        }
+        Ok(())
+    }
+}
+
+/// What the fake realm was asked to do, in order: `create ADMIN`,
+/// `assign <account> EDITOR`.
+#[derive(Clone, Default)]
+pub(crate) struct FakeRealm {
+    calls: Arc<Mutex<Vec<String>>>,
+    failing: Arc<AtomicBool>,
+}
+
+impl FakeRealm {
+    pub(crate) fn calls(&self) -> Vec<String> {
+        self.calls.lock().unwrap().clone()
+    }
+
+    pub(crate) fn fail(&self) {
+        self.failing.store(true, Ordering::SeqCst);
+    }
+
+    fn record(&self, call: String) -> Result<(), IdentityError> {
+        if self.failing.load(Ordering::SeqCst) {
+            return Err(IdentityError::IdentityProviderUnavailable("down".into()));
+        }
+        self.calls.lock().unwrap().push(call);
+        Ok(())
+    }
+}
+
+impl RealmAdmin for FakeRealm {
+    async fn create_role(&self, name: &RoleName, _description: &str) -> Result<(), IdentityError> {
+        self.record(format!("create {}", name.realm_role()))
+    }
+
+    async fn delete_role(&self, name: &RoleName) -> Result<(), IdentityError> {
+        self.record(format!("delete {}", name.realm_role()))
+    }
+
+    async fn assign_role(&self, account: &KeycloakId, name: &RoleName) -> Result<(), IdentityError> {
+        self.record(format!("assign {account} {}", name.realm_role()))
+    }
+
+    async fn remove_role(&self, account: &KeycloakId, name: &RoleName) -> Result<(), IdentityError> {
+        self.record(format!("remove {account} {}", name.realm_role()))
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct TestPorts;
 
 impl IdentityPorts for TestPorts {
     type Users = InMemoryUsers;
+    type Roles = InMemoryRoles;
     type Keycloak = FakeKeycloak;
+    type Realm = FakeRealm;
     type Verifier = FakeVerifier;
 }
 
 pub(crate) struct Harness {
     pub(crate) service: IdentityService<TestPorts>,
     pub(crate) users: InMemoryUsers,
+    pub(crate) roles: InMemoryRoles,
     pub(crate) keycloak: FakeKeycloak,
+    pub(crate) realm: FakeRealm,
     pub(crate) verifier: FakeVerifier,
 }
 
 impl Harness {
-    pub(crate) fn new() -> Self {
+    /// A service whose registry holds the identity module's own catalogue.
+    pub(crate) async fn new() -> Self {
         let users = InMemoryUsers::default();
+        let roles = InMemoryRoles::default();
         let keycloak = FakeKeycloak::default();
+        let realm = FakeRealm::default();
         let verifier = FakeVerifier::default();
+        let service = IdentityService::new(
+            users.clone(),
+            roles.clone(),
+            keycloak.clone(),
+            realm.clone(),
+            verifier.clone(),
+        );
+        service.register(&[CATALOGUE]).await.unwrap();
         Self {
-            service: IdentityService::new(users.clone(), keycloak.clone(), verifier.clone()),
+            service,
             users,
+            roles,
             keycloak,
+            realm,
             verifier,
         }
     }

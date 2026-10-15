@@ -3,7 +3,6 @@
 //! compile time; nothing imports this module.
 
 pub mod config;
-pub mod seed;
 
 use std::sync::Arc;
 
@@ -19,19 +18,23 @@ use tower_sessions::cookie::time::Duration;
 use tower_sessions::{Expiry, SessionManagerLayer};
 
 use crate::files::application::FilesService;
+use crate::files::application::permissions::CATALOGUE as FILES_CATALOGUE;
 use crate::files::infrastructure::http as files_http;
 use crate::files::infrastructure::persistence::ToastyFileRepository;
 use crate::files::infrastructure::storage::LocalFileStorage;
+use crate::identity::CATALOGUE as IDENTITY_CATALOGUE;
 use crate::identity::application::IdentityService;
 use crate::identity::application::ports::IdentityPorts;
+use crate::identity::domain::{Catalogue, IdentityError};
 use crate::identity::infrastructure::http as identity_http;
 use crate::identity::infrastructure::keycloak::{
-    HttpKeycloakClient, JwksTokenVerifier, KeycloakSettings, SharedRefreshes,
+    HttpKeycloakClient, HttpRealmAdmin, JwksTokenVerifier, KeycloakSettings, SharedRefreshes,
 };
-use crate::identity::infrastructure::persistence::ToastyUserRepository;
+use crate::identity::infrastructure::persistence::{ToastyRoleRepository, ToastyUserRepository};
 use crate::identity::infrastructure::session_store::RedisSessionStore;
 use crate::shared_infrastructure::problem;
 use crate::translations::application::TranslationsService;
+use crate::translations::application::permissions::CATALOGUE as TRANSLATIONS_CATALOGUE;
 use crate::translations::infrastructure::defaults;
 use crate::translations::infrastructure::http as translations_http;
 use crate::translations::infrastructure::persistence::ToastyTranslationRepository;
@@ -44,9 +47,15 @@ pub struct ProductionPorts;
 
 impl IdentityPorts for ProductionPorts {
     type Users = ToastyUserRepository;
+    type Roles = ToastyRoleRepository;
     type Keycloak = HttpKeycloakClient;
+    type Realm = HttpRealmAdmin;
     type Verifier = JwksTokenVerifier;
 }
+
+/// What every module checks and the roles they ship with, registered with
+/// the identity module at start-up.
+pub const CATALOGUES: [Catalogue; 3] = [IDENTITY_CATALOGUE, FILES_CATALOGUE, TRANSLATIONS_CATALOGUE];
 
 /// The identity service with the production adapters plugged in.
 pub type AppIdentityService = IdentityService<ProductionPorts>;
@@ -69,10 +78,12 @@ pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> 
 
     let identity: AppIdentityService = IdentityService::new(
         ToastyUserRepository::new(db.clone()),
+        ToastyRoleRepository::new(db.clone()),
         HttpKeycloakClient::new(
             keycloak.clone(),
             SharedRefreshes::new(redis, &config.sessions.redis_key_prefix),
         )?,
+        HttpRealmAdmin::new(keycloak.clone())?,
         JwksTokenVerifier::new(&keycloak)?,
     );
 
@@ -126,7 +137,9 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
     let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer.clone());
 
     let translations_admin_routes =
-        translations_http::translations_admin_router(services.translations.clone()).layer(auth_layer);
+        translations_http::translations_admin_router(services.translations.clone()).layer(auth_layer.clone());
+
+    let roles_routes = identity_http::roles_router(services.identity.clone()).layer(auth_layer);
 
     Router::new()
         .nest(
@@ -140,12 +153,18 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
             translations_http::translations_public_router(services.translations.clone()),
         )
         .nest("/api/admin/translations", translations_admin_routes)
+        .nest("/api/admin", roles_routes)
         .nest_service("/uploads", ServeDir::new(&config.files.upload_dir))
         .nest_service("/legal", ServeDir::new("resources/legal"))
         .route("/health", get(health))
         .fallback(problem::not_found)
         .layer(sessions)
         .layer(TraceLayer::new_for_http())
+}
+
+/// Registers what every module checks, so roles can grant it.
+pub async fn register_permissions(services: &Services) -> Result<(), IdentityError> {
+    services.identity.register(&CATALOGUES).await
 }
 
 fn keycloak_settings(config: &AppConfig) -> KeycloakSettings {
@@ -160,4 +179,26 @@ fn keycloak_settings(config: &AppConfig) -> KeycloakSettings {
 
 async fn health() -> Json<serde_json::Value> {
     Json(serde_json::json!({ "status": "UP" }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use super::CATALOGUES;
+
+    #[test]
+    fn every_permission_has_one_module_and_every_stock_grant_is_declared() {
+        let mut names = BTreeSet::new();
+        for permission in CATALOGUES.iter().flat_map(|catalogue| catalogue.permissions) {
+            assert!(names.insert(permission.name), "{} is declared twice", permission.name);
+        }
+        for grant in CATALOGUES
+            .iter()
+            .flat_map(|catalogue| catalogue.stock_roles)
+            .flat_map(|role| role.grants)
+        {
+            assert!(names.contains(grant), "{grant} is granted but not declared");
+        }
+    }
 }

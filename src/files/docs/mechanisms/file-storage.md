@@ -8,5 +8,6 @@ What happens to the bytes and the metadata row on upload, soft delete and delete
   longer return it.
 - **Delete** removes the bytes and the row.
 
-Signed-in users may list, read and upload; changing metadata and both kinds of deletion need `ADMIN`. The stored files
+Signed-in users may list, read and upload; changing metadata and both kinds of deletion need `FILES_MANAGE`
+([Authorization](../../../../docs/authorization.md)). The stored files
 are served publicly from `/uploads`.

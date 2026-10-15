@@ -63,6 +63,13 @@ impl Problem {
         problem
     }
 
+    /// An ICU argument of `code`.
+    #[must_use]
+    pub fn with_arg(mut self, name: &str, value: impl Into<Value>) -> Self {
+        self.args.insert(name.to_string(), value.into());
+        self
+    }
+
     #[must_use]
     pub fn with_field_arg(mut self, field: &str, name: &str, value: impl Into<Value>) -> Self {
         self.field_args(field).insert(name.to_string(), value.into());

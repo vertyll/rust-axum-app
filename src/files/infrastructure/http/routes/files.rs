@@ -7,13 +7,14 @@ use validator::Validate;
 
 use super::Files;
 use crate::files::application::commands::UploadFile;
+use crate::files::application::permissions::FilesManage;
 use crate::files::application::ports::FileStorage;
 use crate::files::application::service::FilesService;
 use crate::files::domain::{FileId, FileRepository, FilesError, StorageKind};
 use crate::files::infrastructure::http::error::ApiError;
 use crate::files::infrastructure::http::requests::{UpdateFileRequest, UploadQuery};
 use crate::files::infrastructure::http::responses::FileResponse;
-use crate::identity::{Auth, RequireAdmin};
+use crate::identity::{Auth, Permitted};
 use crate::shared_infrastructure::problem::{JsonBody, PathParam, QueryParams};
 
 pub fn files_router<R, S>(files: Arc<FilesService<R, S>>) -> Router
@@ -96,7 +97,7 @@ where
 
 async fn update_file<R, S>(
     State(files): Files<R, S>,
-    RequireAdmin(_claims): RequireAdmin,
+    Permitted(_caller, _): Permitted<FilesManage>,
     PathParam(id): PathParam<i64>,
     JsonBody(request): JsonBody<UpdateFileRequest>,
 ) -> Result<Json<FileResponse>, ApiError>
@@ -110,7 +111,7 @@ where
 
 async fn delete_file<R, S>(
     State(files): Files<R, S>,
-    RequireAdmin(_claims): RequireAdmin,
+    Permitted(_caller, _): Permitted<FilesManage>,
     PathParam(id): PathParam<i64>,
 ) -> Result<(), ApiError>
 where
@@ -123,13 +124,13 @@ where
 
 async fn soft_delete_file<R, S>(
     State(files): Files<R, S>,
-    RequireAdmin(claims): RequireAdmin,
+    Permitted(caller, _): Permitted<FilesManage>,
     PathParam(id): PathParam<i64>,
 ) -> Result<(), ApiError>
 where
     R: FileRepository,
     S: FileStorage,
 {
-    files.soft_delete(FileId(id), claims.user_id.0).await?;
+    files.soft_delete(FileId(id), caller.user_id.0).await?;
     Ok(())
 }

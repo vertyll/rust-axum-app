@@ -2,8 +2,9 @@
 //! the composition root onto protected routers (also of other modules); it
 //! takes the access token from `Authorization: Bearer` or, for a browser,
 //! from its session, refreshing it when it is about to expire. [`Auth`] and
-//! [`RequireAdmin`] read the [`Caller`] it stores in the request extensions.
+//! [`Permitted`] read the [`Caller`] it stores in the request extensions.
 
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use axum::extract::{FromRequestParts, Request, State};
@@ -18,7 +19,7 @@ use super::error::ApiError;
 use crate::identity::application::ports::IdentityPorts;
 use crate::identity::application::service::IdentityService;
 use crate::identity::application::{AuthSession, Caller};
-use crate::identity::domain::{IdentityError, RoleName};
+use crate::identity::domain::{IdentityError, Permission};
 
 pub(crate) const SESSION_KEY: &str = "identity.session";
 const REFRESH_SKEW: SignedDuration = SignedDuration::from_secs(30);
@@ -114,18 +115,19 @@ impl<S: Send + Sync> FromRequestParts<S> for Auth {
     }
 }
 
-/// Like [`Auth`], but additionally requires the `admin` role.
-pub struct RequireAdmin(pub Caller);
+/// Like [`Auth`], but the caller's roles must grant the permission `P`:
+/// `Permitted(caller, _): Permitted<FilesManage>`.
+pub struct Permitted<P: Permission>(pub Caller, pub PhantomData<fn() -> P>);
 
-impl<S: Send + Sync> FromRequestParts<S> for RequireAdmin {
+impl<S: Send + Sync, P: Permission> FromRequestParts<S> for Permitted<P> {
     type Rejection = ApiError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Auth(caller) = Auth::from_request_parts(parts, state).await?;
-        if !caller.has_role(RoleName::Admin) {
-            return Err(IdentityError::AdminRoleRequired.into());
+        if !caller.may::<P>() {
+            return Err(IdentityError::PermissionDenied(P::NAME).into());
         }
-        Ok(RequireAdmin(caller))
+        Ok(Permitted(caller, PhantomData))
     }
 }
 

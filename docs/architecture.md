@@ -35,8 +35,8 @@ The routes are declared in each module's `infrastructure/http/routes`, and `boot
 router under its path and decides which sit behind the auth guard. There is no OpenAPI description; the routes and
 their extractors are the reference.
 
-A handler states what it needs through its extractor: `Auth` for a signed-in caller, `RequireAdmin` for the `ADMIN`
-role.
+A handler states what it needs through its extractor: `Auth` for a signed-in caller, `Permitted<P>` for a caller whose
+roles grant the permission `P`. Each module declares the permissions it checks: [Authorization](authorization.md).
 
 ## Errors are message keys
 

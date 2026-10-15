@@ -1,7 +1,7 @@
 use jiff::Timestamp;
 use toasty::Deferred;
 
-use super::UserRoleRecord;
+use super::{RolePermissionRecord, UserRoleRecord};
 
 #[derive(Debug, toasty::Model)]
 #[table = "roles"]
@@ -12,6 +12,7 @@ pub struct RoleRecord {
     #[unique]
     pub name: String,
     pub description: Option<String>,
+    pub unrestricted: bool,
     #[auto]
     pub created_at: Timestamp,
     #[auto]
@@ -19,4 +20,6 @@ pub struct RoleRecord {
 
     #[has_many]
     pub user_roles: Deferred<Vec<UserRoleRecord>>,
+    #[has_many]
+    pub role_permissions: Deferred<Vec<RolePermissionRecord>>,
 }

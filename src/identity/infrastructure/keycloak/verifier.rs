@@ -108,7 +108,7 @@ impl Claims {
             .realm_access
             .map(|access| access.roles.iter().filter_map(|role| role.parse().ok()).collect())
             .unwrap_or_default();
-        roles.sort_by_key(|role| role.as_str());
+        roles.sort();
         roles.dedup();
         Ok(VerifiedToken {
             identity: KeycloakIdentity {
@@ -128,7 +128,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn keeps_only_the_roles_the_application_knows() {
+    fn keeps_the_realm_roles_in_lower_case_for_the_service_to_match() {
         let claims = Claims {
             sub: "subject".into(),
             exp: 1_800_000_000,
@@ -141,13 +141,18 @@ mod tests {
                     "offline_access".into(),
                     "default-roles-rust-axum-app".into(),
                     "USER".into(),
+                    "not a role name".into(),
                 ],
             }),
         };
 
         let verified = claims.into_verified().unwrap();
 
-        assert_eq!(verified.identity.roles, vec![RoleName::Admin, RoleName::User]);
+        let roles: Vec<&str> = verified.identity.roles.iter().map(RoleName::as_str).collect();
+        assert_eq!(
+            roles,
+            ["admin", "default-roles-rust-axum-app", "offline_access", "user"]
+        );
         assert_eq!(verified.identity.email.as_str(), "ada@rust-axum-app.local");
         assert_eq!(verified.identity.last_name, "");
     }

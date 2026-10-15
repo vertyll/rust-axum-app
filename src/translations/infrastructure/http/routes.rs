@@ -9,9 +9,10 @@ use validator::Validate;
 use super::error::ApiError;
 use super::requests::TranslationRequest;
 use super::responses::TranslationResponse;
-use crate::identity::RequireAdmin;
+use crate::identity::Permitted;
 use crate::shared_infrastructure::problem::{JsonBody, PathParam};
 use crate::translations::application::TranslationsService;
+use crate::translations::application::permissions::{TranslationsEdit, TranslationsView};
 use crate::translations::domain::{Language, TranslationRepository};
 
 type Translations<R> = State<Arc<TranslationsService<R>>>;
@@ -42,7 +43,7 @@ async fn catalogue<R: TranslationRepository>(
 
 async fn list<R: TranslationRepository>(
     State(translations): Translations<R>,
-    RequireAdmin(_claims): RequireAdmin,
+    Permitted(_caller, _): Permitted<TranslationsView>,
 ) -> Result<Json<Vec<TranslationResponse>>, ApiError> {
     let list = translations.list().await?;
     Ok(Json(list.into_iter().map(TranslationResponse::from).collect()))
@@ -50,7 +51,7 @@ async fn list<R: TranslationRepository>(
 
 async fn update<R: TranslationRepository>(
     State(translations): Translations<R>,
-    RequireAdmin(_claims): RequireAdmin,
+    Permitted(_caller, _): Permitted<TranslationsEdit>,
     PathParam(key): PathParam<String>,
     JsonBody(request): JsonBody<TranslationRequest>,
 ) -> Result<Json<TranslationResponse>, ApiError> {
@@ -60,7 +61,7 @@ async fn update<R: TranslationRepository>(
 
 async fn reset<R: TranslationRepository>(
     State(translations): Translations<R>,
-    RequireAdmin(_claims): RequireAdmin,
+    Permitted(_caller, _): Permitted<TranslationsEdit>,
     PathParam(key): PathParam<String>,
 ) -> Result<Json<TranslationResponse>, ApiError> {
     Ok(Json(translations.reset(&key).await?.into()))

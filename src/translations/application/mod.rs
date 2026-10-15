@@ -1,3 +1,4 @@
+pub mod permissions;
 pub mod service;
 
 #[cfg(test)]

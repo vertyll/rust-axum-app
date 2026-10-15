@@ -6,9 +6,9 @@ The defaults ship inside the binary (`translations/pl.json` and `en.json`, ICU M
 same keys. At startup the stored catalog is brought in line with them: new keys are added, changed defaults adopted
 and keys the code no longer uses dropped.
 
-An admin can override any message. An override survives a new default until it is reset, and it is checked before it
-is stored: it must parse as ICU MessageFormat and may use only the placeholders of its default, so a typo cannot break
-a message at runtime.
+Anyone whose role grants `TRANSLATIONS_EDIT` can override any message; listing them all needs `TRANSLATIONS_VIEW`. An
+override survives a new default until it is reset, and it is checked before it is stored: it must parse as ICU
+MessageFormat and may use only the placeholders of its default, so a typo cannot break a message at runtime.
 
 ## Who reads it
 

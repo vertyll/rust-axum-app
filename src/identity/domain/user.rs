@@ -111,8 +111,8 @@ pub struct User {
 
 impl User {
     #[must_use]
-    pub fn has_role(&self, role: RoleName) -> bool {
-        self.roles.contains(&role)
+    pub fn has_role(&self, role: &RoleName) -> bool {
+        self.roles.contains(role)
     }
 
     /// Mirrors the identity; answers whether anything changed, so an
@@ -146,8 +146,12 @@ mod tests {
         }
     }
 
+    fn role(name: &str) -> RoleName {
+        RoleName::parse(name).unwrap()
+    }
+
     fn user() -> User {
-        let identity = identity("ada@rust-axum-app.local", vec![RoleName::User]);
+        let identity = identity("ada@rust-axum-app.local", vec![role("user")]);
         User {
             id: UserId(1),
             keycloak_id: identity.keycloak_id,
@@ -170,15 +174,15 @@ mod tests {
     #[test]
     fn mirroring_an_unchanged_identity_reports_no_change() {
         let mut user = user();
-        assert!(!user.mirror(&identity("ada@rust-axum-app.local", vec![RoleName::User])));
+        assert!(!user.mirror(&identity("ada@rust-axum-app.local", vec![role("user")])));
     }
 
     #[test]
     fn mirroring_takes_the_new_email_and_roles() {
         let mut user = user();
-        assert!(user.mirror(&identity("ada@new.example", vec![RoleName::Admin])));
+        assert!(user.mirror(&identity("ada@new.example", vec![role("admin")])));
         assert_eq!(user.email.as_str(), "ada@new.example");
-        assert!(user.has_role(RoleName::Admin));
-        assert!(!user.has_role(RoleName::User));
+        assert!(user.has_role(&role("admin")));
+        assert!(!user.has_role(&role("user")));
     }
 }

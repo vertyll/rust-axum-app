@@ -46,7 +46,8 @@ The browser holds only the `RUST_AXUM_APP_SESSION` cookie: `HttpOnly`, `SameSite
 `authenticate`, the middleware `bootstrap` layers onto the protected routers, takes the access token from
 `Authorization: Bearer` or, for a browser, from its session. `JwksTokenVerifier` checks the signature against
 Keycloak's published keys (cached by key id), the issuer, the expiry and the audience (`KEYCLOAK_AUDIENCE`), and the
-roles come from `realm_access.roles`. The resulting `Caller` is what `Auth` and `RequireAdmin` read.
+roles come from `realm_access.roles`. The resulting `Caller`, with what its roles grant, is what `Auth` and
+`Permitted` read: [Authorization](authorization.md).
 
 Either way the decision rests on the token alone, so any instance can serve any request.
 
@@ -67,12 +68,12 @@ requests](../src/identity/docs/mechanisms/cross-site-requests.md).
 
 ## Code
 
-| Path                                                 | Role                                                  |
-|------------------------------------------------------|-------------------------------------------------------|
-| `identity/infrastructure/http/routes/auth.rs`        | authorize, callback, session, logout                  |
-| `identity/infrastructure/http/extract.rs`            | the `authenticate` middleware, `Auth`, `RequireAdmin` |
-| `identity/infrastructure/keycloak/client.rs`         | code exchange, refresh, revocation                    |
-| `identity/infrastructure/keycloak/shared_refresh.rs` | one refresh per refresh token across instances        |
-| `identity/infrastructure/keycloak/verifier.rs`       | token verification against Keycloak's keys            |
-| `identity/infrastructure/session_store.rs`           | the Redis session store                               |
-| `identity/application/service.rs`                    | sign-in, refresh, sign-out and the account mirror     |
+| Path                                                 | Role                                               |
+|------------------------------------------------------|----------------------------------------------------|
+| `identity/infrastructure/http/routes/auth.rs`        | authorize, callback, session, logout               |
+| `identity/infrastructure/http/extract.rs`            | the `authenticate` middleware, `Auth`, `Permitted` |
+| `identity/infrastructure/keycloak/client.rs`         | code exchange, refresh, revocation                 |
+| `identity/infrastructure/keycloak/shared_refresh.rs` | one refresh per refresh token across instances     |
+| `identity/infrastructure/keycloak/verifier.rs`       | token verification against Keycloak's keys         |
+| `identity/infrastructure/session_store.rs`           | the Redis session store                            |
+| `identity/application/service.rs`                    | sign-in, refresh, sign-out and the account mirror  |

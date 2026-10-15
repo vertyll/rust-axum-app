@@ -18,6 +18,7 @@ Every document in this repository, the module it belongs to, and what it covers.
 | [Development Setup](docs/development-setup.md) | —      | overview | Running the infrastructure, the application, migrations and checks.         |
 | [Architecture](docs/architecture.md)           | —      | overview | Modules, ports and adapters, the composition root, routes and the database. |
 | [Authentication](docs/authentication.md)       | —      | overview | Sign-in, token authorization and sign-out.                                  |
+| [Authorization](docs/authorization.md)         | —      | overview | Permissions each module declares, roles, what they grant and the endpoints. |
 
 ## Mechanisms
 

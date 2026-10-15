@@ -8,10 +8,28 @@ pub enum IdentityError {
     Unauthenticated,
     #[error("invalid or unknown token")]
     InvalidToken,
-    #[error("admin role required")]
-    AdminRoleRequired,
+    #[error("permission {0} required")]
+    PermissionDenied(&'static str),
     #[error("user not found")]
     UserNotFound,
+    #[error("invalid role name")]
+    InvalidRoleName,
+    #[error("role not found")]
+    RoleNotFound,
+    #[error("a role of that name exists")]
+    RoleAlreadyExists,
+    #[error("no module declares the permission {0}")]
+    UnknownPermission(String),
+    #[error("the last unrestricted role cannot be restricted")]
+    LastUnrestrictedRole,
+    #[error("a system role cannot be removed")]
+    SystemRole,
+    #[error("an unrestricted role must be restricted before it is removed")]
+    UnrestrictedRole,
+    #[error("a role some account holds cannot be removed")]
+    RoleStillAssigned,
+    #[error("the last account holding an unrestricted role cannot lose it")]
+    LastUnrestrictedHolder,
     #[error("the sign-in could not be completed")]
     SignInRejected,
     #[error("the session has ended")]

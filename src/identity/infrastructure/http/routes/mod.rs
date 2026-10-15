@@ -1,4 +1,5 @@
 mod auth;
+mod roles;
 mod users;
 
 use std::sync::Arc;
@@ -9,6 +10,7 @@ use crate::identity::application::service::IdentityService;
 use crate::identity::infrastructure::keycloak::KeycloakSettings;
 
 pub use auth::auth_router;
+pub use roles::roles_router;
 pub use users::users_router;
 
 pub(crate) type Identity<P> = State<Arc<IdentityService<P>>>;

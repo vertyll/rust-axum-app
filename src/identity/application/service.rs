@@ -1,22 +1,35 @@
 //! The identity application service: sign-in through Keycloak, session
 //! refresh and the mirror of Keycloak accounts the rest of the app joins to.
+//! Roles and what they grant are managed in [`roles`](super::roles).
 
 use crate::identity::application::ports::{IdentityPorts, KeycloakClient, TokenVerifier};
 use crate::identity::application::session::{AuthSession, Caller, TokenPair};
-use crate::identity::domain::{IdentityError, KeycloakIdentity, NewUser, User, UserId, UserRepository};
+use crate::identity::domain::{
+    Grants, IdentityError, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
+};
 
 #[derive(Clone)]
 pub struct IdentityService<P: IdentityPorts> {
-    users: P::Users,
+    pub(super) users: P::Users,
+    pub(super) roles: P::Roles,
     keycloak: P::Keycloak,
+    pub(super) realm: P::Realm,
     verifier: P::Verifier,
 }
 
 impl<P: IdentityPorts> IdentityService<P> {
-    pub fn new(users: P::Users, keycloak: P::Keycloak, verifier: P::Verifier) -> Self {
+    pub fn new(
+        users: P::Users,
+        roles: P::Roles,
+        keycloak: P::Keycloak,
+        realm: P::Realm,
+        verifier: P::Verifier,
+    ) -> Self {
         Self {
             users,
+            roles,
             keycloak,
+            realm,
             verifier,
         }
     }
@@ -44,11 +57,12 @@ impl<P: IdentityPorts> IdentityService<P> {
         tracing::info!(keycloak_id = %session.identity.keycloak_id, "signed out");
     }
 
-    /// Verifies an access token and resolves the local account behind it.
+    /// Verifies an access token, resolves the local account behind it and
+    /// what its roles grant.
     pub async fn authenticate(&self, access_token: &str) -> Result<Caller, IdentityError> {
         let verified = self.verifier.verify(access_token).await?;
-        let user = self.sync(&verified.identity).await?;
-        Ok(Caller::from(&user))
+        let (user, roles) = self.sync(&verified.identity).await?;
+        Ok(Caller::new(&user, Grants::of(&roles)))
     }
 
     pub async fn get_user(&self, id: UserId) -> Result<User, IdentityError> {
@@ -59,16 +73,24 @@ impl<P: IdentityPorts> IdentityService<P> {
         self.users.list().await
     }
 
-    async fn sync(&self, identity: &KeycloakIdentity) -> Result<User, IdentityError> {
-        match self.users.find_by_keycloak_id(&identity.keycloak_id).await? {
+    /// Mirrors the account and the roles of the token this application
+    /// knows; a realm role with no role here, such as Keycloak's own
+    /// `offline_access`, grants nothing and is left out.
+    async fn sync(&self, identity: &KeycloakIdentity) -> Result<(User, Vec<Role>), IdentityError> {
+        let roles = self.roles.find_many(&identity.roles).await?;
+        let mut known = identity.clone();
+        known.roles = roles.iter().map(|role| role.name.clone()).collect();
+        known.roles.sort();
+        let user = match self.users.find_by_keycloak_id(&known.keycloak_id).await? {
             Some(mut user) => {
-                if user.mirror(identity) {
+                if user.mirror(&known) {
                     self.users.update(&user).await?;
                 }
-                Ok(user)
+                user
             }
-            None => self.users.create(NewUser::from(identity)).await,
-        }
+            None => self.users.create(NewUser::from(&known)).await?,
+        };
+        Ok((user, roles))
     }
 
     async fn open(&self, tokens: TokenPair, on_rejection: IdentityError) -> Result<AuthSession, IdentityError> {
@@ -94,9 +116,13 @@ mod tests {
     use crate::identity::application::testing::{Harness, identity};
     use crate::identity::domain::{IdentityError, RoleName, UserRepository};
 
+    fn role(name: &str) -> RoleName {
+        RoleName::parse(name).unwrap()
+    }
+
     #[tokio::test]
     async fn signing_in_creates_the_account_once() {
-        let harness = Harness::new();
+        let harness = Harness::new().await;
         let first = harness.service.sign_in("code", "verifier").await.unwrap();
         harness.service.sign_in("code", "verifier").await.unwrap();
 
@@ -106,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_failed_account_write_revokes_the_new_session() {
-        let harness = Harness::new();
+        let harness = Harness::new().await;
         harness.users.fail_writes();
 
         let result = harness.service.sign_in("code", "verifier").await;
@@ -117,7 +143,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_token_keycloak_rejects_ends_the_sign_in() {
-        let harness = Harness::new();
+        let harness = Harness::new().await;
         harness.verifier.reject_all();
 
         let result = harness.service.sign_in("code", "verifier").await;
@@ -126,20 +152,34 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn authenticating_mirrors_role_changes() {
-        let harness = Harness::new();
+    async fn authenticating_mirrors_role_changes_and_grants_what_they_grant() {
+        let harness = Harness::new().await;
         harness.service.sign_in("code", "verifier").await.unwrap();
-        harness.verifier.issue(identity(vec![RoleName::Admin]));
+        harness.verifier.issue(identity(vec![role("admin")]));
 
         let caller = harness.service.authenticate("access").await.unwrap();
 
-        assert!(caller.has_role(RoleName::Admin));
-        assert!(harness.users.list().await.unwrap()[0].has_role(RoleName::Admin));
+        assert!(caller.has_role(&role("admin")));
+        assert!(caller.grants.allows("ANYTHING"));
+        assert!(harness.users.list().await.unwrap()[0].has_role(&role("admin")));
+    }
+
+    #[tokio::test]
+    async fn a_realm_role_unknown_here_is_left_out() {
+        let harness = Harness::new().await;
+        harness
+            .verifier
+            .issue(identity(vec![role("offline_access"), role("user")]));
+
+        let caller = harness.service.authenticate("access").await.unwrap();
+
+        assert_eq!(caller.roles, vec![role("user")]);
+        assert!(!caller.grants.allows("USERS_VIEW"));
     }
 
     #[tokio::test]
     async fn an_unknown_user_is_not_found() {
-        let harness = Harness::new();
+        let harness = Harness::new().await;
         let result = harness.service.get_user(crate::identity::domain::UserId(42)).await;
         assert!(matches!(result, Err(IdentityError::UserNotFound)));
     }

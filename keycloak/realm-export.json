@@ -234,7 +234,7 @@
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
+      "serviceAccountsEnabled": true,
       "rootUrl": "",
       "baseUrl": "",
       "redirectUris": [
@@ -311,6 +311,23 @@
       "realmRoles": [
         "default-roles-rust-axum-app"
       ]
+    },
+    {
+      "username": "service-account-rust-axum-app",
+      "enabled": true,
+      "serviceAccountClientId": "rust-axum-app",
+      "realmRoles": [
+        "default-roles-rust-axum-app"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "view-realm",
+          "manage-realm",
+          "view-users",
+          "query-users",
+          "manage-users"
+        ]
+      }
     }
   ],
   "revokeRefreshToken": true,
