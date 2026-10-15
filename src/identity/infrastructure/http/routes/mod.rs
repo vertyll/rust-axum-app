@@ -17,6 +17,6 @@ pub(crate) type Identity<P> = State<Arc<IdentityService<P>>>;
 /// where the browser goes once signed in.
 #[derive(Debug, Clone)]
 pub struct SignInSettings {
-	pub keycloak: KeycloakSettings,
-	pub post_login_url: String,
+    pub keycloak: KeycloakSettings,
+    pub post_login_url: String,
 }

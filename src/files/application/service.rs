@@ -7,12 +7,12 @@ use crate::files::domain::FileRepository;
 
 #[derive(Clone)]
 pub struct FilesService<R, S> {
-	pub(super) repository: R,
-	pub(super) storage: S,
+    pub(super) repository: R,
+    pub(super) storage: S,
 }
 
 impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
-	pub fn new(repository: R, storage: S) -> Self {
-		Self { repository, storage }
-	}
+    pub fn new(repository: R, storage: S) -> Self {
+        Self { repository, storage }
+    }
 }

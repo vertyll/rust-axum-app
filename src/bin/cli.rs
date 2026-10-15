@@ -15,16 +15,16 @@ use rust_axum_app::bootstrap::config::AppConfig;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-	dotenvy::dotenv().ok();
+    dotenvy::dotenv().ok();
 
-	let app_config = AppConfig::load()?;
-	let cli_config = Config::load()?;
+    let app_config = AppConfig::load()?;
+    let cli_config = Config::load()?;
 
-	let db = toasty::Db::builder()
-		.models(toasty::models!(rust_axum_app::*))
-		.connect(&app_config.database.url())
-		.await?;
+    let db = toasty::Db::builder()
+        .models(toasty::models!(rust_axum_app::*))
+        .connect(&app_config.database.url())
+        .await?;
 
-	ToastyCli::with_config(db, cli_config).parse_and_run().await?;
-	Ok(())
+    ToastyCli::with_config(db, cli_config).parse_and_run().await?;
+    Ok(())
 }

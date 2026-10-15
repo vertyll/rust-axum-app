@@ -26,7 +26,7 @@ use crate::identity::application::IdentityService;
 use crate::identity::application::ports::IdentityPorts;
 use crate::identity::infrastructure::http as identity_http;
 use crate::identity::infrastructure::keycloak::{
-	HttpKeycloakClient, JwksTokenVerifier, KeycloakSettings, SharedRefreshes,
+    HttpKeycloakClient, JwksTokenVerifier, KeycloakSettings, SharedRefreshes,
 };
 use crate::identity::infrastructure::persistence::ToastyUserRepository;
 use crate::identity::infrastructure::session_store::RedisSessionStore;
@@ -43,9 +43,9 @@ use config::AppConfig;
 pub struct ProductionPorts;
 
 impl IdentityPorts for ProductionPorts {
-	type Users = ToastyUserRepository;
-	type Keycloak = HttpKeycloakClient;
-	type Verifier = JwksTokenVerifier;
+    type Users = ToastyUserRepository;
+    type Keycloak = HttpKeycloakClient;
+    type Verifier = JwksTokenVerifier;
 }
 
 /// The identity service with the production adapters plugged in.
@@ -58,106 +58,106 @@ pub type AppFilesService = FilesService<ToastyFileRepository, LocalFileStorage>;
 pub type AppTranslationsService = TranslationsService<ToastyTranslationRepository>;
 
 pub struct Services {
-	pub identity: Arc<AppIdentityService>,
-	pub files: Arc<AppFilesService>,
-	pub translations: Arc<AppTranslationsService>,
+    pub identity: Arc<AppIdentityService>,
+    pub files: Arc<AppFilesService>,
+    pub translations: Arc<AppTranslationsService>,
 }
 
 /// Wires concrete adapters into the application services.
 pub fn build_services(db: toasty::Db, config: &AppConfig, redis: RedisPool) -> anyhow::Result<Services> {
-	let keycloak = keycloak_settings(config);
+    let keycloak = keycloak_settings(config);
 
-	let identity: AppIdentityService = IdentityService::new(
-		ToastyUserRepository::new(db.clone()),
-		HttpKeycloakClient::new(
-			keycloak.clone(),
-			SharedRefreshes::new(redis, &config.sessions.redis_key_prefix),
-		)?,
-		JwksTokenVerifier::new(&keycloak)?,
-	);
+    let identity: AppIdentityService = IdentityService::new(
+        ToastyUserRepository::new(db.clone()),
+        HttpKeycloakClient::new(
+            keycloak.clone(),
+            SharedRefreshes::new(redis, &config.sessions.redis_key_prefix),
+        )?,
+        JwksTokenVerifier::new(&keycloak)?,
+    );
 
-	let files = FilesService::new(
-		ToastyFileRepository::new(db.clone()),
-		LocalFileStorage::new(&config.files.upload_dir, &config.files.base_url),
-	);
+    let files = FilesService::new(
+        ToastyFileRepository::new(db.clone()),
+        LocalFileStorage::new(&config.files.upload_dir, &config.files.base_url),
+    );
 
-	let translations = TranslationsService::new(ToastyTranslationRepository::new(db.clone()), defaults::shipped()?);
+    let translations = TranslationsService::new(ToastyTranslationRepository::new(db.clone()), defaults::shipped()?);
 
-	Ok(Services {
-		identity: Arc::new(identity),
-		files: Arc::new(files),
-		translations: Arc::new(translations),
-	})
+    Ok(Services {
+        identity: Arc::new(identity),
+        files: Arc::new(files),
+        translations: Arc::new(translations),
+    })
 }
 
 /// Connects to Redis, which holds the browser sessions and coordinates token
 /// refreshes, so the application holds no state of its own between requests.
 pub async fn redis(config: &AppConfig) -> anyhow::Result<RedisPool> {
-	let pool = RedisPool::new(RedisConfig::from_url(&config.sessions.redis_url)?, None, None, None, 1)?;
-	pool.init().await?;
-	Ok(pool)
+    let pool = RedisPool::new(RedisConfig::from_url(&config.sessions.redis_url)?, None, None, None, 1)?;
+    pool.init().await?;
+    Ok(pool)
 }
 
 /// Assembles the HTTP router. The composition root decides which routers
 /// sit behind the auth guard; the modules only provide their routes.
 pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Router {
-	let auth_layer = from_fn_with_state(
-		services.identity.clone(),
-		identity_http::authenticate::<ProductionPorts>,
-	);
+    let auth_layer = from_fn_with_state(
+        services.identity.clone(),
+        identity_http::authenticate::<ProductionPorts>,
+    );
 
-	let sign_in = identity_http::SignInSettings {
-		keycloak: keycloak_settings(config),
-		post_login_url: config.keycloak.post_login_url.clone(),
-	};
+    let sign_in = identity_http::SignInSettings {
+        keycloak: keycloak_settings(config),
+        post_login_url: config.keycloak.post_login_url.clone(),
+    };
 
-	let sessions = SessionManagerLayer::new(RedisSessionStore::new(redis, &config.sessions.redis_key_prefix))
-		.with_name("RUST_AXUM_APP_SESSION")
-		.with_http_only(true)
-		.with_same_site(SameSite::Lax)
-		.with_secure(config.sessions.cookie_secure)
-		.with_path("/")
-		.with_expiry(Expiry::OnInactivity(Duration::seconds(
-			config.sessions.inactivity_timeout_seconds,
-		)));
+    let sessions = SessionManagerLayer::new(RedisSessionStore::new(redis, &config.sessions.redis_key_prefix))
+        .with_name("RUST_AXUM_APP_SESSION")
+        .with_http_only(true)
+        .with_same_site(SameSite::Lax)
+        .with_secure(config.sessions.cookie_secure)
+        .with_path("/")
+        .with_expiry(Expiry::OnInactivity(Duration::seconds(
+            config.sessions.inactivity_timeout_seconds,
+        )));
 
-	let users_routes = identity_http::users_router(services.identity.clone()).layer(auth_layer.clone());
+    let users_routes = identity_http::users_router(services.identity.clone()).layer(auth_layer.clone());
 
-	let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer.clone());
+    let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer.clone());
 
-	let translations_admin_routes =
-		translations_http::translations_admin_router(services.translations.clone()).layer(auth_layer);
+    let translations_admin_routes =
+        translations_http::translations_admin_router(services.translations.clone()).layer(auth_layer);
 
-	Router::new()
-		.nest(
-			"/api/auth",
-			identity_http::auth_router(services.identity.clone(), sign_in),
-		)
-		.nest("/api/users", users_routes)
-		.nest("/api/files", files_routes)
-		.nest(
-			"/api/translations",
-			translations_http::translations_public_router(services.translations.clone()),
-		)
-		.nest("/api/admin/translations", translations_admin_routes)
-		.nest_service("/uploads", ServeDir::new(&config.files.upload_dir))
-		.nest_service("/legal", ServeDir::new("resources/legal"))
-		.route("/health", get(health))
-		.fallback(problem::not_found)
-		.layer(sessions)
-		.layer(TraceLayer::new_for_http())
+    Router::new()
+        .nest(
+            "/api/auth",
+            identity_http::auth_router(services.identity.clone(), sign_in),
+        )
+        .nest("/api/users", users_routes)
+        .nest("/api/files", files_routes)
+        .nest(
+            "/api/translations",
+            translations_http::translations_public_router(services.translations.clone()),
+        )
+        .nest("/api/admin/translations", translations_admin_routes)
+        .nest_service("/uploads", ServeDir::new(&config.files.upload_dir))
+        .nest_service("/legal", ServeDir::new("resources/legal"))
+        .route("/health", get(health))
+        .fallback(problem::not_found)
+        .layer(sessions)
+        .layer(TraceLayer::new_for_http())
 }
 
 fn keycloak_settings(config: &AppConfig) -> KeycloakSettings {
-	KeycloakSettings {
-		realm_url: config.keycloak.realm_url.clone(),
-		client_id: config.keycloak.client_id.clone(),
-		client_secret: config.keycloak.client_secret.clone(),
-		audience: config.keycloak.audience.clone(),
-		callback_url: config.keycloak.callback_url.clone(),
-	}
+    KeycloakSettings {
+        realm_url: config.keycloak.realm_url.clone(),
+        client_id: config.keycloak.client_id.clone(),
+        client_secret: config.keycloak.client_secret.clone(),
+        audience: config.keycloak.audience.clone(),
+        callback_url: config.keycloak.callback_url.clone(),
+    }
 }
 
 async fn health() -> Json<serde_json::Value> {
-	Json(serde_json::json!({ "status": "UP" }))
+    Json(serde_json::json!({ "status": "UP" }))
 }

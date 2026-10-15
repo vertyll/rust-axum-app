@@ -14,32 +14,32 @@ use crate::identity::infrastructure::http::responses::UserResponse;
 use crate::shared_infrastructure::problem::PathParam;
 
 pub fn users_router<P: IdentityPorts>(identity: Arc<IdentityService<P>>) -> Router {
-	Router::new()
-		.route("/", get(list_users))
-		.route("/me", get(me))
-		.route("/{id}", get(get_user))
-		.with_state(identity)
+    Router::new()
+        .route("/", get(list_users))
+        .route("/me", get(me))
+        .route("/{id}", get(get_user))
+        .with_state(identity)
 }
 
 async fn me<P: IdentityPorts>(
-	State(identity): Identity<P>,
-	Auth(caller): Auth,
+    State(identity): Identity<P>,
+    Auth(caller): Auth,
 ) -> Result<Json<UserResponse>, ApiError> {
-	Ok(Json(identity.get_user(caller.user_id).await?.into()))
+    Ok(Json(identity.get_user(caller.user_id).await?.into()))
 }
 
 async fn list_users<P: IdentityPorts>(
-	State(identity): Identity<P>,
-	RequireAdmin(_caller): RequireAdmin,
+    State(identity): Identity<P>,
+    RequireAdmin(_caller): RequireAdmin,
 ) -> Result<Json<Vec<UserResponse>>, ApiError> {
-	let users = identity.list_users().await?;
-	Ok(Json(users.into_iter().map(UserResponse::from).collect()))
+    let users = identity.list_users().await?;
+    Ok(Json(users.into_iter().map(UserResponse::from).collect()))
 }
 
 async fn get_user<P: IdentityPorts>(
-	State(identity): Identity<P>,
-	RequireAdmin(_caller): RequireAdmin,
-	PathParam(id): PathParam<i64>,
+    State(identity): Identity<P>,
+    RequireAdmin(_caller): RequireAdmin,
+    PathParam(id): PathParam<i64>,
 ) -> Result<Json<UserResponse>, ApiError> {
-	Ok(Json(identity.get_user(UserId(id)).await?.into()))
+    Ok(Json(identity.get_user(UserId(id)).await?.into()))
 }
