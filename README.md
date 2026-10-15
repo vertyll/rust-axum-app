@@ -6,6 +6,8 @@
     <img alt="" src="https://img.shields.io/badge/Keycloak-00b8e3?style=for-the-badge&logo=keycloak&logoColor=4D4D4D">
 </p>
 
+# Rust Axum App
+
 ## Project Assumptions
 
 Modular monolith in Rust with hexagonal architecture and Domain-Driven Design layering: three bounded contexts
@@ -13,7 +15,7 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 
 ## Technology Stack
 
-### Back-end:
+### Back-end
 
 - Rust.
 - Axum.
@@ -25,7 +27,7 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 - jsonwebtoken (JWKS).
 - ICU MessageFormat.
 
-### Authentication:
+### Authentication
 
 - **Identity provider**: Keycloak (realm `rust-axum-app`); the application never sees a password.
 - **Pattern**: BFF; the application keeps the tokens, the browser holds only a session cookie.
@@ -33,7 +35,7 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 - **JWT**: verified by the auth guard, from a Bearer header or from the session.
 - **Details**: [Authentication](docs/authentication.md).
 
-### Core back-end:
+### Core back-end
 
 - Hexagonal architecture: ports are traits wired with generics, adapters are chosen only in `bootstrap`.
 - The application has an exception handling mechanism (RFC 9457 problem details with message codes).
@@ -44,7 +46,7 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 - The application has translations (ICU MessageFormat) editable by an admin.
 - And many other features that can be found in the application code.
 
-### Other:
+### Other
 
 - Docker for development environment.
 - Clippy for static code analysis.
