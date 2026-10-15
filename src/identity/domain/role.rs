@@ -11,6 +11,7 @@ pub enum RoleName {
 }
 
 impl RoleName {
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             RoleName::Admin => "admin",
@@ -18,6 +19,7 @@ impl RoleName {
         }
     }
 
+    #[must_use]
     pub const fn description(self) -> &'static str {
         match self {
             RoleName::Admin => "Administrator",

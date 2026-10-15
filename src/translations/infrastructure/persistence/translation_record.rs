@@ -22,6 +22,7 @@ pub struct TranslationRecord {
 }
 
 impl TranslationRecord {
+    #[must_use]
     pub fn to_domain(&self) -> Translation {
         Translation {
             key: self.message_key.clone(),

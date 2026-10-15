@@ -20,6 +20,7 @@ pub struct KeycloakSettings {
 }
 
 impl KeycloakSettings {
+    #[must_use]
     pub fn endpoint(&self, name: &str) -> String {
         format!("{}/protocol/openid-connect/{name}", self.realm_url)
     }

@@ -19,6 +19,7 @@ pub struct SignInTransaction {
 }
 
 impl SignInTransaction {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             state: random(STATE_BYTES),
@@ -33,11 +34,13 @@ impl Default for SignInTransaction {
     }
 }
 
+#[must_use]
 pub fn challenge_of(code_verifier: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(code_verifier.as_bytes()))
 }
 
 /// Compares in time independent of where the values first differ.
+#[must_use]
 pub fn same_state(expected: &str, received: &str) -> bool {
     expected.len() == received.len()
         && expected

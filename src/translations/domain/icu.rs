@@ -1,4 +1,4 @@
-//! ICU MessageFormat syntax checks. Messages are rendered by clients; the
+//! ICU `MessageFormat` syntax checks. Messages are rendered by clients; the
 //! server only makes sure an edited message parses and asks for no argument
 //! the code never supplies.
 
@@ -7,6 +7,7 @@ use std::collections::BTreeSet;
 use swc_icu_messageformat_parser::{AstElement, Parser, ParserOptions};
 
 /// The argument names `message` refers to, or `None` when it does not parse.
+#[must_use]
 pub fn placeholders(message: &str) -> Option<BTreeSet<String>> {
     let options = ParserOptions {
         requires_other_clause: true,
@@ -46,16 +47,16 @@ mod tests {
 
     use super::placeholders;
 
-    fn names(list: &[&str]) -> Option<BTreeSet<String>> {
-        Some(list.iter().map(ToString::to_string).collect())
+    fn names(list: &[&str]) -> BTreeSet<String> {
+        list.iter().map(ToString::to_string).collect()
     }
 
     #[test]
     fn collects_arguments_including_nested_plural_branches() {
         let message = "{min, plural, one {# znak} few {# znaki} many {# znaków} other {# znaku}} dla {name}";
 
-        assert_eq!(placeholders(message), names(&["min", "name"]));
-        assert_eq!(placeholders("Plain text"), names(&[]));
+        assert_eq!(placeholders(message), Some(names(&["min", "name"])));
+        assert_eq!(placeholders("Plain text"), Some(names(&[])));
     }
 
     #[test]

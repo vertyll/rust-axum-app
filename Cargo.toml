@@ -23,6 +23,11 @@ path = "src/bin/cli.rs"
 unsafe_code = "forbid"
 
 [lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# A port's trait is async; an in-memory fake or an extractor with nothing to await still has to keep its signature.
+unused_async_trait_impl = "allow"
+# An application, not a library: a public function is a module's boundary, and its error type says what can fail.
+missing_errors_doc = "allow"
 # Every module is a directory with its own `mod.rs`; a module written as `foo.rs` next to `foo/` would mix the styles.
 self_named_module_files = "warn"
 

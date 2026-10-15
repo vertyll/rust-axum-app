@@ -12,6 +12,7 @@ pub enum Language {
 impl Language {
     pub const ALL: [Language; 2] = [Language::Pl, Language::En];
 
+    #[must_use]
     pub fn code(self) -> &'static str {
         match self {
             Language::Pl => "pl",

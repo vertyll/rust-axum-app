@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
@@ -32,6 +33,7 @@ enum Claim {
 }
 
 impl SharedRefreshes {
+    #[must_use]
     pub fn new(redis: Pool, key_prefix: &str) -> Self {
         Self {
             redis: Some(redis),
@@ -39,6 +41,7 @@ impl SharedRefreshes {
         }
     }
 
+    #[must_use]
     pub fn in_process_only() -> Self {
         Self {
             redis: None,
@@ -147,8 +150,10 @@ async fn release(redis: &Pool, lock_key: &str) {
 fn sha256(value: &str) -> String {
     Sha256::digest(value.as_bytes())
         .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+        .fold(String::with_capacity(64), |mut hex, byte| {
+            let _ = write!(hex, "{byte:02x}");
+            hex
+        })
 }
 
 #[cfg(test)]

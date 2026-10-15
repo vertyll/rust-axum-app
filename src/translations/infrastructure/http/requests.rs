@@ -12,6 +12,7 @@ pub struct TranslationRequest {
 }
 
 impl TranslationRequest {
+    #[must_use]
     pub fn into_text(self) -> LocalizedText {
         LocalizedText {
             pl: self.pl,

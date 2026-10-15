@@ -12,7 +12,7 @@ impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
             return Err(FilesError::InvalidStorageType);
         }
 
-        let size = cmd.data.len() as i64;
+        let size = i64::try_from(cmd.data.len()).map_err(|_| FilesError::UploadFailed)?;
         let object = self.storage.store(cmd.data, &cmd.original_name).await?;
         let stored_path = object.file_path.clone();
 
@@ -61,7 +61,7 @@ mod tests {
         let (service, _, storage) = files_harness();
         let err = service.upload(upload_cmd("empty.txt", b"")).await.unwrap_err();
         assert!(matches!(err, FilesError::NoFileUploaded));
-        assert!(storage.stored_paths().is_empty());
+        assert_eq!(storage.stored_paths(), [] as [std::string::String; 0]);
     }
 
     #[tokio::test]

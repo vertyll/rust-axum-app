@@ -24,6 +24,7 @@ impl KeycloakId {
         Self(value.into())
     }
 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -51,6 +52,7 @@ impl Email {
         }
     }
 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -108,6 +110,7 @@ pub struct User {
 }
 
 impl User {
+    #[must_use]
     pub fn has_role(&self, role: RoleName) -> bool {
         self.roles.contains(&role)
     }
@@ -121,9 +124,9 @@ impl User {
             || self.roles != identity.roles;
         if changed {
             self.email = identity.email.clone();
-            self.first_name = identity.first_name.clone();
-            self.last_name = identity.last_name.clone();
-            self.roles = identity.roles.clone();
+            self.first_name.clone_from(&identity.first_name);
+            self.last_name.clone_from(&identity.last_name);
+            self.roles.clone_from(&identity.roles);
         }
         changed
     }

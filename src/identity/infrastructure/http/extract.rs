@@ -90,6 +90,10 @@ fn bearer_token(headers: &HeaderMap) -> Option<String> {
         .map(str::to_owned)
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "passed to `map_err`, which hands over the error it maps"
+)]
 pub(crate) fn store(err: tower_sessions::session::Error) -> IdentityError {
     IdentityError::SessionStoreFailure(err.to_string())
 }

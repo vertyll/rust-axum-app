@@ -13,6 +13,7 @@ pub struct RedisSessionStore {
 }
 
 impl RedisSessionStore {
+    #[must_use]
     pub fn new(pool: Pool, key_prefix: &str) -> Self {
         Self {
             pool,

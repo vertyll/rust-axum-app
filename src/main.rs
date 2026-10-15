@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     bootstrap::seed::seed_roles(&db).await?;
 
     let redis = bootstrap::redis(&config).await?;
-    let services = bootstrap::build_services(db, &config, redis.clone())?;
+    let services = bootstrap::build_services(&db, &config, redis.clone())?;
     services.translations.synchronize().await?;
 
     let app = bootstrap::router(&services, &config, redis);

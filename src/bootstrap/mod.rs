@@ -64,7 +64,7 @@ pub struct Services {
 }
 
 /// Wires concrete adapters into the application services.
-pub fn build_services(db: toasty::Db, config: &AppConfig, redis: RedisPool) -> anyhow::Result<Services> {
+pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> anyhow::Result<Services> {
     let keycloak = keycloak_settings(config);
 
     let identity: AppIdentityService = IdentityService::new(

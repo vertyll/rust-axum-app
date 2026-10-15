@@ -9,6 +9,7 @@ pub struct ToastyUserRepository {
 }
 
 impl ToastyUserRepository {
+    #[must_use]
     pub fn new(db: toasty::Db) -> Self {
         Self { db }
     }
@@ -156,6 +157,10 @@ where
     Ok(())
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "passed to `map_err`, which hands over the error it maps"
+)]
 pub(crate) fn persistence(err: toasty::Error) -> IdentityError {
     IdentityError::PersistenceFailure(err.to_string())
 }

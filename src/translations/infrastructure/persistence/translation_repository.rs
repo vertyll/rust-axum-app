@@ -7,6 +7,7 @@ pub struct ToastyTranslationRepository {
 }
 
 impl ToastyTranslationRepository {
+    #[must_use]
     pub fn new(db: toasty::Db) -> Self {
         Self { db }
     }
@@ -81,6 +82,10 @@ impl TranslationRepository for ToastyTranslationRepository {
     }
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "passed to `map_err`, which hands over the error it maps"
+)]
 fn persistence(err: toasty::Error) -> TranslationsError {
     TranslationsError::PersistenceFailure(err.to_string())
 }

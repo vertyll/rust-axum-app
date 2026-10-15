@@ -43,7 +43,7 @@ impl HttpKeycloakClient {
     }
 
     fn shared_refresh(&self, refresh_token: &str) -> SharedRefresh {
-        let mut refreshes = self.refreshes.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut refreshes = self.refreshes.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         refreshes.retain(|_, (started, cell)| !(cell.initialized() && started.elapsed() > REUSE_WINDOW));
         refreshes
             .entry(refresh_token.to_string())
@@ -53,7 +53,7 @@ impl HttpKeycloakClient {
     }
 
     fn forget(&self, refresh_token: &str, cell: &SharedRefresh) {
-        let mut refreshes = self.refreshes.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut refreshes = self.refreshes.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         if refreshes
             .get(refresh_token)
             .is_some_and(|(_, stored)| Arc::ptr_eq(stored, cell))
@@ -152,6 +152,10 @@ struct TokenResponse {
     refresh_token: Option<String>,
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "passed to `map_err`, which hands over the error it maps"
+)]
 fn unavailable(err: reqwest::Error) -> IdentityError {
     IdentityError::IdentityProviderUnavailable(err.to_string())
 }

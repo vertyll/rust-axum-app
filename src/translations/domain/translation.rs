@@ -11,6 +11,7 @@ pub struct LocalizedText {
 }
 
 impl LocalizedText {
+    #[must_use]
     pub fn get(&self, language: Language) -> &str {
         match language {
             Language::Pl => &self.pl,
@@ -31,6 +32,7 @@ pub struct Translation {
 }
 
 impl Translation {
+    #[must_use]
     pub fn new(key: String, default: LocalizedText, now: Timestamp) -> Self {
         Self {
             key,

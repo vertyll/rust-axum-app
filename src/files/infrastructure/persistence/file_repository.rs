@@ -7,6 +7,7 @@ pub struct ToastyFileRepository {
 }
 
 impl ToastyFileRepository {
+    #[must_use]
     pub fn new(db: toasty::Db) -> Self {
         Self { db }
     }
@@ -92,6 +93,10 @@ impl FileRepository for ToastyFileRepository {
     }
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "passed to `map_err`, which hands over the error it maps"
+)]
 fn persistence(err: toasty::Error) -> FilesError {
     FilesError::PersistenceFailure(err.to_string())
 }

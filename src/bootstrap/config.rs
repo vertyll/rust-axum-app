@@ -25,6 +25,7 @@ pub enum Environment {
 }
 
 impl Environment {
+    #[must_use]
     pub fn is_local(self) -> bool {
         self == Environment::Local
     }
@@ -61,6 +62,7 @@ pub struct DatabaseConfig {
 }
 
 impl DatabaseConfig {
+    #[must_use]
     pub fn url(&self) -> String {
         format!(
             "postgresql://{}:{}@{}:{}/{}",
@@ -189,7 +191,7 @@ impl AppConfig {
             "SESSION_COOKIE_SECURE",
         ];
         for key in required {
-            if env::var(key).map(|value| value.trim().is_empty()).unwrap_or(true) {
+            if env::var(key).map_or(true, |value| value.trim().is_empty()) {
                 bail!("{key} must be set when APP_ENVIRONMENT is not local");
             }
         }

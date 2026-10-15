@@ -25,6 +25,6 @@ mod tests {
         let stored = repository.get_any(file.id).unwrap();
         assert!(stored.is_deleted());
         assert_eq!(stored.deleted_by_user_id, Some(42));
-        assert!(storage.removed_paths().is_empty());
+        assert_eq!(storage.removed_paths(), [] as [std::string::String; 0]);
     }
 }

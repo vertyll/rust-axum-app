@@ -25,6 +25,7 @@ pub struct AuthSession {
 }
 
 impl AuthSession {
+    #[must_use]
     pub fn needs_refresh_at(&self, now: Timestamp, skew: SignedDuration) -> bool {
         now.checked_add(skew).unwrap_or(Timestamp::MAX) >= self.access_token_expires_at
     }
@@ -51,6 +52,7 @@ pub struct Caller {
 }
 
 impl Caller {
+    #[must_use]
     pub fn has_role(&self, role: RoleName) -> bool {
         self.roles.contains(&role)
     }

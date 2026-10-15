@@ -29,7 +29,7 @@ const INVALID_VALUE: &str = "validation.invalid";
 #[derive(Debug, Serialize)]
 pub struct Problem {
     #[serde(rename = "type")]
-    problem_type: &'static str,
+    type_uri: &'static str,
     title: &'static str,
     #[serde(serialize_with = "status_code")]
     status: StatusCode,
@@ -45,7 +45,7 @@ impl Problem {
     pub fn new(status: StatusCode, code: impl Into<String>) -> Self {
         let code = code.into();
         Self {
-            problem_type: "about:blank",
+            type_uri: "about:blank",
             title: status.canonical_reason().unwrap_or_default(),
             status,
             detail: code.clone(),
@@ -56,6 +56,7 @@ impl Problem {
     }
 
     /// A `400` naming one rejected field — for rules only the domain can check.
+    #[must_use]
     pub fn field(field: &str, key: &str) -> Self {
         let mut problem = Self::new(StatusCode::BAD_REQUEST, VALIDATION_FAILED);
         problem.errors.insert(field.to_string(), vec![key.to_string()]);
@@ -71,6 +72,7 @@ impl Problem {
     /// A `400` listing every rejected field. A validator's message is the
     /// catalogue key; its parameters (never the submitted `value`) become the
     /// field's ICU arguments.
+    #[must_use]
     pub fn validation(errors: &ValidationErrors) -> Self {
         let mut problem = Self::new(StatusCode::BAD_REQUEST, VALIDATION_FAILED);
         for (field, field_errors) in errors.field_errors() {
@@ -111,6 +113,10 @@ impl IntoResponse for Problem {
     }
 }
 
+#[expect(
+    clippy::trivially_copy_pass_by_ref,
+    reason = "`serialize_with` passes the field by reference"
+)]
 fn status_code<S: serde::Serializer>(status: &StatusCode, serializer: S) -> Result<S::Ok, S::Error> {
     serializer.serialize_u16(status.as_u16())
 }

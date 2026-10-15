@@ -5,7 +5,7 @@
 //! * [`identity`] — accounts mirrored from Keycloak, browser sessions on
 //!   Keycloak's hosted pages, roles and the auth guards.
 //! * [`files`] — file upload, storage and metadata.
-//! * [`translations`] — the ICU MessageFormat catalogue clients render
+//! * [`translations`] — the ICU `MessageFormat` catalogue clients render
 //!   message keys with; defaults ship in `translations/*.json`.
 //!
 //! Each module is layered the same way:

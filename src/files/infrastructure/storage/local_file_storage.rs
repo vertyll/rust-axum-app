@@ -72,6 +72,10 @@ impl FileStorage for LocalFileStorage {
     }
 }
 
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "passed to `map_err`, which hands over the error it maps"
+)]
 fn storage(action: &str, err: std::io::Error) -> FilesError {
     tracing::error!("storage: failed to {action}: {err}");
     FilesError::StorageFailure(action.to_string())
