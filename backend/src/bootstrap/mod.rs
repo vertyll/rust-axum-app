@@ -69,7 +69,6 @@ macro_rules! front_end {
     };
 }
 
-/// The default messages of every module and of every area of the front-end.
 pub const MESSAGES: [Messages; 11] = [
     crate::shared_http::MESSAGES,
     crate::identity::MESSAGES,
@@ -189,7 +188,6 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
         .layer(TraceLayer::new_for_http())
 }
 
-/// Registers what every module checks, so roles can grant it.
 pub async fn register_permissions(services: &Services) -> Result<(), IdentityError> {
     services.identity.register(&CATALOGUES).await
 }

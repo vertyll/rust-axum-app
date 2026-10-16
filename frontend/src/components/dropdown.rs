@@ -18,7 +18,6 @@ const ON_TOGGLE: &str = "if (!this.open) return; \
         panel.classList.add('bottom-full', 'mb-2'); \
     }";
 
-/// Which edge of its trigger a dropdown's panel lines up with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DropdownAlign {
     Start,
@@ -67,7 +66,6 @@ pub async fn dropdown(
 /// The classes of an item in a dropdown's panel, a link or a button.
 pub const DROPDOWN_ITEM: &str =
     "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-foreground/5";
-/// An item that is the current choice.
 pub const DROPDOWN_ITEM_ACTIVE: &str =
     "flex w-full items-center gap-2 rounded-md bg-foreground/5 px-3 py-2 text-left text-sm font-medium";
 /// An item whose action cannot be undone, such as signing out.

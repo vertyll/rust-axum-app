@@ -9,7 +9,6 @@ pub mod infrastructure;
 
 pub use application::TranslationsService;
 
-/// The messages this module answers with.
 pub const MESSAGES: crate::shared_kernel::messages::Messages = crate::shared_kernel::messages::Messages {
     owner: "translations",
     pl: include_str!("messages/pl.json"),

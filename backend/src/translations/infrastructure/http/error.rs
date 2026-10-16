@@ -1,5 +1,3 @@
-//! Error presentation of the translations HTTP adapter.
-
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 

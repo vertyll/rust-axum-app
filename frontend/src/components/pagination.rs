@@ -13,7 +13,6 @@ use super::icon::{Icon, IconSize, icon};
 use crate::backend::{BackendError, Page, PageRequest};
 use crate::i18n::texts;
 
-/// The sizes a reader may choose, as fastdo offers them.
 pub const PAGE_SIZES: [usize; 5] = [5, 10, 25, 50, 100];
 pub const DEFAULT_PAGE_SIZE: usize = 10;
 /// The largest page the back-end gives, for a short list read whole, such as
@@ -56,7 +55,6 @@ where
     }
 }
 
-/// Where a shown page sits in its list, for the controls.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PageInfo {
     /// The page shown, from 1.
@@ -81,7 +79,6 @@ impl<T> From<&Page<T>> for PageInfo {
 const STEP: &str = "inline-flex size-8 items-center justify-center rounded-md border border-border bg-background \
                     transition-colors hover:bg-foreground/5 disabled:pointer-events-none disabled:opacity-50 md:size-9";
 
-/// The controls under a paged list.
 #[component]
 pub async fn pagination(
     cx: &Cx,

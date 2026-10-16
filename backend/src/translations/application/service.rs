@@ -1,5 +1,3 @@
-//! Use cases of the translations context.
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 

@@ -1,5 +1,3 @@
-//! Domain layer of the file's context.
-
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -50,7 +48,6 @@ impl fmt::Display for StorageKind {
     }
 }
 
-/// A stored file's metadata as the business sees it.
 #[derive(Debug, Clone)]
 pub struct StoredFile {
     pub id: FileId,

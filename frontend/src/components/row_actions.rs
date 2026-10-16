@@ -10,7 +10,6 @@ const STICKY: &str = "sticky right-0 bg-background shadow-[-8px_0_8px_-8px_rgb(0
 const ICON_ACTION: &str = "inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors \
                            hover:bg-foreground/5 hover:text-foreground";
 
-/// The heading of the actions column.
 #[component]
 pub async fn actions_head(#[into] label: String) -> Result<impl View> {
     Ok(view! {
@@ -24,7 +23,6 @@ pub async fn actions_head(#[into] label: String) -> Result<impl View> {
     })
 }
 
-/// The actions of one row.
 #[component]
 pub async fn actions_cell(#[default] child: Child<'_>) -> Result<impl View> {
     Ok(view! {
@@ -34,7 +32,6 @@ pub async fn actions_cell(#[default] child: Child<'_>) -> Result<impl View> {
     })
 }
 
-/// An action that opens a page.
 #[component]
 pub async fn icon_link(#[into] href: String, name: Icon, #[into] label: String) -> Result<impl View> {
     Ok(view! {
@@ -50,7 +47,6 @@ pub async fn icon_link(#[into] href: String, name: Icon, #[into] label: String) 
     })
 }
 
-/// An action that downloads a file.
 #[component]
 pub async fn icon_download(#[into] href: String, name: Icon, #[into] label: String) -> Result<impl View> {
     Ok(view! {

@@ -1,5 +1,3 @@
-//! A collection read a page at a time.
-
 pub const MAX_PAGE_SIZE: u32 = 100;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
