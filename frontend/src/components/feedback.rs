@@ -1,5 +1,3 @@
-//! How a refused form tells the reader what went wrong.
-
 use topcoat::Result;
 use topcoat::context::Cx;
 use topcoat::view::{View, attributes, component, view};

@@ -54,7 +54,7 @@ jobs:
         run: cargo install topcoat-cli --version "$TOPCOAT_CLI_VERSION" --locked --root .tools
 
       - name: Check formatting
-        run: .tools/bin/topcoat fmt --rustfmt --check
+        run: .tools/bin/topcoat fmt --rustfmt --check src tests build.rs
 
       - name: Clippy
         run: cargo clippy --all-targets --locked -- -D warnings

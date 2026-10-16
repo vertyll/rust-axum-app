@@ -1,16 +1,7 @@
-//! The server-rendered front-end of rust-axum-app, on Topcoat.
-//!
-//! It holds no token and no session of its own: the back-end signs people in
-//! and keeps their sessions, and this application forwards the browser's
-//! session cookie with every call it makes. The browser talks only to this
-//! application, which also passes `/api` and `/uploads` on to the
-//! back-end, so the session cookie is set on this address.
-//!
-//! * [`app`] — the pages, mapped to URLs by their module tree.
-//! * [`backend`] — the client of the back-end's REST API, and the proxy.
-//! * [`auth`] — who is signed in and what their roles grant.
-//! * [`i18n`] — the reader's language and the back-end's message catalog.
-//! * [`components`] — the Topcoat UI components and the application's own.
+//! The server-rendered front-end, on Topcoat. It holds no token and no session
+//! of its own: the back-end signs people in, and this application forwards the
+//! browser's session cookie with every call. The modules are laid out in
+//! `frontend/README.md`.
 
 mod app;
 mod auth;

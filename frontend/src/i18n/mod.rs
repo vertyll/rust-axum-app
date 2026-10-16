@@ -1,5 +1,5 @@
-//! What the reader reads, in their language. Every text is a key of the back
-//! end's message catalog, formatted as ICU `MessageFormat`, so an
+//! What the reader reads, in their language. Every text is a key of the
+//! back-end's message catalog, formatted as ICU `MessageFormat`, so an
 //! administrator's edit of a message reaches these pages too.
 
 pub mod api;

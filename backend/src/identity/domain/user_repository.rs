@@ -1,7 +1,3 @@
-//! `UserRepository` — the User aggregate's driven port, implemented by the
-//! Toasty adapter and wired through generics: native `async fn` in traits,
-//! static dispatch, no `async_trait` boxing.
-
 use super::error::IdentityError;
 use super::user::{KeycloakId, NewUser, User, UserId};
 use crate::shared_kernel::pagination::{PageRequest, PageResult};

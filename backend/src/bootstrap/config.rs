@@ -1,6 +1,5 @@
 //! Application configuration, loaded from environment variables by their
-//! exact names (see `.env.example`). Outside local, startup fails when a
-//! deployment-specific value is unset instead of falling back to a local one.
+//! exact names (see `.env.example`).
 
 use std::env;
 use std::fmt::Display;

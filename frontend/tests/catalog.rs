@@ -1,7 +1,5 @@
-//! Every message key these pages use is in the back-end's catalog, in both
-//! languages, so no reader sees a key in place of a text. The catalog is the
-//! front-end's texts (`backend/translations/<area>`) and the messages each
-//! back-end module ships (`backend/src/<module>/messages`).
+//! The catalog is the front-end's texts (`backend/translations/<area>`) and
+//! the messages each back-end module ships (`backend/src/<module>/messages`).
 
 use std::collections::BTreeMap;
 use std::fs;

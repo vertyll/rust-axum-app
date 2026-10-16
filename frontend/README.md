@@ -121,10 +121,13 @@ Configuration comes from environment variables; `.env.example` lists them, and a
 ## Checks
 
 ```bash
-.tools/bin/topcoat fmt --rustfmt --check
+.tools/bin/topcoat fmt --rustfmt --check src tests build.rs
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
 ```
+
+The formatter is given the sources by name: on its own it walks every folder, `target/` too, where the code generated
+for the dependencies is not formatted.
 
 ## Production
 

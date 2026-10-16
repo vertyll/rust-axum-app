@@ -1,13 +1,5 @@
-//! Migration CLI (`cargo run --bin cli -- <command>`), following the Toasty
-//! guide's per-project CLI pattern:
-//!
-//! ```text
-//! cargo run --bin cli -- migration generate --name init
-//! cargo run --bin cli -- migration apply
-//! cargo run --bin cli -- snapshot
-//! ```
-//!
-//! Migration files live in `toasty/` (see `Toasty.toml`).
+//! The migration command line, after the Toasty guide; its commands are in
+//! `docs/development-setup.md`.
 
 use secrecy::ExposeSecret;
 use toasty_cli::{Config, ToastyCli};

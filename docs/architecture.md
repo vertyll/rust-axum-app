@@ -50,6 +50,12 @@ Dependencies point inwards: `infrastructure` implements the ports of `applicatio
 module's `application/testing` holds in-memory fakes of its ports, so a use case is tested without a database or
 Keycloak.
 
+Between modules, one uses another only through the public API its `mod.rs` re-exports, and only in one direction:
+`files` uses the auth guards of `identity`, and `identity` never imports `files`. What every module shares sits in two
+modules of its own: `shared_kernel` holds plain value types a domain may use, such as a page request or the messages a
+module ships, with no I/O; `shared_http` holds what the HTTP adapters share, the RFC 9457 problem documents and the
+paging parameters and responses.
+
 ## The composition root
 
 `backend/src/bootstrap` is the only place that names a concrete adapter. A service is generic over its ports, and
