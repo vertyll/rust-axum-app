@@ -5,7 +5,6 @@ use topcoat::{
 
 /// The visual style of an [`alert`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[allow(dead_code)]
 pub enum AlertVariant {
     #[default]
     Neutral,

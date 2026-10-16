@@ -5,7 +5,7 @@ use topcoat::{
 
 /// The visual style of a [`badge`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "installed with the component; not every variant is used yet")]
 pub enum BadgeVariant {
     #[default]
     Primary,

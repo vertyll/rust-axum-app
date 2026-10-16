@@ -5,7 +5,7 @@ use topcoat::{
 
 /// The visual style of a [`button`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "installed with the component; not every variant is used yet")]
 pub enum ButtonVariant {
     #[default]
     Primary,
@@ -43,7 +43,7 @@ impl ButtonVariant {
 
 /// The size of a [`button`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "installed with the component; not every variant is used yet")]
 pub enum ButtonSize {
     Sm,
     #[default]

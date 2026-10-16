@@ -7,7 +7,7 @@ use super::label::label;
 
 /// The layout of a [`field`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "installed with the component; not every variant is used yet")]
 pub enum FieldOrientation {
     /// Stack the label, control, and supporting text.
     #[default]
@@ -36,7 +36,7 @@ impl FieldOrientation {
 
 /// The text size of a [`field_legend`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[allow(dead_code)]
+#[expect(dead_code, reason = "installed with the component; not every variant is used yet")]
 pub enum FieldLegendVariant {
     #[default]
     Legend,
