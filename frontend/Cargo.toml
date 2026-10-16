@@ -12,7 +12,9 @@ unsafe_code = "forbid"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
+# An application, not a library: a public function is a module's boundary, and its error type says what can fail.
 missing_errors_doc = "allow"
+# Every module is a directory with its own `mod.rs`; a module written as `foo.rs` next to `foo/` would mix the styles.
 self_named_module_files = "warn"
 
 [dependencies]
