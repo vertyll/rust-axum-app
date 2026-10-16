@@ -1,6 +1,3 @@
-//! Repository port of the translations context (Toasty adapter in
-//! `infrastructure::persistence`).
-
 use super::error::TranslationsError;
 use super::translation::Translation;
 
