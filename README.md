@@ -13,8 +13,8 @@
 
 Two applications in Rust. The back-end (`backend/`) is a modular monolith with hexagonal architecture and Domain-Driven
 Design layering: three bounded contexts (`identity`, `files`, `translations`), each with its own domain, application
-and infrastructure layers. The front-end (`frontend/`) renders its pages on the server with Topcoat and calls the back
-end's API: [Architecture](docs/architecture.md#two-applications).
+and infrastructure layers. The front-end (`frontend/`) renders its pages on the server with Topcoat and calls the
+back-end's API: [Architecture](docs/architecture.md#two-applications).
 
 ## Technology Stack
 
@@ -29,6 +29,7 @@ end's API: [Architecture](docs/architecture.md#two-applications).
 - reqwest.
 - jsonwebtoken (JWKS).
 - ICU MessageFormat.
+- Details: [back-end](backend/README.md).
 
 ### Front-end
 

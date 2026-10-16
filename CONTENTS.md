@@ -5,13 +5,13 @@ Every document in this repository, the module it belongs to, and what it covers.
 
 ## Start here
 
-| Document                        | Module | Kind               | Covers                                                                |
-|---------------------------------|--------|--------------------|-----------------------------------------------------------------------|
-| [rust-axum-app](README.md)      | —      | repository README  | What the repository is, its stack and where to start.                 |
-| [Glossary](GLOSSARY.md)         | —      | reference          | Every term the docs use, and where it is explained.                   |
-| [Standards](STANDARDS.md)       | —      | reference          | The RFCs and specifications the code implements or depends on.        |
-| [Front-end](frontend/README.md) | —      | application README | The Topcoat pages: their layout, the proxy, text, running and checks. |
-| [Back-end](backend/README.md)   | —      | application README | The Axum API: its layout, how to run it and its checks.               |
+| Document                        | Module | Kind               | Covers                                                                                                     |
+|---------------------------------|--------|--------------------|------------------------------------------------------------------------------------------------------------|
+| [rust-axum-app](README.md)      | —      | repository README  | What the repository is, its stack and where to start.                                                      |
+| [Glossary](GLOSSARY.md)         | —      | reference          | Every term the docs use, and where it is explained.                                                        |
+| [Standards](STANDARDS.md)       | —      | reference          | The RFCs and specifications the code implements or depends on.                                             |
+| [Front-end](frontend/README.md) | —      | application README | The Topcoat pages: their layout, the proxy, text, running and checks.                                      |
+| [Back-end](backend/README.md)   | —      | application README | The Axum API: its layout, modules, access, messages, database, mechanisms, running, checks and production. |
 
 ## Overview
 
