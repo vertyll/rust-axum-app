@@ -1,4 +1,4 @@
-//! Lists shown a page at a time, as fastdo's paginator: the first, previous,
+//! Lists shown a page at a time: the first, previous,
 //! next and last page, the number of items per page, where the reader is and
 //! how many items there are. The page and its size are signals a shard reads,
 //! so changing either re-renders only that shard.

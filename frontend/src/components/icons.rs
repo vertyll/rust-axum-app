@@ -1,5 +1,5 @@
 //! The drawings of the icons: Heroicons 2.2.0, 24 px outline (MIT license,
-//! github.com/tailwindlabs/heroicons), the set fastdo uses, kept in the source
+//! github.com/tailwindlabs/heroicons), kept in the source
 //! rather than fetched when the crate builds. Pages draw them with
 //! [`icon`](super::icon::icon).
 

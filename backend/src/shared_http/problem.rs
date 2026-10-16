@@ -5,7 +5,8 @@
 //! arguments for it and `errors` maps each rejected field to its own keys.
 //! In a validation problem `args` is keyed by field too, since two fields may
 //! be rejected by the same rule with different limits.
-//! `detail` repeats `code`, matching the other services of this workspace.
+//! `detail` repeats `code`, so a client that reads only `detail` still gets
+//! the key.
 
 use std::collections::BTreeMap;
 

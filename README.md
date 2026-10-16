@@ -63,6 +63,7 @@ back-end's API: [Architecture](docs/architecture.md#two-applications).
 - Docker for development environment.
 - Clippy for static code analysis.
 - rustfmt for code formatting.
+- rustdoc for code documentation.
 
 ## Documentation
 

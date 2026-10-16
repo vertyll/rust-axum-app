@@ -1,0 +1,71 @@
+name: Rustdoc
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/src/**"
+      - "backend/Cargo.toml"
+      - "backend/Cargo.lock"
+      - "backend/rustdoc/**"
+      - ".github/workflows/rustdoc.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Rust
+        run: rustup toolchain install
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Generate rustdoc HTML
+        run: ./rustdoc/build.sh
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload rustdoc artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: backend/target/doc
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-24.04
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

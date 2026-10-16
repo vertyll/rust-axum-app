@@ -1,4 +1,4 @@
-//! The navigation, laid out as fastdo's: a bar on top with the modules, the
+//! The navigation: a bar on top with the modules, the
 //! account menu and the language, and a side bar with the sections of the
 //! current module. On a phone the modules fold into a menu, and the sections
 //! sit under the bar.

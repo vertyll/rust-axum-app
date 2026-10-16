@@ -25,10 +25,10 @@ pub enum DropdownAlign {
     End,
 }
 
-/// A button that opens a panel of items, as fastdo's `app-dropdown`. It is a
+/// A button that opens a panel of items. It is a
 /// `<details>`, so it works without scripts. `label` names the trigger for
 /// screen readers; `trigger` is what it shows, and the children are the
-/// panel's items, such as [`dropdown_item`]s.
+/// panel's items, styled with [`DROPDOWN_ITEM`].
 #[component]
 pub async fn dropdown(
     #[into] label: String,

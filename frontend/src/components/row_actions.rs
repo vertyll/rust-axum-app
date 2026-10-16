@@ -1,4 +1,4 @@
-//! The actions column of a table, as fastdo's: it stays at the right edge
+//! The actions column of a table: it stays at the right edge
 //! while the other columns scroll beneath it, and each action is an icon with
 //! its name for screen readers and as a tooltip.
 

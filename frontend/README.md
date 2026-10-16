@@ -31,21 +31,21 @@ uses lives in that feature's module.
 
 ## Navigation and tables
 
-The navigation follows fastdo's. The top bar holds the modules (Start, Files, Administration), the account menu and the
+The top bar holds the modules (Start, Files, Administration), the account menu and the
 language menu; the side bar on the left holds the sections of the open module, such as Translations, Roles and Users
 under Administration, each shown only when the reader's roles grant it. On a phone the modules fold into a menu, and
 the sections are listed under the bar. The menus are `<details>` elements, so they work without scripts.
 
 A table (`data_table`) shows every column and scrolls sideways on a narrow screen, while its actions column stays at
-the right edge (`row_actions`). Every list (files, users, roles, translations) is a shard paged as fastdo's paginator
-(`pagination`): the first, previous, next and last page, 5 to 100 items per page, the page and the total. Turning a
+the right edge (`row_actions`). Every list (files, users, roles, translations) is a shard paged by
+`pagination`: the first, previous, next and last page, 5 to 100 items per page, the page and the total. Turning a
 page, choosing a size or typing in the translations filter re-renders only the list, which asks the back-end for that
 page ([Architecture: Collections are paged](../docs/architecture.md#collections-are-paged)); both numbers come from
 the browser, so a size not offered falls back to the default, and a page past the end shows the last one.
 
 The pages are built from the components in `src/components`: those `topcoat ui` installed, and the application's own,
-such as `icon` (a Heroicon by name, as fastdo's `ng-icon`), `dropdown`, `pagination`, `data_table`, `row_actions`,
-`back_link`, `page_header`, `text_field`, `confirm` and `feedback`. The icons are Heroicons 2.2.0 (MIT), fastdo's set,
+such as `icon` (a Heroicon by name), `dropdown`, `pagination`, `data_table`, `row_actions`,
+`back_link`, `page_header`, `text_field`, `confirm` and `feedback`. The icons are Heroicons 2.2.0 (MIT),
 kept in `components/icons.rs`.
 
 ## Pages

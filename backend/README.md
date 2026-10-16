@@ -84,6 +84,17 @@ cargo test --locked
 
 The Redis-backed tests start Redis with Testcontainers, so Docker or Podman must be running.
 
+## API documentation
+
+The shared modules publish their doc comments with rustdoc, behind a landing page that groups them by layer:
+
+```bash
+./rustdoc/build.sh
+```
+
+Output lands in `target/doc/`, with the index at `target/doc/index.html`; the `Rustdoc` workflow publishes it to GitHub
+Pages from `main`. Doc comments with a broken link fail the build.
+
 ## Production
 
 `APP_ENVIRONMENT=production` takes its settings from the environment and refuses to start while one of these is unset,
