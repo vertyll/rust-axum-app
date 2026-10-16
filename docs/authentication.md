@@ -2,27 +2,33 @@
 
 The application never handles a credential. Keycloak (realm `rust-axum-app`) owns every page that touches one: sign-up,
 sign-in, email verification, password reset, two-factor authentication and acceptance of the terms of use. The
-application is a BFF: it runs the sign-in, keeps the tokens on the server and gives the browser only a session cookie.
+back-end is a BFF: it runs the sign-in, keeps the tokens on the server and gives the browser only a session cookie. The
+browser reaches it through the front-end, which passes `/api/*` on unchanged:
+[Architecture: Two applications](architecture.md#two-applications).
 
 ## Signing in
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant A as rust-axum-app
+    participant F as Front-end
+    participant A as Back-end
     participant K as Keycloak
     participant R as Redis
 
-    B->>A: GET /api/auth/authorize
-    A-->>B: 302 to Keycloak, with state and the PKCE challenge
+    B->>F: GET /api/auth/authorize
+    F->>A: passed on
+    A-->>B: 303 to Keycloak, with state and the PKCE challenge
     B->>K: sign in on Keycloak's page
-    K-->>B: 302 to /api/auth/callback?code&state
-    B->>A: GET /api/auth/callback?code&state
+    K-->>B: 302 to /api/auth/callback?code&state on the front-end's address
+    B->>F: GET /api/auth/callback?code&state
+    F->>A: passed on
     A->>K: code + client secret + PKCE verifier
     K-->>A: access, refresh and ID token
     A->>R: store the tokens in the session
-    A-->>B: 302 to AUTH_POST_LOGIN_URL, Set-Cookie with the session id
-    B->>A: API call + session cookie
+    A-->>B: 303 to AUTH_POST_LOGIN_URL, the front-end's home page, Set-Cookie with the session id
+    B->>F: page request + session cookie
+    F->>A: API call + session cookie
     A->>R: read the session
     Note over A: the request is authorized by the session's access token
 ```
@@ -54,19 +60,22 @@ Either way the decision rests on the token alone, so any instance can serve any 
 ## Sessions and refreshing
 
 The session lives in Redis, and its access token is refreshed once per refresh token, across instances: [Token
-refresh](../src/identity/docs/mechanisms/token-refresh.md).
+refresh](../backend/src/identity/docs/mechanisms/token-refresh.md).
 
 ## Signing out
 
 `POST /api/auth/logout` revokes the refresh token at Keycloak, which ends the Keycloak session, and clears the local
-one.
+one. The front-end's sign-out button posts to its own `/sign-out`, which calls it with the session cookie, passes the
+cookie's removal on to the browser and returns home.
 
 ## Cross-site requests
 
 An unsafe request from another site gets no token: [Cross-site
-requests](../src/identity/docs/mechanisms/cross-site-requests.md).
+requests](../backend/src/identity/docs/mechanisms/cross-site-requests.md).
 
 ## Code
+
+The paths are under `backend/src/`; the front-end's side is in its [README](../frontend/README.md).
 
 | Path                                                 | Role                                               |
 |------------------------------------------------------|----------------------------------------------------|

@@ -3,7 +3,8 @@
 ## Prerequisites
 
 - Docker or Podman, with Compose
-- Rust 1.99 (edition 2024), the version `rust-toolchain.toml` pins; `rustup install` fetches it
+- Rust 1.99 (edition 2024), the version `backend/rust-toolchain.toml` and `frontend/rust-toolchain.toml` pin;
+  `rustup install` fetches it
 
 ## Start the infrastructure
 
@@ -21,7 +22,8 @@ Every `docker compose` command here works verbatim as `podman compose`.
 | MailDev      | `http://localhost:1080`                     | catches Keycloak's verification and reset mails |
 | RedisInsight | `http://localhost:5540`                     | browsing the sessions in Redis                  |
 
-Keycloak imports `keycloak/realm-export.json` on its first start, with two accounts:
+Keycloak imports `keycloak/realm-export.json` on its first start, with two accounts; its terms of use link to the
+front-end's `/legal/terms` and `/legal/privacy`:
 
 | Account                     | Password              | Roles           |
 |-----------------------------|-----------------------|-----------------|
@@ -33,7 +35,9 @@ Keycloak imports `keycloak/realm-export.json` on its first start, with two accou
 > The realm lives in the `keycloak-data` volume afterwards, so a change to the export file only takes effect after
 > `docker compose -f docker-compose.local.yml down -v`.
 
-## Run the application
+## Run the back-end
+
+From `backend/`:
 
 ```bash
 cargo run
@@ -43,15 +47,25 @@ Configuration comes only from environment variables. Every one has a local defau
 nothing has to be set; `.env.example` lists them all, and a `.env` next to it is read when present.
 
 On start, in the `local` environment, the application pushes the schema to the database, registers every module's
-permissions with the stock roles `admin` and `user`, and fills the
-translation catalog from `translations/`. It listens on `http://localhost:3000`.
+permissions with the stock roles `admin` and `user`, and fills the translation catalog from the modules' `messages/` and
+the front-end's `backend/translations/`. It listens on `http://localhost:8080`, which only the front-end calls.
 
-Open `http://localhost:3000/api/auth/authorize` in a browser to sign in; the session cookie then authorizes every
-call from that browser.
+## Run the front-end
+
+From `frontend/`, after building the Topcoat CLI into `.tools/` once:
+
+```bash
+cargo install topcoat-cli --version 0.10.0 --locked --root .tools
+.tools/bin/topcoat dev
+```
+
+Open `http://localhost:3000` and sign in with one of the accounts above. The front-end passes `/api` on to the back-end,
+so Keycloak returns to `http://localhost:3000/api/auth/callback`, and the sign-in lands on the front-end's home page.
+More in the [front-end's README](../frontend/README.md).
 
 ## Migrations
 
-Migrations are Toasty's, in `toasty/migrations`, driven by the `cli` binary:
+Migrations are Toasty's, in `backend/toasty/migrations`, driven by the `cli` binary, run from `backend/`:
 
 ```bash
 cargo run --bin cli -- migration generate --name <name>
@@ -66,6 +80,8 @@ Locally the schema is pushed on start, so `apply` is only needed when that push 
 > target database before deploying.
 
 ## Checks
+
+The front-end's checks are in [its README](../frontend/README.md#checks). From `backend/`:
 
 ```bash
 cargo fmt --check

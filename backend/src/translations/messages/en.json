@@ -1,0 +1,7 @@
+{
+  "translations.errors.invalid_message": "The message is not valid ICU MessageFormat",
+  "translations.errors.not_found": "Translation not found",
+  "translations.errors.unknown_language": "Unsupported language",
+  "translations.errors.unknown_placeholder": "The message uses unknown argument {name}",
+  "translations.validators.message.length": "The message must have {min} to {max, plural, one {# character} other {# characters}}"
+}

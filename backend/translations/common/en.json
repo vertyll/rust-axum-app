@@ -1,0 +1,19 @@
+{
+  "common.actions": "Actions",
+  "common.bytes": "{size, number} B",
+  "common.cancel": "Cancel",
+  "common.confirm": "Yes, go ahead",
+  "common.datetime": "{at, date, medium}, {at, time, short} UTC",
+  "common.details": "Details",
+  "common.edit": "Edit",
+  "common.form.refused": "The change was not saved",
+  "common.pagination.first": "First page",
+  "common.pagination.label": "Pages",
+  "common.pagination.last": "Last page",
+  "common.pagination.next": "Next page",
+  "common.pagination.per_page": "Items per page",
+  "common.pagination.position": "Page {page} of {pages}",
+  "common.pagination.previous": "Previous page",
+  "common.pagination.total": "Total results: {count}",
+  "common.save": "Save"
+}

@@ -4,8 +4,14 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
   workflow_dispatch:
 
 permissions:
@@ -22,6 +28,9 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -33,6 +42,8 @@ jobs:
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
 
       - name: Check formatting
         run: cargo fmt --check
@@ -43,6 +54,8 @@ jobs:
       - name: Analyze
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: SonarSource/sonarqube-scan-action@v8
+        with:
+          projectBaseDir: backend
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
@@ -50,6 +63,9 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -59,6 +75,8 @@ jobs:
 
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
 
       - name: Test
         run: cargo test --locked
@@ -78,8 +96,8 @@ jobs:
       - name: Build
         uses: docker/build-push-action@v7
         with:
-          context: .
+          context: backend
           platforms: linux/arm64
           push: false
-          cache-from: type=gha,scope=rust-axum-app
-          cache-to: type=gha,mode=max,scope=rust-axum-app
+          cache-from: type=gha,scope=rust-axum-app-backend
+          cache-to: type=gha,mode=max,scope=rust-axum-app-backend

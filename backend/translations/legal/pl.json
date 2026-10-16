@@ -1,0 +1,19 @@
+{
+  "legal.modified": "Ostatnia modyfikacja: {date, date, long}",
+  "legal.privacy.other": "Przeczytaj regulamin",
+  "legal.privacy.p1": "Administratorem danych jest Mikołaj Gawron, autor Rust Axum App, projektu demonstracyjnego stworzonego w celach nauki i portfolio. Kontakt: {email}.",
+  "legal.privacy.p2": "Przetwarzamy dane konta (adres e-mail, imię i nazwisko, hasło przechowywane wyłącznie jako skrót w Keycloaku), przypisane role oraz przesłane pliki. Robimy to wyłącznie po to, żeby aplikacja działała, na podstawie art. 6 ust. 1 lit. b RODO, czyli w celu świadczenia usługi, z której korzystasz.",
+  "legal.privacy.p3": "Dane są przechowywane w bazach danych na prywatnym serwerze autora w Unii Europejskiej. Nie są sprzedawane ani udostępniane innym podmiotom. Wiadomości e-mail związane z kontem wysyła zewnętrzny dostawca poczty (Resend), który otrzymuje tylko adres odbiorcy i treść wiadomości i może je przetwarzać poza Europejskim Obszarem Gospodarczym na podstawie standardowych klauzul umownych zatwierdzonych przez Komisję Europejską.",
+  "legal.privacy.p4": "Dane przechowujemy do czasu usunięcia konta. Ponieważ to projekt demonstracyjny, mogą też zostać usunięte wcześniej, na przykład przy resecie bazy.",
+  "legal.privacy.p5": "Masz prawo dostępu do swoich danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przeniesienia oraz sprzeciwu. Aby z nich skorzystać, napisz na {email}. Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych.",
+  "legal.privacy.p6": "Podanie danych jest dobrowolne, ale bez nich nie da się założyć konta. Nie podejmujemy wobec Ciebie decyzji opartych wyłącznie na zautomatyzowanym przetwarzaniu, w tym profilowania.",
+  "legal.privacy.p7": "Aplikacja używa wyłącznie plików cookie niezbędnych do działania sesji i logowania oraz jednego, który zapamiętuje wybrany język. Nie używamy analityki ani reklam.",
+  "legal.privacy.title": "Polityka prywatności",
+  "legal.terms.other": "Przeczytaj politykę prywatności",
+  "legal.terms.p1": "Rust Axum App to projekt demonstracyjny, który Mikołaj Gawron stworzył w celach nauki i jako część swojego portfolio. To przykładowa aplikacja w Rust i Axum. Korzystanie z aplikacji jest bezpłatne.",
+  "legal.terms.p2": "Konto zakładasz i obsługujesz przez Keycloak, usługę logowania działającą na serwerze autora. Przy rejestracji akceptujesz ten regulamin i potwierdzasz zapoznanie się z polityką prywatności; data akceptacji jest zapisywana przy koncie.",
+  "legal.terms.p3": "Nie wprowadzaj danych osobowych innych osób ani informacji, których nie chcesz przechowywać na serwerze autora.",
+  "legal.terms.p4": "Aplikacja jest udostępniana w obecnym stanie, bez gwarancji dostępności i poprawnego działania. Autor może w każdej chwili zmienić jej działanie, zresetować dane lub ją wyłączyć. Konta i treści naruszające prawo albo używane do nadużyć mogą zostać usunięte.",
+  "legal.terms.p5": "Pytania i zgłoszenia: {email}.",
+  "legal.terms.title": "Regulamin"
+}

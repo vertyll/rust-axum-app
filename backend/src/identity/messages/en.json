@@ -1,0 +1,21 @@
+{
+  "auth.errors.authentication_required": "Authentication required",
+  "auth.errors.identity_provider_unavailable": "The sign-in service is unavailable. Try again shortly.",
+  "auth.errors.invalid_token": "Invalid token",
+  "auth.errors.permission_denied": "You lack the permission {permission}.",
+  "auth.errors.session_expired": "Your session has ended. Please sign in again.",
+  "auth.errors.sign_in_rejected": "The sign-in could not be completed. Please try again.",
+  "auth.errors.state_mismatch": "The sign-in was started in another window or has expired. Please sign in again.",
+  "auth.errors.user_not_found": "User not found",
+  "roles.errors.already_exists": "A role of that name exists.",
+  "roles.errors.last_unrestricted_holder": "The last person holding every permission cannot lose it.",
+  "roles.errors.last_unrestricted_role": "The last role holding every permission cannot be limited.",
+  "roles.errors.not_found": "Role not found",
+  "roles.errors.still_assigned": "Someone still holds this role; take it away from them first.",
+  "roles.errors.system_role": "The roles admin and user cannot be removed.",
+  "roles.errors.unrestricted_role": "A role holding every permission must be limited before it is removed.",
+  "roles.validators.description.length": "A description has at most {max, plural, one {# character} other {# characters}}.",
+  "roles.validators.name.invalid_format": "A role name has lower-case letters, digits, _ and -, and starts with a letter.",
+  "roles.validators.permissions.unknown": "No module declares the permission {permission}.",
+  "users.validators.email.invalid_format": "Email address has an invalid format."
+}

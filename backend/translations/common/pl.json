@@ -1,0 +1,19 @@
+{
+  "common.actions": "Akcje",
+  "common.bytes": "{size, number} B",
+  "common.cancel": "Anuluj",
+  "common.confirm": "Tak, wykonaj",
+  "common.datetime": "{at, date, medium}, {at, time, short} UTC",
+  "common.details": "Szczegóły",
+  "common.edit": "Edytuj",
+  "common.form.refused": "Zmiana nie została zapisana",
+  "common.pagination.first": "Pierwsza strona",
+  "common.pagination.label": "Strony",
+  "common.pagination.last": "Ostatnia strona",
+  "common.pagination.next": "Następna strona",
+  "common.pagination.per_page": "Elementów na stronę",
+  "common.pagination.position": "Strona {page} z {pages}",
+  "common.pagination.previous": "Poprzednia strona",
+  "common.pagination.total": "Łącznie wyników: {count}",
+  "common.save": "Zapisz"
+}

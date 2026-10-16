@@ -1,0 +1,7 @@
+{
+  "translations.errors.invalid_message": "Komunikat nie jest poprawnym formatem ICU MessageFormat",
+  "translations.errors.not_found": "Nie znaleziono tłumaczenia",
+  "translations.errors.unknown_language": "Nieobsługiwany język",
+  "translations.errors.unknown_placeholder": "Komunikat używa nieznanego argumentu {name}",
+  "translations.validators.message.length": "Komunikat musi mieć od {min} do {max, plural, one {# znaku} few {# znaków} many {# znaków} other {# znaku}}"
+}

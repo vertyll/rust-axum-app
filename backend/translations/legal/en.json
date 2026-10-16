@@ -1,0 +1,19 @@
+{
+  "legal.modified": "Last modified: {date, date, long}",
+  "legal.privacy.other": "Read the terms of use",
+  "legal.privacy.p1": "The data controller is Mikołaj Gawron, the author of Rust Axum App, a demo project built for learning and as a portfolio piece. Contact: {email}.",
+  "legal.privacy.p2": "We process your account data (email address, name, and a password stored only as a hash in Keycloak), the roles assigned to you and the files you upload. We do so only to run the application, under Article 6(1)(b) GDPR, that is to provide the service you use.",
+  "legal.privacy.p3": "The data is stored in databases on the author's private server in the European Union. It is never sold or shared with anyone else. Account emails are sent by an external mail provider (Resend), which receives only the recipient's address and the message and may process them outside the European Economic Area under standard contractual clauses approved by the European Commission.",
+  "legal.privacy.p4": "We keep the data until your account is deleted. As this is a demo project, it may also be deleted earlier, for example when the database is reset.",
+  "legal.privacy.p5": "You have the right to access, rectify and erase your data, to restrict its processing, to data portability and to object. To exercise them, write to {email}. You also have the right to lodge a complaint with a data protection supervisory authority; in Poland, the President of the Personal Data Protection Office (UODO).",
+  "legal.privacy.p6": "Providing the data is voluntary, but an account cannot be created without it. No decisions about you are based solely on automated processing, including profiling.",
+  "legal.privacy.p7": "The application uses only the cookies it needs for the session and sign-in, and one that remembers the language you chose. There is no analytics and no advertising.",
+  "legal.privacy.title": "Privacy policy",
+  "legal.terms.other": "Read the privacy policy",
+  "legal.terms.p1": "Rust Axum App is a demo project Mikołaj Gawron built for learning and as part of his portfolio. It is a sample application in Rust and Axum. The application is free to use.",
+  "legal.terms.p2": "You create and manage your account through Keycloak, a sign-in service running on the author's server. When you sign up you accept these terms and confirm that you have read the privacy policy; the date of acceptance is stored with your account.",
+  "legal.terms.p3": "Do not enter other people's personal data or anything you would not want stored on the author's server.",
+  "legal.terms.p4": "The application is provided as is, with no guarantee that it is available or works correctly. The author may change it, reset its data or shut it down at any time. Accounts and content that break the law or are used for abuse may be removed.",
+  "legal.terms.p5": "Questions and reports: {email}.",
+  "legal.terms.title": "Terms of use"
+}

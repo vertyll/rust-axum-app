@@ -4,14 +4,17 @@
     <img alt="" src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white">
     <img alt="" src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white">
     <img alt="" src="https://img.shields.io/badge/Keycloak-00b8e3?style=for-the-badge&logo=keycloak&logoColor=4D4D4D">
+    <img alt="" src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">
 </p>
 
 # Rust Axum App
 
 ## Project Assumptions
 
-Modular monolith in Rust with hexagonal architecture and Domain-Driven Design layering: three bounded contexts
-(`identity`, `files`, `translations`), each with its own domain, application and infrastructure layers.
+Two applications in Rust. The back-end (`backend/`) is a modular monolith with hexagonal architecture and Domain-Driven
+Design layering: three bounded contexts (`identity`, `files`, `translations`), each with its own domain, application
+and infrastructure layers. The front-end (`frontend/`) renders its pages on the server with Topcoat and calls the back
+end's API: [Architecture](docs/architecture.md#two-applications).
 
 ## Technology Stack
 
@@ -26,6 +29,14 @@ Modular monolith in Rust with hexagonal architecture and Domain-Driven Design la
 - reqwest.
 - jsonwebtoken (JWKS).
 - ICU MessageFormat.
+
+### Front-end
+
+- Rust.
+- Topcoat (server-rendered pages, browser reactivity).
+- Tailwind CSS, with the Topcoat UI components.
+- ICU MessageFormat (FormatJS), from the back-end's catalog.
+- Details: [front-end](frontend/README.md).
 
 ### Authentication
 

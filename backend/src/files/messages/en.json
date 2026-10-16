@@ -1,0 +1,6 @@
+{
+  "files.errors.no_file": "No file uploaded",
+  "files.errors.not_found": "File not found",
+  "files.errors.upload": "File upload failed",
+  "files.validators.file.storage_type.invalid": "Invalid file storage type"
+}

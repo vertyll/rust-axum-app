@@ -1,0 +1,10 @@
+{
+  "home.guest": "Sign in to upload files and manage your account.",
+  "home.sections.account": "Your profile, your permissions, your password and second factor.",
+  "home.sections.files": "Upload files and browse the ones already stored.",
+  "home.sections.roles": "Decide what each role may do.",
+  "home.sections.translations": "Change the texts the application shows.",
+  "home.sections.users": "See every account and the roles it holds.",
+  "home.signed_in": "Choose where to go next.",
+  "home.welcome": "Welcome, {name}"
+}

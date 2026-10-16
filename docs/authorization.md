@@ -57,12 +57,14 @@ listens:
 | `identity`     | `USERS_MANAGE`      | giving accounts roles and taking them away             |
 | `identity`     | `ROLES_VIEW`        | seeing the roles, the permissions and what each grants |
 | `identity`     | `ROLES_MANAGE`      | making, changing and removing roles                    |
-| `files`        | `FILES_MANAGE`      | changing any file's details, and deleting files        |
+| `files`        | `FILES_VIEW`        | seeing and downloading every file                      |
+| `files`        | `FILES_MANAGE`      | uploading files, changing their details, deleting them |
 | `translations` | `TRANSLATIONS_VIEW` | seeing every message with its default                  |
 | `translations` | `TRANSLATIONS_EDIT` | changing messages and resetting them                   |
 
-What needs only a signed-in caller, such as uploading a file or reading one's own account, takes `Auth` and no
-permission.
+What needs only a signed-in caller, such as reading one's own account, takes `Auth` and no permission. A route
+without a handler of its own, such as the served files under `/uploads`, is guarded by the `require::<P>` middleware,
+which refuses as `Permitted<P>` does.
 
 ## Stock roles
 

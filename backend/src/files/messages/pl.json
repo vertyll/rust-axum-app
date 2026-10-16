@@ -1,0 +1,6 @@
+{
+  "files.errors.no_file": "Nie przesłano pliku",
+  "files.errors.not_found": "Nie znaleziono pliku",
+  "files.errors.upload": "Wystąpił błąd podczas przesyłania pliku",
+  "files.validators.file.storage_type.invalid": "Nieprawidłowy typ przechowywania plików"
+}

@@ -13,10 +13,10 @@ Thumbs.db
 !.env.example
 
 ### Cargo ###
-/target
+target/
 
 ### File storage ###
-/uploads
+/backend/uploads
 
 ### SonarQube ###
 .scannerwork/

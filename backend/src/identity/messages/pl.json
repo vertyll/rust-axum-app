@@ -1,0 +1,21 @@
+{
+  "auth.errors.authentication_required": "Wymagane uwierzytelnienie",
+  "auth.errors.identity_provider_unavailable": "Usługa logowania jest niedostępna. Spróbuj za chwilę.",
+  "auth.errors.invalid_token": "Nieprawidłowy token",
+  "auth.errors.permission_denied": "Brak uprawnienia {permission}.",
+  "auth.errors.session_expired": "Sesja wygasła. Zaloguj się ponownie.",
+  "auth.errors.sign_in_rejected": "Nie udało się dokończyć logowania. Spróbuj ponownie.",
+  "auth.errors.state_mismatch": "Logowanie rozpoczęto w innym oknie albo wygasło. Zaloguj się ponownie.",
+  "auth.errors.user_not_found": "Użytkownik nie został znaleziony",
+  "roles.errors.already_exists": "Rola o tej nazwie już istnieje.",
+  "roles.errors.last_unrestricted_holder": "Ostatnia osoba z wszystkimi uprawnieniami nie może ich stracić.",
+  "roles.errors.last_unrestricted_role": "Ostatniej roli z wszystkimi uprawnieniami nie można ograniczyć.",
+  "roles.errors.not_found": "Nie znaleziono roli",
+  "roles.errors.still_assigned": "Ktoś wciąż ma tę rolę; najpierw mu ją odbierz.",
+  "roles.errors.system_role": "Ról admin i user nie można usunąć.",
+  "roles.errors.unrestricted_role": "Rolę z wszystkimi uprawnieniami trzeba ograniczyć, zanim zostanie usunięta.",
+  "roles.validators.description.length": "Opis ma najwyżej {max, plural, one {# znak} few {# znaki} many {# znaków} other {# znaku}}.",
+  "roles.validators.name.invalid_format": "Nazwa roli składa się z małych liter, cyfr, _ i -, i zaczyna się literą.",
+  "roles.validators.permissions.unknown": "Żaden moduł nie deklaruje uprawnienia {permission}.",
+  "users.validators.email.invalid_format": "Adres e-mail ma nieprawidłowy format."
+}

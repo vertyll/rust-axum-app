@@ -1,0 +1,17 @@
+{
+  "account.description": "Your profile comes from the sign-in service.",
+  "account.grants.description": "What your roles let you do.",
+  "account.grants.none": "Your roles grant no permissions.",
+  "account.grants.title": "Permissions",
+  "account.grants.unrestricted": "Every permission",
+  "account.profile.email": "Email",
+  "account.profile.name": "Name",
+  "account.profile.roles": "Roles",
+  "account.profile.since": "Member since",
+  "account.profile.title": "Profile",
+  "account.security.description": "These open the sign-in service, which asks for your password first.",
+  "account.security.password": "Change password",
+  "account.security.title": "Security",
+  "account.security.totp": "Set up two-factor authentication",
+  "account.title": "Account"
+}

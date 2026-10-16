@@ -1,0 +1,10 @@
+{
+  "home.guest": "Zaloguj się, aby przesyłać pliki i zarządzać kontem.",
+  "home.sections.account": "Twój profil, uprawnienia, hasło i drugi składnik logowania.",
+  "home.sections.files": "Przesyłaj pliki i przeglądaj te już zapisane.",
+  "home.sections.roles": "Zdecyduj, co może każda rola.",
+  "home.sections.translations": "Zmieniaj teksty, które pokazuje aplikacja.",
+  "home.sections.users": "Zobacz wszystkie konta i ich role.",
+  "home.signed_in": "Wybierz, dokąd chcesz przejść.",
+  "home.welcome": "Witaj, {name}"
+}

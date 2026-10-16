@@ -1,0 +1,133 @@
+# Rust Axum App — front-end
+
+A server-rendered web application on [Topcoat](https://github.com/tokio-rs/topcoat), in Rust. It holds no token and no
+session of its own: the back-end signs people in and keeps their sessions ([Authentication](../docs/authentication.md)),
+and every page calls the back-end's API with the browser's session cookie.
+
+## Layout
+
+The code is grouped by feature. A feature's module holds its pages, its form routes and, in `api.rs`, its calls to the
+back-end; its URL is its module's path, so `app/files/file_id` serves `/files/{file_id}`.
+
+| Path                         | Holds                                                                                              |
+|------------------------------|----------------------------------------------------------------------------------------------------|
+| `src/app`                    | the layout, the home page, the security headers and every feature below                            |
+| `src/app/navigation`         | the top bar with the modules, the account and language menus, and the side bar with the sections   |
+| `src/app/files`              | the files: list, upload, details, changes; `api.rs` calls `/api/files`                             |
+| `src/app/account`            | the reader's account, what their roles grant, password and second factor                           |
+| `src/app/admin/users`        | the accounts and their roles; `api.rs` calls `/api/users` and `/api/admin/users`                   |
+| `src/app/admin/roles`        | the roles and what each grants; `api.rs` calls `/api/admin/roles` and `/api/admin/permissions`     |
+| `src/app/admin/translations` | the message catalog; `api.rs` calls `/api/admin/translations`                                      |
+| `src/app/legal`              | the terms of use and the privacy policy, written in the catalog                                    |
+| `src/auth`                   | who is signed in and what their roles grant; `api.rs` calls `/api/users/me` and `/api/auth/logout` |
+| `src/i18n`                   | the reader's language and the catalog; `api.rs` calls `/api/translations/{language}`               |
+| `src/backend`                | what the features' calls share: the HTTP client, problem documents, and the proxy                  |
+| `src/forms.rs`               | how a form answers: `303 See Other` when accepted, the same page with the refusal when not         |
+| `src/components`             | the Topcoat UI components, installed with `topcoat ui add`, and the application's own              |
+| `styles.css`                 | the Tailwind input and the theme `topcoat ui init` installed                                       |
+
+`src/components` stays flat, as `topcoat ui` installs and updates its components there; a component one feature alone
+uses lives in that feature's module.
+
+## Navigation and tables
+
+The navigation follows fastdo's. The top bar holds the modules (Start, Files, Administration), the account menu and the
+language menu; the side bar on the left holds the sections of the open module, such as Translations, Roles and Users
+under Administration, each shown only when the reader's roles grant it. On a phone the modules fold into a menu, and
+the sections are listed under the bar. The menus are `<details>` elements, so they work without scripts.
+
+A table (`data_table`) shows every column and scrolls sideways on a narrow screen, while its actions column stays at
+the right edge (`row_actions`). Every list (files, users, roles, translations) is a shard paged as fastdo's paginator
+(`pagination`): the first, previous, next and last page, 5 to 100 items per page, the page and the total. Turning a
+page, choosing a size or typing in the translations filter re-renders only the list, which asks the back-end for that
+page ([Architecture: Collections are paged](../docs/architecture.md#collections-are-paged)); both numbers come from
+the browser, so a size not offered falls back to the default, and a page past the end shows the last one.
+
+The pages are built from the components in `src/components`: those `topcoat ui` installed, and the application's own,
+such as `icon` (a Heroicon by name, as fastdo's `ng-icon`), `dropdown`, `pagination`, `data_table`, `row_actions`,
+`back_link`, `page_header`, `text_field`, `confirm` and `feedback`. The icons are Heroicons 2.2.0 (MIT), fastdo's set,
+kept in `components/icons.rs`.
+
+## Pages
+
+| URL                                   | Shows                                                   | Needs                                      |
+|---------------------------------------|---------------------------------------------------------|--------------------------------------------|
+| `/`                                   | sign-in and sign-up for a guest, the sections otherwise | —                                          |
+| `/account`                            | the profile, what the roles grant, password and 2FA     | a session                                  |
+| `/files`, `/files/{id}`               | the files, an upload, a file's details                  | `FILES_VIEW`; `FILES_MANAGE` to change     |
+| `/admin/users`, `/admin/users/{id}`   | the accounts and the roles each holds                   | `USERS_VIEW`; `USERS_MANAGE` to give roles |
+| `/admin/roles`, `/admin/roles/{name}` | the roles and what each grants                          | `ROLES_VIEW`; `ROLES_MANAGE` to change     |
+| `/admin/translations`, `.../{key}`    | the message catalog, filtered and paged by the back-end | `TRANSLATIONS_VIEW`; `TRANSLATIONS_EDIT`   |
+| `/legal/terms`, `/legal/privacy`      | the terms of use and the privacy policy                 | —                                          |
+
+Each page calls `require_auth` or `require_permission` itself, and hides what the reader's roles do not grant; the back
+end checks every call again, so a hidden link is not the protection. A page the reader may not open answers `401`,
+`403` or `404` through the layout. Keycloak's terms page links to the two legal pages.
+
+## The back-end behind it
+
+The browser talks only to this application. `/api/*` and `/uploads/*` are passed on to the back-end as the browser sent
+them, without the hop-by-hop headers and refusing any `.` or `..` segment, and redirects come back unfollowed. So the
+session cookie is set on this address, Keycloak returns to `/api/auth/callback` here, and every call is same-origin.
+An uploaded file is always sent as a download that cannot run as a page (`Content-Disposition: attachment`,
+`nosniff`, a sandboxing `Content-Security-Policy`), so a script in it never acts with the reader's session.
+
+When a page calls the back-end itself, it sends only the session cookie and passes every `Set-Cookie` of the answer on
+to the browser, such as the cookie's renewed expiry. These calls are made before the page renders, as cookies cannot
+be written once the response has started.
+
+## Changes and cross-site requests
+
+A change is a form posted to a route here, never to the API. Topcoat's origin policy refuses a change sent from
+another site before the route runs; the back-end sees the call from this server as same-origin, so that policy is the
+check. Every response forbids being framed by another site (`X-Frame-Options: DENY`, `frame-ancestors 'none'`), so a
+page cannot be laid under another site's clicks.
+
+## Text
+
+Every label and every error is a key of the back-end's catalog: `texts.t(key)`, `texts.t_with(key, args)`, and
+`texts.problem(&problem)` for a refusal. The language is the `lang` cookie, chosen in the header, then the browser's
+`Accept-Language`, then Polish; the proxy also hands it to Keycloak. A key missing from the reader's language is taken
+from Polish and reported. Dates are shown in UTC, as the server does not know the reader's time zone.
+`tests/catalog.rs` fails when a page uses a key the catalog lacks in either language.
+
+## Running it
+
+Start the infrastructure and the back-end first ([Development Setup](../docs/development-setup.md)). The Topcoat CLI
+is built into `.tools/` once:
+
+```bash
+cargo install topcoat-cli --version 0.10.0 --locked --root .tools
+```
+
+Then:
+
+```bash
+.tools/bin/topcoat dev
+```
+
+The application is at `http://localhost:3000`, and rebuilds when a source file changes. The first build downloads the
+pinned Tailwind CLI and checks it against the release's SHA-256; `build.rs` holds the version and the checksums.
+
+Configuration comes from environment variables; `.env.example` lists them, and a `.env` next to it is read when present.
+
+| Variable                  | Default                 | Purpose                                                         |
+|---------------------------|-------------------------|-----------------------------------------------------------------|
+| `HOST`, `PORT`            | `127.0.0.1`, `3000`     | where it listens                                                |
+| `APP_ENVIRONMENT`         | `local`                 | `production` also makes the `lang` cookie `Secure`              |
+| `BACKEND_INTERNAL_URL`    | `http://localhost:8080` | the back-end, as this server reaches it                         |
+| `BACKEND_TIMEOUT_SECONDS` | `30`                    | how long an API call may take, and a proxied transfer may stall |
+
+## Checks
+
+```bash
+.tools/bin/topcoat fmt --rustfmt --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+```
+
+## Production
+
+The image builds the binary and its asset bundle together, as the bundle must come from the same build, and runs with
+`APP_ENVIRONMENT=production`, which requires `BACKEND_INTERNAL_URL`. Its health check reads `/health`. The back-end's
+`AUTH_CALLBACK_URL` and `AUTH_POST_LOGIN_URL` name this application's public address.

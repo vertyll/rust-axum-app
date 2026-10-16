@@ -215,11 +215,11 @@
   "localizationTexts": {
     "pl": {
       "termsTitle": "Regulamin Rust Axum App",
-      "termsText": "<p>Rust Axum App to projekt demonstracyjny, stworzony w celach nauki i portfolio. Twoje dane są przechowywane w bazach danych na prywatnym serwerze autora w Unii Europejskiej.</p><p>Akceptując, potwierdzasz, że przeczytałeś <a href=\"http://localhost:3000/legal/terms.html#pl\" target=\"_blank\" rel=\"noopener\">regulamin</a> i <a href=\"http://localhost:3000/legal/privacy.html#pl\" target=\"_blank\" rel=\"noopener\">politykę prywatności</a> i akceptujesz regulamin.</p>"
+      "termsText": "<p>Rust Axum App to projekt demonstracyjny, stworzony w celach nauki i portfolio. Twoje dane są przechowywane w bazach danych na prywatnym serwerze autora w Unii Europejskiej.</p><p>Akceptując, potwierdzasz, że przeczytałeś <a href=\"http://localhost:3000/legal/terms\" target=\"_blank\" rel=\"noopener\">regulamin</a> i <a href=\"http://localhost:3000/legal/privacy\" target=\"_blank\" rel=\"noopener\">politykę prywatności</a> i akceptujesz regulamin.</p>"
     },
     "en": {
       "termsTitle": "Rust Axum App terms of use",
-      "termsText": "<p>Rust Axum App is a demo project built for learning and as a portfolio piece. Your data is stored in databases on the author's private server in the European Union.</p><p>By accepting, you confirm that you have read the <a href=\"http://localhost:3000/legal/terms.html#en\" target=\"_blank\" rel=\"noopener\">terms of use</a> and the <a href=\"http://localhost:3000/legal/privacy.html#en\" target=\"_blank\" rel=\"noopener\">privacy policy</a>, and you accept the terms of use.</p>"
+      "termsText": "<p>Rust Axum App is a demo project built for learning and as a portfolio piece. Your data is stored in databases on the author's private server in the European Union.</p><p>By accepting, you confirm that you have read the <a href=\"http://localhost:3000/legal/terms\" target=\"_blank\" rel=\"noopener\">terms of use</a> and the <a href=\"http://localhost:3000/legal/privacy\" target=\"_blank\" rel=\"noopener\">privacy policy</a>, and you accept the terms of use.</p>"
     }
   },
   "clients": [

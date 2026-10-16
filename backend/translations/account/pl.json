@@ -1,0 +1,17 @@
+{
+  "account.description": "Twój profil pochodzi z usługi logowania.",
+  "account.grants.description": "Na co pozwalają Ci Twoje role.",
+  "account.grants.none": "Twoje role nie dają żadnych uprawnień.",
+  "account.grants.title": "Uprawnienia",
+  "account.grants.unrestricted": "Wszystkie uprawnienia",
+  "account.profile.email": "E-mail",
+  "account.profile.name": "Imię i nazwisko",
+  "account.profile.roles": "Role",
+  "account.profile.since": "Konto od",
+  "account.profile.title": "Profil",
+  "account.security.description": "Te przyciski otwierają usługę logowania, która najpierw poprosi o hasło.",
+  "account.security.password": "Zmień hasło",
+  "account.security.title": "Bezpieczeństwo",
+  "account.security.totp": "Skonfiguruj uwierzytelnianie dwuskładnikowe",
+  "account.title": "Konto"
+}
