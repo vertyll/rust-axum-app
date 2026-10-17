@@ -99,21 +99,20 @@ theme in [`keycloak/themes/rust-axum-app`](../keycloak/themes/rust-axum-app), so
 | `login/messages`          | the texts of the bar and the footer, in Polish and English, as the front-end words them                                                  |
 | `email/html/template.ftl` | the frame of every mail; the texts stay Keycloak's own, in Polish and English                                                            |
 
-The theme menu offers System, Light and Dark, as the front-end's does. The sign-in starts in the theme the reader chose
-in the front-end: the front-end's proxy adds it to `/api/auth/authorize`, the back-end passes it to Keycloak as
-`ui_theme`, and `theme.js` keeps it in the browser for Keycloak's address, where a choice in its own menu replaces it. A
-realm that turns dark mode off gets the light theme and no menu. A choice made in that menu goes back to the front-end,
-as the sign-in returns to an address that carries nothing else: `theme.js` leaves it in the cookie
-`ui_theme_rust-axum-app`, under the domain Keycloak shares with the front-end, the parent of Keycloak's host (on
-localhost, every port), and the front-end's proxy takes it over when the sign-in returns to `/api/auth/callback`, and
-removes the cookie. A signed-in reader's account action reaches Keycloak's page through a redirect that drops
-`ui_theme`, so the proxy also leaves the front-end's theme in that cookie on `/api/auth/authorize`, and `theme.js`
-takes it from there when the address carries none.
+The theme menu offers System, Light and Dark, as the front-end's does. A realm that turns dark mode off gets the light
+theme and no menu. The theme the reader last chose, in the front-end or in that menu, is kept in the cookie
+`ui_theme_rust-axum-app`, which both read and write: the front-end writes it with its own when the reader picks a theme,
+`theme.js` writes it on a choice in its menu, and each reads it on every page. It lives under the domain Keycloak shares
+with the front-end, the parent of Keycloak's host (on localhost, every port), for a year, and is not `HttpOnly`, as
+Keycloak's script reads it. Being a shared record rather than a message, it keeps the two in step however the reader
+moves between them: through a sign-in, a cancelled account action, whose redirect drops the `ui_theme` the front-end
+also sends, the browser's history or another tab.
 
-The language goes both ways too. Keycloak shows the sign-in page in `ui_locales`, and a signed-in person their
-account's language, which the application stores before a `kc_action` (above). A language chosen in Keycloak's own
-menu goes back as the theme does: `language.js` leaves it in the cookie `ui_locale_rust-axum-app`, and the proxy takes
-it over into the `lang` cookie when the sign-in returns to `/api/auth/callback`, and removes it.
+The language goes both ways too. Keycloak shows the sign-in page in `ui_locales`, and a signed-in person their account's
+language, which the application stores before a `kc_action` (above). A language chosen in Keycloak's own menu goes back
+in a cookie too, taken over once, as Keycloak itself keeps the language on the account: `language.js` leaves it in the
+cookie `ui_locale_rust-axum-app`, and the proxy takes it over into the `lang` cookie when the sign-in returns to
+`/api/auth/callback`, and removes it.
 
 `template.ftl` is a copy of `keycloak.v2`'s own, changed only where it says `rust-axum-app`. Keycloak builds its pages
 from that template, so after an upgrade of Keycloak the copy is compared with the new release's and brought up to date.

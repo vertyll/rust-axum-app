@@ -15,8 +15,8 @@
     address.searchParams.delete("ui_theme");
     window.history.replaceState(window.history.state, "", address);
   } else {
-    // An account action of a signed-in reader reaches this page through a redirect that drops `ui_theme`, so the app
-    // also leaves its theme in the cookie it takes a choice made here back from.
+    // The theme last chosen in the app or here, kept in a cookie both read and write, so the two agree however the
+    // reader moves between them, such as through the redirect of a signed-in account action, which drops `ui_theme`.
     const fromCookie = document.cookie.match(new RegExp(`(?:^|; )${cookieName()}=([^;]*)`))?.[1];
     if (THEMES.includes(fromCookie)) {
       store(fromCookie);
@@ -31,7 +31,7 @@
     const choice = event.target.closest("[data-theme-choice]");
     if (choice) {
       store(choice.dataset.themeChoice);
-      handOff(choice.dataset.themeChoice);
+      share(choice.dataset.themeChoice);
       apply();
       choice.closest("details")?.removeAttribute("open");
     }
@@ -61,15 +61,15 @@
     }
   }
 
-  // The app takes a choice made here over from the cookie `ui_theme_<realm>`, as the sign-in returns to an address
-  // that carries nothing else. It lives under the domain Keycloak shares with the app, the parent of this host; on
-  // localhost and an IP address every port already shares cookies.
+  // A choice made here goes in the cookie `ui_theme_<realm>`, which the app reads too. It lives under the domain
+  // Keycloak shares with the app, the parent of this host; on localhost and an IP address every port already shares
+  // cookies.
   function cookieName() {
     const realm = window.location.pathname.match(/\/realms\/([^/]+)\//)?.[1];
     return realm ? `ui_theme_${realm}` : null;
   }
 
-  function handOff(theme) {
+  function share(theme) {
     const name = cookieName();
     if (!name) {
       return;
@@ -78,7 +78,7 @@
     const isAddress = labels.every((label) => /^\d+$/.test(label));
     const domain = labels.length > 2 && !isAddress ? `; Domain=${labels.slice(1).join(".")}` : "";
     const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `${name}=${theme}; Path=/; Max-Age=86400; SameSite=Lax${domain}${secure}`;
+    document.cookie = `${name}=${theme}; Path=/; Max-Age=31536000; SameSite=Lax${domain}${secure}`;
   }
 
   function store(theme) {

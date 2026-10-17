@@ -4,16 +4,19 @@ use std::fmt;
 use std::str::FromStr;
 
 use topcoat::context::{Cx, app_context};
-use topcoat::cookie::time::Duration;
 use topcoat::cookie::{Cookie, Cookies, SameSite, cookies};
+
+use topcoat::router::header::HOST;
+use topcoat::router::request::headers;
 
 use crate::config::AppConfig;
 
 pub const THEME_COOKIE: &str = "theme";
 
-/// The cookie Keycloak's pages leave a theme chosen there in, named after the realm, as the sign-in returns to an
-/// address that carries nothing else.
-pub const SIGN_IN_THEME_COOKIE: &str = "ui_theme_rust-axum-app";
+/// The theme the reader last chose, here or on Keycloak's pages, which both read and write: a shared record rather
+/// than a message, so the two agree however the reader moves between them, through a sign-in, a cancelled account
+/// action, the browser's history or another tab. Keycloak's script reads it, so it is not `HttpOnly`.
+pub const SHARED_THEME_COOKIE: &str = "ui_theme_rust-axum-app";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Theme {
@@ -58,58 +61,39 @@ impl fmt::Display for Theme {
     }
 }
 
-/// The reader's theme: the one they chose, else the system's.
+/// The reader's theme: the one they last chose, here or on Keycloak's pages, else the system's.
 pub fn theme(cx: &Cx) -> Theme {
-    cookies(cx)
-        .get(THEME_COOKIE)
-        .and_then(|cookie| cookie.value().parse().ok())
+    let jar = cookies(cx);
+    [SHARED_THEME_COOKIE, THEME_COOKIE]
+        .into_iter()
+        .find_map(|name| jar.get(name).and_then(|cookie| cookie.value().parse().ok()))
         .unwrap_or_default()
 }
 
-/// Remembers the reader's theme on this site.
+/// Remembers the reader's theme on this site, and in the cookie shared with Keycloak's pages, under the parent of this
+/// request's `Host`.
 pub fn remember(cx: &Cx, theme: Theme) {
-    let cookie = Cookie::build((THEME_COOKIE, theme.code()))
+    let secure = app_context::<AppConfig>(cx).secure_cookies();
+    let own = Cookie::build((THEME_COOKIE, theme.code()))
         .path("/")
         .http_only(true)
         .same_site(SameSite::Lax)
-        .secure(app_context::<AppConfig>(cx).secure_cookies())
+        .secure(secure)
         .permanent()
         .build();
-    cookies(cx).add(cookie);
-}
-
-/// Leaves the reader's theme in the cookie Keycloak's pages hand a theme back in, readable by their script: a signed-in
-/// reader's account action reaches those pages through a redirect that drops `ui_theme`. `host` is this request's
-/// `Host`.
-pub fn leave_theme_for_keycloak(cx: &Cx, host: Option<&str>) {
-    let cookie = Cookie::build((SIGN_IN_THEME_COOKIE, theme(cx).code()))
+    let shared = Cookie::build((SHARED_THEME_COOKIE, theme.code()))
         .path("/")
         .same_site(SameSite::Lax)
-        .secure(app_context::<AppConfig>(cx).secure_cookies())
-        .max_age(Duration::days(1));
-    let cookie = match host.and_then(shared_cookie_domain) {
-        Some(domain) => cookie.domain(domain.to_owned()),
-        None => cookie,
+        .secure(secure)
+        .permanent();
+    let host = headers(cx).get(HOST).and_then(|host| host.to_str().ok());
+    let shared = match host.and_then(shared_cookie_domain) {
+        Some(domain) => shared.domain(domain.to_owned()),
+        None => shared,
     };
-    cookies(cx).add(cookie.build());
-}
-
-/// Takes over a theme chosen on Keycloak's pages, once: remembers it here and removes the cookie it came in, from the
-/// domain Keycloak set it under. `host` is this request's `Host`.
-pub fn take_sign_in_theme(cx: &Cx, host: Option<&str>) {
     let jar = cookies(cx);
-    let Some(handed_over) = jar.get(SIGN_IN_THEME_COOKIE) else {
-        return;
-    };
-    if let Ok(theme) = handed_over.value().parse() {
-        remember(cx, theme);
-    }
-    let removal = Cookie::build(SIGN_IN_THEME_COOKIE).path("/");
-    let removal = match host.and_then(shared_cookie_domain) {
-        Some(domain) => removal.domain(domain.to_owned()),
-        None => removal,
-    };
-    jar.remove(removal.build());
+    jar.add(own);
+    jar.add(shared.build());
 }
 
 /// The domain a cookie shared with Keycloak lives under: the parent of this host. `localhost` and an IP address have
