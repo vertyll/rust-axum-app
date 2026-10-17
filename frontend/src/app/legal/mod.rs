@@ -13,20 +13,44 @@ const CONTACT_EMAIL: &str = "gawrmiko@gmail.com";
 
 const MODIFIED: (i32, u8, u8) = (2026, 10, 3);
 
+/// One section of a legal document: its text, under a heading when it has one.
+pub(crate) struct Section {
+    heading: Option<&'static str>,
+    text: &'static str,
+}
+
+impl Section {
+    pub(crate) const fn titled(heading: &'static str, text: &'static str) -> Self {
+        Self {
+            heading: Some(heading),
+            text,
+        }
+    }
+
+    pub(crate) const fn plain(text: &'static str) -> Self {
+        Self { heading: None, text }
+    }
+}
+
 #[component]
 async fn legal_document(
     cx: &Cx,
     title_key: &'static str,
-    paragraph_keys: &'static [&'static str],
+    sections: &'static [Section],
     #[into] other_href: String,
     other_key: &'static str,
 ) -> Result<impl View> {
     let texts = texts(cx).await?;
     let (year, month, day) = MODIFIED;
     let modified = DateTimeValue::try_new(year, month, day, 0, 0, 0, 0).expect("the modification date is a valid date");
-    let paragraphs: Vec<Vec<Segment>> = paragraph_keys
+    let sections: Vec<(Option<String>, Vec<Segment>)> = sections
         .iter()
-        .map(|key| segments(&texts.t_with(key, vec![("email", CONTACT_EMAIL.into())])))
+        .map(|section| {
+            (
+                section.heading.map(|key| texts.t(key)),
+                segments(&texts.t_with(section.text, vec![("email", CONTACT_EMAIL.into())])),
+            )
+        })
         .collect();
 
     Ok(view! {
@@ -36,20 +60,25 @@ async fn legal_document(
                 (texts.t_with("legal.modified", vec![("date", modified.into())]))
             </p>
             <div class="flex flex-col gap-4 leading-relaxed">
-                for paragraph in paragraphs {
-                    <p>
-                        for segment in paragraph {
-                            match segment {
-                                Segment::Text(text) => (text),
-                                Segment::Email => <a
-                                    href=(format!("mailto:{CONTACT_EMAIL}"))
-                                    class="underline underline-offset-4"
-                                >
-                                    (CONTACT_EMAIL)
-                                </a>,
-                            }
+                for (heading, paragraph) in sections {
+                    <section>
+                        if let Some(heading) = heading {
+                            <h2 class="mb-1 text-lg font-semibold">(heading)</h2>
                         }
-                    </p>
+                        <p>
+                            for segment in paragraph {
+                                match segment {
+                                    Segment::Text(text) => (text),
+                                    Segment::Email => <a
+                                        href=(format!("mailto:{CONTACT_EMAIL}"))
+                                        class="underline underline-offset-4"
+                                    >
+                                        (CONTACT_EMAIL)
+                                    </a>,
+                                }
+                            }
+                        </p>
+                    </section>
                 }
             </div>
             link(
