@@ -22,7 +22,7 @@ back-end; its URL is its module's path, so `app/files/file_id` serves `/files/{f
 | `src/auth`                   | who is signed in and what their roles grant; `api.rs` calls `/api/users/me` and `/api/auth/logout`      |
 | `src/i18n`                   | the reader's language and the catalog; `api.rs` calls `/api/translations/{language}`                    |
 | `src/theme.rs`               | the reader's color theme, from the `theme` cookie that `app/theme` sets                                 |
-| `src/keycloak.rs`            | what the front-end shares with Keycloak's pages: theme, language, account actions                       |
+| `src/keycloak`               | what the front-end shares with Keycloak's pages: theme, language, account actions                       |
 | `src/backend`                | what the features' calls share: the HTTP client, problem documents, and the proxy                       |
 | `src/forms.rs`               | how a form answers: `303 See Other` when accepted, the same page with the refusal when not              |
 | `src/components`             | the Topcoat UI components, installed with `topcoat ui add`, and the application's own                   |

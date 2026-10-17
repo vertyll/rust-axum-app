@@ -140,7 +140,7 @@ it by its own JAR and those two fields.
 ## Code
 
 The paths are under `backend/src/`; the front-end's side is in its [README](../frontend/README.md), and what it shares
-with Keycloak's pages in `frontend/src/keycloak.rs`.
+with Keycloak's pages in `frontend/src/keycloak`.
 
 | Path                                                 | Role                                               |
 |------------------------------------------------------|----------------------------------------------------|

@@ -1,24 +1,16 @@
-use reqwest::Method;
-use serde::Deserialize;
 use topcoat::Result;
 use topcoat::context::Cx;
 use topcoat::router::page;
 use topcoat::view::{View, attributes, component, view};
 
 use crate::auth::require_auth;
-use crate::backend::{self, BackendError};
+use crate::backend::BackendError;
 use crate::components::badge::{BadgeVariant, badge};
 use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
 use crate::components::card::{card, card_content, card_description, card_header, card_title};
 use crate::components::page_header::page_header;
 use crate::i18n::texts;
-use crate::keycloak::{AccountAction, account_action};
-
-/// The reader's second factor, as the back-end reads it from Keycloak.
-#[derive(Debug, Deserialize)]
-struct SecondFactor {
-    credential_id: Option<String>,
-}
+use crate::keycloak::{self, AccountAction, account_action};
 
 #[page]
 pub(crate) async fn account(cx: &Cx) -> Result<impl View> {
@@ -96,21 +88,14 @@ pub(crate) async fn account(cx: &Cx) -> Result<impl View> {
 #[component]
 async fn security_card(cx: &Cx) -> Result<impl View> {
     let texts = texts(cx).await?;
-    let second_factor: SecondFactor =
-        backend::json(cx, backend::request(cx, Method::GET, "/api/users/me/second-factor"))
-            .await
-            .map_err(BackendError::into_page_error)?;
-    let (totp_action, totp_label, totp_status) = match second_factor.credential_id {
-        Some(id) => (
-            AccountAction::DeleteCredential(id),
-            "account.security.totp_disable",
-            "account.security.totp_on",
-        ),
-        None => (
-            AccountAction::ConfigureTotp,
-            "account.security.totp",
-            "account.security.totp_off",
-        ),
+    let second_factor = keycloak::second_factor(cx)
+        .await
+        .map_err(BackendError::into_page_error)?;
+    let totp_action = second_factor.toggle();
+    let (totp_label, totp_status) = if second_factor.is_on() {
+        ("account.security.totp_disable", "account.security.totp_on")
+    } else {
+        ("account.security.totp", "account.security.totp_off")
     };
     Ok(view! {
         card(

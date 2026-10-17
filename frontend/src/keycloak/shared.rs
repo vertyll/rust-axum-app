@@ -1,20 +1,11 @@
-//! The way into Keycloak's pages and the person's account there: the theme and
-//! the language the reader shares with Keycloak's pages, the account actions
-//! that open one of those pages, and the language kept on the account. The
-//! rest of the front-end uses only what this module makes public; the cookies
-//! and their domain are its own.
+//! The choices the reader shares with Keycloak's pages, in cookies both read
+//! and write.
 
-use reqwest::Method;
-use serde::Serialize;
 use topcoat::context::{Cx, app_context};
 use topcoat::cookie::{Cookie, Cookies, SameSite, cookies};
 use topcoat::router::header::HOST;
-use topcoat::router::href;
 use topcoat::router::request::headers;
 
-use crate::auth::fetch_current_user;
-use crate::backend;
-use crate::backend::proxy::{Rest, api};
 use crate::config::AppConfig;
 
 /// A choice the reader shares with Keycloak's pages, kept in a cookie both
@@ -58,50 +49,6 @@ pub fn share(cx: &Cx, preference: Preference, code: &str) {
         None => cookie,
     };
     cookies(cx).add(cookie.build());
-}
-
-/// Keycloak shows a signed-in person their account's language, so a signed-in
-/// reader's choice goes there too; when Keycloak cannot store it, the choice
-/// still holds here.
-pub async fn keep_account_language(cx: &Cx, code: &str) -> topcoat::Result<()> {
-    #[derive(Serialize)]
-    struct AccountLanguage<'a> {
-        language: &'a str,
-    }
-    if fetch_current_user(cx).await?.is_none() {
-        return Ok(());
-    }
-    let request = backend::request(cx, Method::PUT, "/api/users/me/language").json(&AccountLanguage { language: code });
-    if let Err(err) = backend::send(cx, request).await {
-        tracing::warn!("could not store the account's language: {err:?}");
-    }
-    Ok(())
-}
-
-/// A page of Keycloak's that a signed-in person is sent to, which returns here.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AccountAction {
-    UpdatePassword,
-    ConfigureTotp,
-    /// Removes the credential with this id, after Keycloak asks the reader to confirm.
-    DeleteCredential(String),
-}
-
-/// Where the browser goes for an account action: the sign-in, asking Keycloak
-/// for that one page.
-pub fn account_action(cx: &Cx, action: &AccountAction) -> String {
-    #[derive(Serialize)]
-    struct Action {
-        kc_action: String,
-    }
-    let kc_action = match action {
-        AccountAction::UpdatePassword => "UPDATE_PASSWORD".to_owned(),
-        AccountAction::ConfigureTotp => "CONFIGURE_TOTP".to_owned(),
-        AccountAction::DeleteCredential(id) => format!("delete_credential:{id}"),
-    };
-    href!(api, Rest(["auth", "authorize"]))
-        .query(Action { kc_action })
-        .resolve(cx)
 }
 
 /// The domain a cookie shared with Keycloak lives under: the parent of this
