@@ -24,6 +24,7 @@
     const choice = event.target.closest("[data-theme-choice]");
     if (choice) {
       store(choice.dataset.themeChoice);
+      handOff(choice.dataset.themeChoice);
       apply();
       choice.closest("details")?.removeAttribute("open");
     }
@@ -51,6 +52,21 @@
     } catch {
       return "system";
     }
+  }
+
+  // The app takes a choice made here over from the cookie `ui_theme_<realm>`, as the sign-in returns to an address
+  // that carries nothing else. It lives under the domain Keycloak shares with the app, the parent of this host; on
+  // localhost and an IP address every port already shares cookies.
+  function handOff(theme) {
+    const realm = window.location.pathname.match(/\/realms\/([^/]+)\//)?.[1];
+    if (!realm) {
+      return;
+    }
+    const labels = window.location.hostname.split(".");
+    const isAddress = labels.every((label) => /^\d+$/.test(label));
+    const domain = labels.length > 2 && !isAddress ? `; Domain=${labels.slice(1).join(".")}` : "";
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `ui_theme_${realm}=${theme}; Path=/; Max-Age=86400; SameSite=Lax${domain}${secure}`;
   }
 
   function store(theme) {

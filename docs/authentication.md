@@ -90,8 +90,12 @@ theme in [`keycloak/themes/rust-axum-app`](../keycloak/themes/rust-axum-app), so
 
 The theme menu offers System, Light and Dark, as the front-end's does. The sign-in starts in the theme the reader chose
 in the front-end: the front-end's proxy adds it to `/api/auth/authorize`, the back-end passes it to Keycloak as
-`ui_theme`, and `theme.js` keeps it in the browser for Keycloak's address, where a choice in its own menu replaces it.
-A realm that turns dark mode off gets the light theme and no menu.
+`ui_theme`, and `theme.js` keeps it in the browser for Keycloak's address, where a choice in its own menu replaces it. A
+realm that turns dark mode off gets the light theme and no menu. A choice made in that menu goes back to the front-end,
+as the sign-in returns to an address that carries nothing else: `theme.js` leaves it in the cookie
+`ui_theme_rust-axum-app`, under the domain Keycloak shares with the front-end, the parent of Keycloak's host (on
+localhost, every port), and the front-end's proxy takes it over when the sign-in returns to `/api/auth/callback`, and
+removes the cookie.
 
 `template.ftl` is a copy of `keycloak.v2`'s own, changed only where it says `rust-axum-app`. Keycloak builds its pages
 from that template, so after an upgrade of Keycloak the copy is compared with the new release's and brought up to date.
