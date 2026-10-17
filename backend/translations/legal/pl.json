@@ -10,7 +10,7 @@
   "legal.privacy.h8": "8. Pliki cookie i pamięć przeglądarki",
   "legal.privacy.other": "Przeczytaj regulamin",
   "legal.privacy.p1": "Administratorem danych jest Mikołaj Gawron, autor Rust Axum App, projektu demonstracyjnego stworzonego w celach nauki i portfolio. Kontakt: {email}.",
-  "legal.privacy.p2": "Przetwarzamy dane konta (adres e-mail, imię i nazwisko, hasło przechowywane wyłącznie jako skrót w Keycloaku), przypisane role oraz przesłane pliki. 6 ust. 1 lit. b RODO, czyli w celu świadczenia usługi, z której korzystasz.",
+  "legal.privacy.p2": "Przetwarzamy dane konta (adres e-mail, imię i nazwisko, hasło przechowywane wyłącznie jako skrót w Keycloaku), przypisane role oraz przesłane pliki.",
   "legal.privacy.p3": "Dane przetwarzamy wyłącznie po to, żeby aplikacja działała, na podstawie art. 6 ust. 1 lit. b RODO, czyli w celu świadczenia usługi, z której korzystasz.",
   "legal.privacy.p4": "Dane są przechowywane w bazach danych na prywatnym serwerze autora w Unii Europejskiej. Nie są sprzedawane ani udostępniane innym podmiotom. Wiadomości e-mail związane z kontem wysyła zewnętrzny dostawca poczty (Resend), który otrzymuje tylko adres odbiorcy i treść wiadomości i może je przetwarzać poza Europejskim Obszarem Gospodarczym na podstawie standardowych klauzul umownych zatwierdzonych przez Komisję Europejską.",
   "legal.privacy.p5": "Dane przechowujemy do czasu usunięcia konta. Ponieważ to projekt demonstracyjny, mogą też zostać usunięte wcześniej, na przykład przy resecie bazy.",
