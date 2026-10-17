@@ -7,6 +7,6 @@ mod use_cases;
 #[cfg(test)]
 pub(crate) mod testing;
 
-pub use commands::{UpdateFileMeta, UploadFile};
-pub use ports::{FileStorage, StoredObject};
+pub use commands::{RequestUpload, UpdateFileMeta};
+pub use ports::{FileStorage, ObjectDownload, ObjectUpload, SignedLink};
 pub use service::FilesService;

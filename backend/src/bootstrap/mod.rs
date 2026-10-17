@@ -11,6 +11,8 @@ use axum::Router;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 use fred::prelude::{ClientLike, Config as RedisConfig, Pool as RedisPool};
+use jiff::{SignedDuration, Timestamp};
+use tokio_util::sync::CancellationToken;
 use tower_http::trace::TraceLayer;
 use tower_sessions::cookie::SameSite;
 use tower_sessions::cookie::time::Duration;
@@ -20,7 +22,7 @@ use crate::files::application::FilesService;
 use crate::files::application::permissions::CATALOGUE as FILES_CATALOGUE;
 use crate::files::infrastructure::http as files_http;
 use crate::files::infrastructure::persistence::ToastyFileRepository;
-use crate::files::infrastructure::storage::LocalFileStorage;
+use crate::files::infrastructure::storage::{LocalFileStorage, S3FileStorage, S3Settings, Storages};
 use crate::identity::CATALOGUE as IDENTITY_CATALOGUE;
 use crate::identity::application::IdentityService;
 use crate::identity::application::ports::IdentityPorts;
@@ -85,13 +87,15 @@ pub const MESSAGES: [Messages; 11] = [
 
 pub type AppIdentityService = IdentityService<ProductionPorts>;
 
-pub type AppFilesService = FilesService<ToastyFileRepository, LocalFileStorage>;
+pub type AppFilesService = FilesService<ToastyFileRepository, Storages>;
 
 pub type AppTranslationsService = TranslationsService<ToastyTranslationRepository>;
 
 pub struct Services {
     pub identity: Arc<AppIdentityService>,
     pub files: Arc<AppFilesService>,
+    /// The local disk, which also serves its signed links under `/uploads`.
+    pub local_files: LocalFileStorage,
     pub translations: Arc<AppTranslationsService>,
 }
 
@@ -109,9 +113,24 @@ pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> 
         JwksTokenVerifier::new(&keycloak)?,
     );
 
+    let local_files = LocalFileStorage::new(
+        &config.files.upload_dir,
+        &config.files.base_url,
+        config.files.signing_key.clone(),
+    );
+    let s3 = &config.files.s3;
+    let object_store = S3FileStorage::new(&S3Settings {
+        endpoint: s3.endpoint.clone(),
+        public_endpoint: s3.public_endpoint.clone(),
+        region: s3.region.clone(),
+        bucket: s3.bucket.clone(),
+        access_key: s3.access_key.clone(),
+        secret_key: s3.secret_key.clone(),
+    });
     let files = FilesService::new(
         ToastyFileRepository::new(db.clone()),
-        LocalFileStorage::new(&config.files.upload_dir, &config.files.base_url),
+        Storages::new(config.files.storage, local_files.clone(), object_store),
+        config.files.max_size,
     );
 
     let translations = TranslationsService::new(
@@ -122,6 +141,7 @@ pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> 
     Ok(Services {
         identity: Arc::new(identity),
         files: Arc::new(files),
+        local_files,
         translations: Arc::new(translations),
     })
 }
@@ -161,7 +181,7 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
 
     let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer.clone());
 
-    let uploads_routes = files_http::uploads_router(&config.files.upload_dir).layer(auth_layer.clone());
+    let uploads_routes = files_http::uploads_router(services.local_files.clone());
 
     let translations_admin_routes =
         translations_http::translations_admin_router(services.translations.clone()).layer(auth_layer.clone());
@@ -186,6 +206,29 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
         .fallback(problem::not_found)
         .layer(sessions)
         .layer(TraceLayer::new_for_http())
+}
+
+/// How long an allowed upload may stay pending before it counts as abandoned.
+const ABANDONED_AFTER: SignedDuration = SignedDuration::from_hours(6);
+
+/// How often abandoned uploads are looked for.
+const SWEEP_EVERY: std::time::Duration = std::time::Duration::from_mins(15);
+
+/// Removes abandoned uploads every `SWEEP_EVERY` until `shutdown` is cancelled.
+pub async fn sweep_abandoned_uploads(files: Arc<AppFilesService>, shutdown: CancellationToken) {
+    let mut ticks = tokio::time::interval(SWEEP_EVERY);
+    loop {
+        tokio::select! {
+            () = shutdown.cancelled() => return,
+            _ = ticks.tick() => {}
+        }
+        let before = Timestamp::now() - ABANDONED_AFTER;
+        match files.sweep_abandoned(before).await {
+            Ok(0) => {}
+            Ok(removed) => tracing::info!(removed, "abandoned uploads removed"),
+            Err(err) => tracing::warn!("abandoned uploads could not be removed: {err}"),
+        }
+    }
 }
 
 pub async fn register_permissions(services: &Services) -> Result<(), IdentityError> {

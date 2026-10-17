@@ -1,42 +1,59 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::files::application::ports::{FileStorage, StoredObject};
+use jiff::Timestamp;
+
+use crate::files::application::ports::{FileStorage, ObjectDownload, ObjectUpload, SignedLink};
 use crate::files::domain::{FilesError, StorageKind};
 
+/// A storage in memory: the objects the browser would have sent, by key and size.
 #[derive(Clone, Default)]
 pub(crate) struct FakeStorage {
-    stored: Arc<Mutex<Vec<String>>>,
+    objects: Arc<Mutex<HashMap<String, u64>>>,
     removed: Arc<Mutex<Vec<String>>>,
 }
 
 impl FakeStorage {
-    pub fn stored_paths(&self) -> Vec<String> {
-        self.stored.lock().unwrap().clone()
+    /// Stores an object, as the browser does with an upload link.
+    pub fn put(&self, key: &str, size: u64) {
+        self.objects.lock().unwrap().insert(key.to_string(), size);
     }
 
-    pub fn removed_paths(&self) -> Vec<String> {
+    pub fn removed(&self) -> Vec<String> {
         self.removed.lock().unwrap().clone()
     }
 }
 
 impl FileStorage for FakeStorage {
-    fn kind(&self) -> StorageKind {
-        StorageKind::Local
+    fn uploads_to(&self) -> StorageKind {
+        StorageKind::S3
     }
 
-    async fn store(&self, data: Vec<u8>, original_name: &str) -> Result<StoredObject, FilesError> {
-        let file_path = format!("/fake/{original_name}");
-        self.stored.lock().unwrap().push(file_path.clone());
-        Ok(StoredObject {
-            filename: format!("generated-{original_name}"),
-            file_path,
-            url: format!("/uploads/generated-{original_name}"),
-            metadata: serde_json::json!({ "bytes": data.len() }),
+    async fn upload_link(&self, _storage: StorageKind, upload: &ObjectUpload) -> Result<SignedLink, FilesError> {
+        Ok(SignedLink {
+            method: "PUT",
+            url: format!("https://storage.test/{}", upload.key),
+            headers: vec![("content-type".into(), upload.mime_type.clone())],
+            expires_at: Timestamp::now(),
         })
     }
 
-    async fn remove(&self, path: &str) -> Result<(), FilesError> {
-        self.removed.lock().unwrap().push(path.to_string());
+    async fn download_link(&self, _storage: StorageKind, download: &ObjectDownload) -> Result<SignedLink, FilesError> {
+        Ok(SignedLink {
+            method: "GET",
+            url: format!("https://storage.test/{}", download.key),
+            headers: Vec::new(),
+            expires_at: Timestamp::now(),
+        })
+    }
+
+    async fn object_size(&self, _storage: StorageKind, key: &str) -> Result<Option<u64>, FilesError> {
+        Ok(self.objects.lock().unwrap().get(key).copied())
+    }
+
+    async fn remove(&self, _storage: StorageKind, key: &str) -> Result<(), FilesError> {
+        self.objects.lock().unwrap().remove(key);
+        self.removed.lock().unwrap().push(key.to_string());
         Ok(())
     }
 }

@@ -1,5 +1,7 @@
+use jiff::Timestamp;
+
 use super::records::FileRecord;
-use crate::files::domain::{FileId, FileRepository, FilesError, NewStoredFile, StoredFile};
+use crate::files::domain::{FileId, FileRepository, FileStatus, FilesError, NewStoredFile, StoredFile};
 use crate::shared_kernel::pagination::{PageRequest, PageResult};
 
 #[derive(Clone)]
@@ -19,15 +21,13 @@ impl FileRepository for ToastyFileRepository {
         let mut db = self.db.clone();
 
         let record = toasty::create!(FileRecord {
-            filename: file.filename,
+            object_key: file.object_key,
             original_name: file.original_name,
-            file_path: file.file_path,
             mime_type: file.mime_type,
-            encoding: file.encoding,
+            encoding: "binary",
             size: file.size,
             storage_type: file.storage.as_str(),
-            url: file.url,
-            metadata: file.metadata,
+            status: FileStatus::Pending.as_str(),
         })
         .exec(&mut db)
         .await
@@ -49,12 +49,19 @@ impl FileRepository for ToastyFileRepository {
         record.map(|record| record.to_domain()).transpose()
     }
 
-    async fn page_active(&self, request: PageRequest) -> Result<PageResult<StoredFile>, FilesError> {
+    async fn page_uploaded(&self, request: PageRequest) -> Result<PageResult<StoredFile>, FilesError> {
         let mut db = self.db.clone();
-        let active = || FileRecord::filter(FileRecord::fields().deleted_at().is_none());
+        let uploaded = || {
+            FileRecord::filter(
+                FileRecord::fields()
+                    .deleted_at()
+                    .is_none()
+                    .and(FileRecord::fields().status().eq(FileStatus::Uploaded.as_str())),
+            )
+        };
 
-        let total = active().count().exec(&mut db).await.map_err(persistence)?;
-        let records = active()
+        let total = uploaded().count().exec(&mut db).await.map_err(persistence)?;
+        let records = uploaded()
             .order_by(FileRecord::fields().id().desc())
             .limit(request.limit())
             .offset(request.offset())
@@ -66,6 +73,22 @@ impl FileRepository for ToastyFileRepository {
         Ok(PageResult::new(items, request, total))
     }
 
+    async fn pending_before(&self, before: Timestamp) -> Result<Vec<StoredFile>, FilesError> {
+        let mut db = self.db.clone();
+
+        let records = FileRecord::filter(
+            FileRecord::fields()
+                .status()
+                .eq(FileStatus::Pending.as_str())
+                .and(FileRecord::fields().created_at().lt(before)),
+        )
+        .exec(&mut db)
+        .await
+        .map_err(persistence)?;
+
+        records.iter().map(FileRecord::to_domain).collect()
+    }
+
     async fn update(&self, file: &StoredFile) -> Result<(), FilesError> {
         let mut db = self.db.clone();
 
@@ -73,10 +96,7 @@ impl FileRepository for ToastyFileRepository {
             original_name: file.original_name.clone(),
             mime_type: file.mime_type.clone(),
             encoding: file.encoding.clone(),
-            size: file.size,
-            storage_type: file.storage.as_str(),
-            url: file.url.clone(),
-            metadata: file.metadata.clone(),
+            status: file.status.as_str(),
             deleted_at: file.deleted_at,
             deleted_by_user_id: file.deleted_by_user_id,
         })

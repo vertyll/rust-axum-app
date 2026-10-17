@@ -16,15 +16,6 @@ impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
         if let Some(encoding) = changes.encoding {
             file.encoding = encoding;
         }
-        if let Some(size) = changes.size {
-            file.size = size;
-        }
-        if let Some(storage) = changes.storage {
-            file.storage = storage;
-        }
-        if let Some(url) = changes.url {
-            file.url = url;
-        }
 
         self.repository.update(&file).await?;
         Ok(file)
@@ -33,12 +24,12 @@ impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
 #[cfg(test)]
 mod tests {
     use crate::files::application::commands::UpdateFileMeta;
-    use crate::files::application::testing::{files_harness, upload_cmd};
+    use crate::files::application::testing::{files_harness, uploaded};
 
     #[tokio::test]
     async fn patches_only_the_provided_fields() {
         let (service, _, _) = files_harness();
-        let file = service.upload(upload_cmd("note.txt", b"hello")).await.unwrap();
+        let file = uploaded(&service, "note.txt").await;
 
         let changes = UpdateFileMeta {
             original_name: Some("renamed.txt".into()),

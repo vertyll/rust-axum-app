@@ -18,7 +18,10 @@
   "files.list.description": "Files uploaded by every user.",
   "files.list.empty": "No files have been uploaded yet.",
   "files.list.title": "Files",
+  "files.upload.failed": "The file could not be uploaded. Try again.",
   "files.upload.file": "File",
-  "files.upload.hint": "Any type of file, up to 2 MB.",
-  "files.upload.submit": "Upload"
+  "files.upload.hint": "Any type of file.",
+  "files.upload.progress": "Upload progress",
+  "files.upload.submit": "Upload",
+  "files.upload.too_large": "A file may be at most {max} MB."
 }

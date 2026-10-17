@@ -18,7 +18,10 @@
   "files.list.description": "Pliki przesłane przez wszystkich użytkowników.",
   "files.list.empty": "Nie przesłano jeszcze żadnych plików.",
   "files.list.title": "Pliki",
+  "files.upload.failed": "Nie udało się przesłać pliku. Spróbuj ponownie.",
   "files.upload.file": "Plik",
-  "files.upload.hint": "Plik dowolnego typu, do 2 MB.",
-  "files.upload.submit": "Prześlij"
+  "files.upload.hint": "Plik dowolnego typu.",
+  "files.upload.progress": "Postęp przesyłania",
+  "files.upload.submit": "Prześlij",
+  "files.upload.too_large": "Plik może mieć najwyżej {max} MB."
 }

@@ -9,3 +9,13 @@ snapshot_name = "0000_snapshot.toml"
 id = 275941845939028034
 name = "0001_permissions.sql"
 snapshot_name = "0001_snapshot.toml"
+
+[[migrations]]
+id = 8450525994023221878
+name = "0002_file_uploads.sql"
+snapshot_name = "0002_snapshot.toml"
+
+[[migrations]]
+id = 2539779501874917092
+name = "0003_file_uploads_drop_paths.sql"
+snapshot_name = "0003_snapshot.toml"

@@ -8,18 +8,18 @@ An Axum API over PostgreSQL and Redis, built as a modular monolith with hexagona
 
 ## Layout
 
-| Path                  | Holds                                                                                |
-|-----------------------|--------------------------------------------------------------------------------------|
-| `src/identity`        | sign-in, sessions, token verification, roles and the mirrored accounts               |
-| `src/files`           | uploads stored on the local disk, with their metadata in PostgreSQL                  |
-| `src/translations`    | the message catalog, its defaults and the admin overrides                            |
-| `src/shared_kernel`   | the value types every module's domain may use, such as a page request                |
-| `src/shared_http`     | RFC 9457 problem documents, paging parameters and responses                          |
-| `src/bootstrap`       | the composition root: configuration, adapters and the router                         |
-| `src/bin/cli.rs`      | the `cli` binary, which drives the migrations                                        |
-| `src/*/messages`      | the messages each module answers with, in Polish and English                         |
-| `translations/<area>` | the front-end's texts, one folder per area of its pages, such as `layout` or `files` |
-| `toasty`              | the migrations and the schema snapshots                                              |
+| Path                  | Holds                                                                                  |
+|-----------------------|----------------------------------------------------------------------------------------|
+| `src/identity`        | sign-in, sessions, token verification, roles and the mirrored accounts                 |
+| `src/files`           | uploads in a bucket or on the local disk, through signed links; metadata in PostgreSQL |
+| `src/translations`    | the message catalog, its defaults and the admin overrides                              |
+| `src/shared_kernel`   | the value types every module's domain may use, such as a page request                  |
+| `src/shared_http`     | RFC 9457 problem documents, paging parameters and responses                            |
+| `src/bootstrap`       | the composition root: configuration, adapters and the router                           |
+| `src/bin/cli.rs`      | the `cli` binary, which drives the migrations                                          |
+| `src/*/messages`      | the messages each module answers with, in Polish and English                           |
+| `translations/<area>` | the front-end's texts, one folder per area of its pages, such as `layout` or `files`   |
+| `toasty`              | the migrations and the schema snapshots                                                |
 
 ## Modules
 
@@ -34,9 +34,9 @@ Each module is a hexagon of its own, with a README on its ports and adapters:
 
 The composition root (`src/bootstrap`) puts every router but sign-in, the public catalog and `/health` behind the auth
 layer, which reads the access token from the session or from `Authorization: Bearer`. A handler then names the
-permission it needs with the `Permitted<P>` extractor, and `/uploads`, which has no handler of its own, with the
-`require::<P>` middleware; a caller whose roles do not grant it gets `403`. Each module declares its permissions and the
-stock roles that hold them ([Authorization](../docs/authorization.md)).
+permission it needs with the `Permitted<P>` extractor; a caller whose roles do not grant it gets `403`. `/uploads`, the
+local disk's signed links, is outside the auth layer: the signature in each link is its permission. Each module
+declares its permissions and the stock roles that hold them ([Authorization](../docs/authorization.md)).
 
 ## Messages
 
@@ -57,8 +57,8 @@ paged by the database ([Collections are paged](../docs/architecture.md#collectio
   signing the user out when requests race.
 - [Cross-site requests](src/identity/docs/mechanisms/cross-site-requests.md) – Why a forged request from another site
   cannot act with the user's session.
-- [File storage](src/files/docs/mechanisms/file-storage.md) – What happens to the bytes and the metadata row on upload,
-  soft delete and delete.
+- [File storage](src/files/docs/mechanisms/file-storage.md) – How a file's bytes reach a storage and come back, with
+  signed links, and what happens on soft delete and delete.
 - [Translation catalog](src/translations/docs/mechanisms/translation-catalog.md) – Where the text behind every message
   key comes from, and how an administrator's edits survive a deployment.
 - [Error responses](../docs/mechanisms/error-responses.md) – The RFC 9457 problem document every refusal answers with.
@@ -72,7 +72,8 @@ cargo run
 ```
 
 The `local` environment is the default and points at the local containers; it listens on `http://localhost:8080`, which
-only the front-end calls. Uploaded files go to `uploads/`.
+only the front-end calls. Uploaded files go to the Garage bucket of the local containers, or to `uploads/` with
+`FILES_STORAGE=local`.
 
 ## Checks
 

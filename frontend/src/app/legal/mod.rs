@@ -13,22 +13,15 @@ const CONTACT_EMAIL: &str = "gawrmiko@gmail.com";
 
 const MODIFIED: (i32, u8, u8) = (2026, 10, 3);
 
-/// One section of a legal document: its text, under a heading when it has one.
+/// One section of a legal document: its heading and its text.
 pub(crate) struct Section {
-    heading: Option<&'static str>,
+    heading: &'static str,
     text: &'static str,
 }
 
 impl Section {
     pub(crate) const fn titled(heading: &'static str, text: &'static str) -> Self {
-        Self {
-            heading: Some(heading),
-            text,
-        }
-    }
-
-    pub(crate) const fn plain(text: &'static str) -> Self {
-        Self { heading: None, text }
+        Self { heading, text }
     }
 }
 
@@ -43,11 +36,11 @@ async fn legal_document(
     let texts = texts(cx).await?;
     let (year, month, day) = MODIFIED;
     let modified = DateTimeValue::try_new(year, month, day, 0, 0, 0, 0).expect("the modification date is a valid date");
-    let sections: Vec<(Option<String>, Vec<Segment>)> = sections
+    let sections: Vec<(String, Vec<Segment>)> = sections
         .iter()
         .map(|section| {
             (
-                section.heading.map(|key| texts.t(key)),
+                texts.t(section.heading),
                 segments(&texts.t_with(section.text, vec![("email", CONTACT_EMAIL.into())])),
             )
         })
@@ -62,9 +55,7 @@ async fn legal_document(
             <div class="flex flex-col gap-4 leading-relaxed">
                 for (heading, paragraph) in sections {
                     <section>
-                        if let Some(heading) = heading {
-                            <h2 class="mb-1 text-lg font-semibold">(heading)</h2>
-                        }
+                        <h2 class="mb-1 text-lg font-semibold">(heading)</h2>
                         <p>
                             for segment in paragraph {
                                 match segment {

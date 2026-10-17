@@ -13,18 +13,18 @@ impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::files::application::testing::{files_harness, upload_cmd};
+    use crate::files::application::testing::{files_harness, uploaded};
 
     #[tokio::test]
-    async fn marks_who_deleted_and_keeps_the_row() {
+    async fn marks_who_deleted_and_keeps_the_row_and_the_bytes() {
         let (service, repository, storage) = files_harness();
-        let file = service.upload(upload_cmd("note.txt", b"hello")).await.unwrap();
+        let file = uploaded(&service, "note.txt").await;
 
         service.soft_delete(file.id, 42).await.unwrap();
 
         let stored = repository.get_any(file.id).unwrap();
         assert!(stored.is_deleted());
         assert_eq!(stored.deleted_by_user_id, Some(42));
-        assert_eq!(storage.removed_paths(), [] as [std::string::String; 0]);
+        assert_eq!(storage.removed(), Vec::<String>::new());
     }
 }

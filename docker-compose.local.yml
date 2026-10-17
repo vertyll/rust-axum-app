@@ -55,6 +55,63 @@ services:
       redis:
         condition: service_healthy
 
+  garage:
+    image: docker.io/dxflrs/garage:v2.4.1
+    restart: unless-stopped
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    environment:
+      GARAGE_RPC_SECRET: "5c2f8a1e7d4b9063c1e5a8f2d7b4e9c3a6f1d8b5e2c9a7f4d1b8e5c2a9f6d3b0"
+      GARAGE_DEFAULT_ACCESS_KEY: "${S3_ACCESS_KEY:-GK3a7c1e9b5d2f4086a1c3e5b7}"
+      GARAGE_DEFAULT_SECRET_KEY: "${S3_SECRET_KEY:-9d4f2b7e1a6c3058b9e2d7f4a1c6b3e8d5f2a9c7e4b1d8f3a6c9e2b5d7f1a4c8}"
+      GARAGE_DEFAULT_BUCKET: "${S3_BUCKET:-rust-axum-app-files}"
+    ports:
+      - "127.0.0.1:3900:3900"
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  garage-init:
+    image: docker.io/amazon/aws-cli:2.37.4
+    depends_on:
+      garage:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      AWS_ACCESS_KEY_ID: "${S3_ACCESS_KEY:-GK3a7c1e9b5d2f4086a1c3e5b7}"
+      AWS_SECRET_ACCESS_KEY: "${S3_SECRET_KEY:-9d4f2b7e1a6c3058b9e2d7f4a1c6b3e8d5f2a9c7e4b1d8f3a6c9e2b5d7f1a4c8}"
+      AWS_DEFAULT_REGION: garage
+      S3_BUCKET: "${S3_BUCKET:-rust-axum-app-files}"
+      FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:3000}"
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        aws --endpoint-url http://garage:3900 s3api put-bucket-cors --bucket "$$S3_BUCKET"
+        --cors-configuration "{\"CORSRules\":[{\"AllowedOrigins\":[\"$$FRONTEND_ORIGIN\"],
+        \"AllowedMethods\":[\"PUT\",\"GET\",\"HEAD\"],\"AllowedHeaders\":[\"*\"],
+        \"ExposeHeaders\":[\"ETag\"],\"MaxAgeSeconds\":3600}]}"
+
+  garage-ui:
+    image: docker.io/noooste/garage-ui:v0.13.0
+    restart: unless-stopped
+    depends_on:
+      garage:
+        condition: service_healthy
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+    environment:
+      GARAGE_UI_GARAGE_TOML: /etc/garage.toml
+      GARAGE_UI_GARAGE_ENDPOINT: http://garage:3900
+      GARAGE_UI_GARAGE_ADMIN_ENDPOINT: http://garage:3903
+    ports:
+      - "127.0.0.1:3909:8080"
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.1
     restart: unless-stopped
@@ -83,3 +140,5 @@ services:
 volumes:
   postgres-data:
   keycloak-data:
+  garage-meta:
+  garage-data:

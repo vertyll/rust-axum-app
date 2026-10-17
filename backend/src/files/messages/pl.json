@@ -1,6 +1,12 @@
 {
+  "files.errors.invalid_link": "Link wygasł albo jest nieprawidłowy",
+  "files.errors.needs_script": "Przesyłanie plików wymaga włączonego JavaScriptu",
   "files.errors.no_file": "Nie przesłano pliku",
   "files.errors.not_found": "Nie znaleziono pliku",
-  "files.errors.upload": "Wystąpił błąd podczas przesyłania pliku",
+  "files.errors.not_pending": "Ten plik został już przesłany",
+  "files.errors.not_uploaded": "Magazyn nie ma pliku o zapowiedzianym rozmiarze",
+  "files.errors.too_large": "Plik może mieć najwyżej {max} MB",
+  "files.validators.file.mime_type.length": "Typ pliku może mieć od 1 do 255 znaków",
+  "files.validators.file.name.length": "Nazwa pliku może mieć od 1 do 255 znaków",
   "files.validators.file.storage_type.invalid": "Nieprawidłowy typ przechowywania plików"
 }

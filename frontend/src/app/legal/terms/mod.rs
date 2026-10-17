@@ -6,11 +6,11 @@ use topcoat::view::{View, view};
 use super::{Section, legal_document};
 
 const SECTIONS: &[Section] = &[
-    Section::plain("legal.terms.p1"),
-    Section::plain("legal.terms.p2"),
-    Section::plain("legal.terms.p3"),
-    Section::plain("legal.terms.p4"),
-    Section::plain("legal.terms.p5"),
+    Section::titled("legal.terms.h1", "legal.terms.p1"),
+    Section::titled("legal.terms.h2", "legal.terms.p2"),
+    Section::titled("legal.terms.h3", "legal.terms.p3"),
+    Section::titled("legal.terms.h4", "legal.terms.p4"),
+    Section::titled("legal.terms.h5", "legal.terms.p5"),
 ];
 
 #[page]

@@ -1,6 +1,12 @@
 {
+  "files.errors.invalid_link": "The link has expired or is invalid",
+  "files.errors.needs_script": "Uploading files needs JavaScript turned on",
   "files.errors.no_file": "No file uploaded",
   "files.errors.not_found": "File not found",
-  "files.errors.upload": "File upload failed",
+  "files.errors.not_pending": "This file has already been uploaded",
+  "files.errors.not_uploaded": "The storage holds no file of the announced size",
+  "files.errors.too_large": "A file may be at most {max} MB",
+  "files.validators.file.mime_type.length": "A file type has 1 to 255 characters",
+  "files.validators.file.name.length": "A file name has 1 to 255 characters",
   "files.validators.file.storage_type.invalid": "Invalid file storage type"
 }

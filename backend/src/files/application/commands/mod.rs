@@ -1,5 +1,5 @@
+mod request_upload;
 mod update_file_meta;
-mod upload_file;
 
+pub use request_upload::RequestUpload;
 pub use update_file_meta::UpdateFileMeta;
-pub use upload_file::UploadFile;

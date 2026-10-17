@@ -131,13 +131,6 @@ impl<S: Send + Sync, P: Permission> FromRequestParts<S> for Permitted<P> {
     }
 }
 
-/// For routes without a handler of their own, such as served files: the
-/// caller's roles must grant the permission `P`, or the request is refused
-/// as a handler taking [`Permitted`] would refuse it.
-pub async fn require<P: Permission>(Permitted(_caller, _): Permitted<P>, request: Request, next: Next) -> Response {
-    next.run(request).await
-}
-
 #[cfg(test)]
 mod tests {
     use axum::http::{HeaderMap, HeaderValue, Method, header};

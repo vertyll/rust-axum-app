@@ -34,10 +34,14 @@ self_named_module_files = "warn"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
+aws-sdk-s3 = { version = "1.152", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio"] }
 axum = { version = "0.8.9", features = ["multipart", "macros"] }
 base64 = "0.23"
+bytes = "1"
 dotenvy = "0.15.7"
 fred = "10"
+futures-util = "0.3"
+hmac = "0.13"
 jiff = { version = "0.2", features = ["serde"] }
 jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
 rand = "0.10"
@@ -59,13 +63,17 @@ tokio = { version = "1", features = [
 	"io-util",
 	"signal",
 ] }
+tokio-util = { version = "0.7", features = ["io", "rt"] }
 tower-sessions = "0.14"
 tower-http = { version = "0.7.1", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url = "2"
 uuid = { version = "1", features = ["v4", "fast-rng"] }
 validator = { version = "0.21", features = ["derive"] }
 secrecy = "0.10"
 
 [dev-dependencies]
+serde_urlencoded = "0.7"
+tempfile = "3"
 testcontainers-modules = { version = "0.15.0", features = ["redis"] }

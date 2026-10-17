@@ -13,7 +13,7 @@ back-end; its URL is its module's path, so `app/files/file_id` serves `/files/{f
 |------------------------------|---------------------------------------------------------------------------------------------------------|
 | `src/app`                    | the layout, the home page, the security headers and every feature below                                 |
 | `src/app/navigation`         | the top bar with the modules, the account, theme and language menus, and the side bar with the sections |
-| `src/app/files`              | the files: list, upload, details, changes; `api.rs` calls `/api/files`                                  |
+| `src/app/files`              | the files: list, upload (`upload.js`), details, download, changes; `api.rs` calls `/api/files`          |
 | `src/app/account`            | the reader's account, what their roles grant, password and second factor                                |
 | `src/app/admin/users`        | the accounts and their roles; `api.rs` calls `/api/users` and `/api/admin/users`                        |
 | `src/app/admin/roles`        | the roles and what each grants; `api.rs` calls `/api/admin/roles` and `/api/admin/permissions`          |
@@ -78,8 +78,12 @@ end checks every call again, so a hidden link is not the protection. A page the 
 The browser talks only to this application. `/api/*` and `/uploads/*` are passed on to the back-end as the browser sent
 them, without the hop-by-hop headers and refusing any `.` or `..` segment, and redirects come back unfollowed. So the
 session cookie is set on this address, Keycloak returns to `/api/auth/callback` here, and every call is same-origin.
-An uploaded file is always sent as a download that cannot run as a page (`Content-Disposition: attachment`,
-`nosniff`, a sandboxing `Content-Security-Policy`), so a script in it never acts with the reader's session.
+A file is uploaded by `src/app/files/upload.js`, which asks `/api/files/upload-ticket` for a signed link, sends the
+bytes there with a progress bar, and confirms the upload; `/files/{id}/download` asks for a fresh download link at each
+click and redirects to it ([File storage](../backend/src/files/docs/mechanisms/file-storage.md)). A link to a bucket
+leaves this address; a link to the local disk is under `/uploads`, and what it returns is always sent as a download
+that cannot run as a page (`Content-Disposition: attachment`, `nosniff`, a sandboxing `Content-Security-Policy`), so
+a script in it never acts with the reader's session.
 
 When a page calls the back-end itself, it sends only the session cookie and passes every `Set-Cookie` of the answer on
 to the browser, such as the cookie's renewed expiry. These calls are made before the page renders, as cookies cannot

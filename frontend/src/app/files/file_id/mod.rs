@@ -1,4 +1,5 @@
 mod delete;
+pub(crate) mod download;
 mod soft_delete;
 
 use serde::Deserialize;
@@ -43,9 +44,8 @@ pub(crate) async fn file(cx: &Cx) -> Result<impl View> {
                 ),
             ),
             <a
-                href=(stored.url.as_str())
+                href=(href!(download::download_file, FileId(id)))
                 class=(button_variants(ButtonVariant::Primary, ButtonSize::Md))
-                download=""
             >
                 icon(name: Icon::ArrowDownTray, size: IconSize::Sm)
                 (texts.t("files.detail.download"))

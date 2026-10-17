@@ -35,13 +35,20 @@ impl IntoResponse for ApiError {
     }
 }
 
+const MEBIBYTE: u64 = 1024 * 1024;
+
 fn files_problem(err: FilesError) -> Problem {
     use FilesError as E;
 
     match err {
         E::NotFound => Problem::new(StatusCode::NOT_FOUND, "files.errors.not_found"),
         E::NoFileUploaded => Problem::field("file", "files.errors.no_file"),
-        E::UploadFailed => Problem::new(StatusCode::BAD_REQUEST, "files.errors.upload"),
+        E::TooLarge { max } => {
+            Problem::field("size", "files.errors.too_large").with_field_arg("size", "max", max / MEBIBYTE)
+        }
+        E::NotPending => Problem::new(StatusCode::CONFLICT, "files.errors.not_pending"),
+        E::NotUploaded => Problem::new(StatusCode::CONFLICT, "files.errors.not_uploaded"),
+        E::InvalidLink => Problem::new(StatusCode::FORBIDDEN, "files.errors.invalid_link"),
         E::InvalidStorageType => Problem::field("storage_type", "files.validators.file.storage_type.invalid"),
         E::PersistenceFailure(detail) => {
             tracing::error!("persistence failure: {detail}");

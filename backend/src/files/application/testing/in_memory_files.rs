@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use crate::shared_kernel::pagination::{PageRequest, PageResult};
 use jiff::Timestamp;
 
-use crate::files::domain::{FileId, FileRepository, FilesError, NewStoredFile, StoredFile};
+use crate::files::domain::{FileId, FileRepository, FileStatus, FilesError, NewStoredFile, StoredFile};
 
 #[derive(Default)]
 struct State {
@@ -14,14 +14,9 @@ struct State {
 #[derive(Clone, Default)]
 pub(crate) struct InMemoryFiles {
     state: Arc<Mutex<State>>,
-    fail_create: Arc<Mutex<bool>>,
 }
 
 impl InMemoryFiles {
-    pub fn set_fail_create(&self, fail: bool) {
-        *self.fail_create.lock().unwrap() = fail;
-    }
-
     /// Reads a row even when it is soft-deleted.
     pub fn get_any(&self, id: FileId) -> Option<StoredFile> {
         self.state
@@ -36,23 +31,18 @@ impl InMemoryFiles {
 
 impl FileRepository for InMemoryFiles {
     async fn create(&self, file: NewStoredFile) -> Result<StoredFile, FilesError> {
-        if *self.fail_create.lock().unwrap() {
-            return Err(FilesError::PersistenceFailure("test create failure".into()));
-        }
         let mut state = self.state.lock().unwrap();
         state.next_id += 1;
         let now = Timestamp::now();
         let stored = StoredFile {
             id: FileId(state.next_id),
-            filename: file.filename,
+            object_key: file.object_key,
             original_name: file.original_name,
-            file_path: file.file_path,
             mime_type: file.mime_type,
-            encoding: file.encoding,
+            encoding: "binary".to_string(),
             size: file.size,
             storage: file.storage,
-            url: file.url,
-            metadata: file.metadata,
+            status: FileStatus::Pending,
             deleted_at: None,
             deleted_by_user_id: None,
             created_at: now,
@@ -71,11 +61,26 @@ impl FileRepository for InMemoryFiles {
             .cloned())
     }
 
-    async fn page_active(&self, request: PageRequest) -> Result<PageResult<StoredFile>, FilesError> {
+    async fn page_uploaded(&self, request: PageRequest) -> Result<PageResult<StoredFile>, FilesError> {
         let state = self.state.lock().unwrap();
-        let mut active: Vec<StoredFile> = state.files.iter().filter(|file| !file.is_deleted()).cloned().collect();
-        active.sort_by_key(|file| std::cmp::Reverse(file.id.0));
-        Ok(request.slice(active))
+        let mut uploaded: Vec<StoredFile> = state
+            .files
+            .iter()
+            .filter(|file| !file.is_deleted() && file.status == FileStatus::Uploaded)
+            .cloned()
+            .collect();
+        uploaded.sort_by_key(|file| std::cmp::Reverse(file.id.0));
+        Ok(request.slice(uploaded))
+    }
+
+    async fn pending_before(&self, before: Timestamp) -> Result<Vec<StoredFile>, FilesError> {
+        let state = self.state.lock().unwrap();
+        Ok(state
+            .files
+            .iter()
+            .filter(|file| file.status == FileStatus::Pending && file.created_at < before)
+            .cloned()
+            .collect())
     }
 
     async fn update(&self, file: &StoredFile) -> Result<(), FilesError> {

@@ -2,32 +2,22 @@ use serde::Deserialize;
 use validator::Validate;
 
 use crate::files::application::commands::UpdateFileMeta;
-use crate::files::domain::StorageKind;
-use crate::files::infrastructure::http::error::ApiError;
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateFileRequest {
+    #[validate(length(min = 1, max = 255, message = "files.validators.file.name.length"))]
     pub original_name: Option<String>,
+    #[validate(length(min = 1, max = 255, message = "files.validators.file.mime_type.length"))]
     pub mime_type: Option<String>,
     pub encoding: Option<String>,
-    pub size: Option<i64>,
-    #[validate(length(min = 1, message = "files.validators.file.storage_type.invalid"))]
-    pub storage_type: Option<String>,
-    pub url: Option<String>,
 }
 
-impl UpdateFileRequest {
-    pub fn into_command(self) -> Result<UpdateFileMeta, ApiError> {
-        Ok(UpdateFileMeta {
-            original_name: self.original_name,
-            mime_type: self.mime_type,
-            encoding: self.encoding,
-            size: self.size,
-            storage: self
-                .storage_type
-                .map(|value| value.parse::<StorageKind>())
-                .transpose()?,
-            url: self.url,
-        })
+impl From<UpdateFileRequest> for UpdateFileMeta {
+    fn from(request: UpdateFileRequest) -> Self {
+        Self {
+            original_name: request.original_name,
+            mime_type: request.mime_type,
+            encoding: request.encoding,
+        }
     }
 }

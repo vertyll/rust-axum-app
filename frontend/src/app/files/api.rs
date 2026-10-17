@@ -1,8 +1,5 @@
-use std::fmt;
-
 use jiff::Timestamp;
 use reqwest::Method;
-use reqwest::multipart::{Form, Part};
 use serde::{Deserialize, Serialize};
 use topcoat::context::Cx;
 
@@ -16,27 +13,14 @@ pub struct StoredFile {
     pub encoding: String,
     pub size: i64,
     pub storage_type: String,
-    /// Where the browser downloads the file; under `/uploads`, which this
-    /// application passes on to the back-end.
-    pub url: String,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
 
-pub struct Upload {
-    pub name: String,
-    pub mime_type: String,
-    pub data: Vec<u8>,
-}
-
-impl fmt::Debug for Upload {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Upload")
-            .field("name", &self.name)
-            .field("mime_type", &self.mime_type)
-            .field("bytes", &self.data.len())
-            .finish()
-    }
+/// Where the browser fetches a file's bytes, for a few minutes.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Link {
+    pub url: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -54,13 +38,12 @@ pub async fn get(cx: &Cx, id: i64) -> Result<StoredFile, BackendError> {
     backend::json(cx, backend::request(cx, Method::GET, &format!("/api/files/{id}"))).await
 }
 
-pub async fn upload(cx: &Cx, upload: Upload) -> Result<StoredFile, BackendError> {
-    let part = Part::bytes(upload.data)
-        .file_name(upload.name)
-        .mime_str(&upload.mime_type)
-        .map_err(BackendError::Malformed)?;
-    let request = backend::request(cx, Method::POST, "/api/files").multipart(Form::new().part("file", part));
-    backend::json(cx, request).await
+pub async fn download_link(cx: &Cx, id: i64) -> Result<Link, BackendError> {
+    backend::json(
+        cx,
+        backend::request(cx, Method::GET, &format!("/api/files/{id}/download-link")),
+    )
+    .await
 }
 
 pub async fn update(cx: &Cx, id: i64, changes: &FileChanges<'_>) -> Result<StoredFile, BackendError> {

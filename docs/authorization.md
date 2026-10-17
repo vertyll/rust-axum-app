@@ -62,9 +62,7 @@ listens:
 | `translations` | `TRANSLATIONS_VIEW` | seeing every message with its default                  |
 | `translations` | `TRANSLATIONS_EDIT` | changing messages and resetting them                   |
 
-What needs only a signed-in caller, such as reading one's own account, takes `Auth` and no permission. A route
-without a handler of its own, such as the served files under `/uploads`, is guarded by the `require::<P>` middleware,
-which refuses as `Permitted<P>` does.
+What needs only a signed-in caller, such as reading one's own account, takes `Auth` and no permission.
 
 ## Stock roles
 

@@ -10,14 +10,15 @@ flowchart LR
     kc[Keycloak]
     redis[("Redis<br/>sessions")]
     pg[(PostgreSQL)]
-    files[("Uploads directory")]
+    files[("Garage bucket<br/>or uploads folder")]
 
     browser -- "RUST_AXUM_APP_SESSION cookie" --> front
     front -- "pages call the API; /api, /uploads passed on" --> back
     back -- "sign-in, refresh, token keys, realm roles" --> kc
     back --> redis
     back --> pg
-    back --> files
+    back -- "signs links, checks objects" --> files
+    browser -- "signed PUT and GET" --> files
 ```
 
 | Application                                     | What it is                                                                 |
@@ -37,14 +38,14 @@ The back-end is one binary made of three modules, each split into the same three
 | Module                                                  | Holds                                                                         |
 |---------------------------------------------------------|-------------------------------------------------------------------------------|
 | [`identity`](../backend/src/identity/README.md)         | sign-in, sessions, token verification and the accounts mirrored from Keycloak |
-| [`files`](../backend/src/files/README.md)               | uploads stored on the local disk, with their metadata in PostgreSQL           |
+| [`files`](../backend/src/files/README.md)               | uploads in a bucket or on the local disk, with their metadata in PostgreSQL   |
 | [`translations`](../backend/src/translations/README.md) | the message catalog, its defaults and the admin overrides                     |
 
-| Layer            | Holds                                                                           |
-|------------------|---------------------------------------------------------------------------------|
-| `domain`         | entities, value types, errors and the repository traits; no I/O                 |
-| `application`    | the service and its use cases, and the ports: traits for everything outside     |
-| `infrastructure` | the adapters: HTTP routes, Toasty persistence, Keycloak, Redis, the file system |
+| Layer            | Holds                                                                        |
+|------------------|------------------------------------------------------------------------------|
+| `domain`         | entities, value types, errors and the repository traits; no I/O              |
+| `application`    | the service and its use cases, and the ports: traits for everything outside  |
+| `infrastructure` | the adapters: HTTP routes, Toasty persistence, Keycloak, Redis, S3, the disk |
 
 Dependencies point inwards: `infrastructure` implements the ports of `application`, which uses `domain`. Each
 module's `application/testing` holds in-memory fakes of its ports, so a use case is tested without a database or

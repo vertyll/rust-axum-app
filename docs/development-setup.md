@@ -21,6 +21,8 @@ Every `docker compose` command here works verbatim as `podman compose`.
 | Keycloak     | `http://localhost:9000` (`admin` / `admin`) | realm `rust-axum-app`, imported on start        |
 | MailDev      | `http://localhost:1080`                     | catches Keycloak's verification and reset mails |
 | RedisInsight | `http://localhost:5540`                     | browsing the sessions in Redis                  |
+| Garage       | `http://localhost:3900`                     | the S3 bucket `rust-axum-app-files`             |
+| Garage UI    | `http://localhost:3909`                     | browsing the bucket                             |
 
 Keycloak imports `keycloak/realm-export.json` on its first start, with two accounts; its terms of use link to the
 front-end's `/legal/terms` and `/legal/privacy`:
@@ -118,8 +120,14 @@ unset, instead of falling back to a local default:
 | `KEYCLOAK_REALM_URL`, `KEYCLOAK_CLIENT_SECRET`     | the realm and the confidential client     |
 | `AUTH_CALLBACK_URL`, `AUTH_POST_LOGIN_URL`         | where Keycloak returns and where it lands |
 | `SMTP_HOST`, `EMAIL_FROM`                          | mail                                      |
+| `FILES_SIGNING_KEY`                                | signs the local disk's links              |
+| `S3_ENDPOINT`, `S3_BUCKET`                         | the bucket, with `FILES_STORAGE=s3`       |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY`                   | its credentials, with `FILES_STORAGE=s3`  |
 
-Uploaded files are written to `FILES_UPLOAD_DIR` (`uploads` by default), which must be a persistent volume.
+Uploads go to the bucket (`FILES_STORAGE=s3`, the default) or to `FILES_UPLOAD_DIR` (`FILES_STORAGE=local`), which
+must then be a persistent volume. `S3_PUBLIC_ENDPOINT` is the bucket's address as the browser reaches it, when it
+differs from `S3_ENDPOINT`, and the bucket allows `PUT`, `GET` and `HEAD` from the application's origin (CORS), as
+`garage-init` sets it locally. `FILES_MAX_SIZE` limits an upload, in bytes (25 MiB by default).
 
 ## Documentation checks
 

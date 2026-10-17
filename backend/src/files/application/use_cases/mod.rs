@@ -1,6 +1,9 @@
+mod confirm_upload;
 mod delete;
+mod download_link;
 mod get;
 mod list;
+mod request_upload;
 mod soft_delete;
+mod sweep_abandoned;
 mod update;
-mod upload;

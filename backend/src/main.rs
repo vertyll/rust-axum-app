@@ -1,4 +1,5 @@
 use secrecy::ExposeSecret;
+use tokio_util::sync::CancellationToken;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -37,6 +38,12 @@ async fn main() -> anyhow::Result<()> {
     bootstrap::register_permissions(&services).await?;
     services.translations.synchronize().await?;
 
+    let shutdown = CancellationToken::new();
+    let sweeper = tokio::spawn(bootstrap::sweep_abandoned_uploads(
+        services.files.clone(),
+        shutdown.clone(),
+    ));
+
     let app = bootstrap::router(&services, &config, redis);
     let address = format!("{}:{}", config.server.host, config.server.port);
     let listener = tokio::net::TcpListener::bind(&address).await?;
@@ -45,6 +52,8 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
+    shutdown.cancel();
+    sweeper.await?;
     Ok(())
 }
 

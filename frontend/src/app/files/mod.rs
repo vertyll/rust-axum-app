@@ -2,14 +2,15 @@ pub(crate) mod api;
 pub(crate) mod file_id;
 
 use topcoat::Result;
+use topcoat::asset::{Asset, asset};
 use topcoat::context::Cx;
-use topcoat::router::content::multipart::Multipart;
 use topcoat::router::{StatusCode, href, page, route};
 use topcoat::runtime::{Signal, shard, signal};
 use topcoat::view::{View, attributes, view};
 
-use self::api::{StoredFile, Upload};
+use self::api::StoredFile;
 use crate::auth::{Permission, require_permission};
+use crate::backend::proxy;
 use crate::backend::{BackendError, Problem};
 use crate::components::button::button;
 use crate::components::data_table::data_table;
@@ -21,7 +22,7 @@ use crate::components::page_header::page_header;
 use crate::components::pagination::{DEFAULT_PAGE_SIZE, PageInfo, load_page, page_request, pagination};
 use crate::components::row_actions::{actions_cell, actions_head, icon_download, icon_link};
 use crate::components::table::{table_body, table_cell, table_head, table_header, table_row};
-use crate::forms::{done, refused};
+use crate::forms::refused;
 use crate::i18n::{Texts, texts};
 
 #[page]
@@ -44,14 +45,23 @@ pub(crate) async fn files(cx: &Cx) -> Result<impl View> {
     })
 }
 
+const UPLOAD_SCRIPT: Asset = asset!("./upload.js");
+
+/// The upload form; `upload.js` sends the file through the files API in
+/// `data-api` and then opens the new file's page under `data-files`.
 #[topcoat::view::component]
 async fn upload_form(cx: &Cx) -> Result<impl View> {
     let texts = texts(cx).await?;
     Ok(view! {
+        <script type="module" src=(UPLOAD_SCRIPT)></script>
         <form
             method="post"
             action=(href!(upload_file))
-            enctype="multipart/form-data"
+            data-upload=""
+            data-api=(href!(proxy::api, proxy::Rest(["files"])))
+            data-files=(href!(files))
+            data-too-large=(texts.t("files.upload.too_large"))
+            data-failed=(texts.t("files.upload.failed"))
             class="mb-6 flex flex-col gap-2 rounded-lg border border-border bg-card p-4"
         >
             field_label(
@@ -74,7 +84,20 @@ async fn upload_form(cx: &Cx) -> Result<impl View> {
                     (texts.t("files.upload.submit"))
                 )
             </div>
+            <progress
+                data-upload-progress=""
+                hidden=""
+                max="1"
+                aria-label=(texts.t("files.upload.progress"))
+                class="h-2 w-full accent-primary"
+            ></progress>
             field_description((texts.t("files.upload.hint")))
+            <p
+                data-upload-error=""
+                hidden=""
+                role="alert"
+                class="text-sm font-medium text-destructive"
+            ></p>
             field_errors(name: "file")
         </form>
     })
@@ -150,7 +173,10 @@ async fn files_table(cx: &Cx, texts: &Texts, rows: Vec<StoredFile>) -> Result<im
                                 label: texts.t("common.details")
                             )
                             icon_download(
-                                href: file.url.as_str(),
+                                href: href!(
+                                    file_id::download::download_file,
+                                    file_id::FileId(file.id),
+                                ).resolve(cx),
                                 name: Icon::ArrowDownTray,
                                 label: texts.t("files.detail.download")
                             )
@@ -162,32 +188,15 @@ async fn files_table(cx: &Cx, texts: &Texts, rows: Vec<StoredFile>) -> Result<im
     })
 }
 
+/// What a browser without JavaScript reaches: the bytes go straight to the
+/// storage, which only the upload script can do.
 #[route(POST)]
-pub(crate) async fn upload_file(cx: &Cx, mut multipart: Multipart) -> Result<()> {
+pub(crate) async fn upload_file(cx: &Cx) -> Result<()> {
     require_permission(cx, Permission::FilesManage).await?;
-    let mut upload = None;
-    while let Some(part) = multipart.next_field().await? {
-        if part.name() != Some("file") {
-            continue;
-        }
-        let name = part.file_name().unwrap_or_default().to_owned();
-        let mime_type = part
-            .content_type()
-            .map_or("application/octet-stream", |mime| mime)
-            .to_owned();
-        let data = part.bytes().await?.to_vec();
-        if !name.is_empty() {
-            upload = Some(Upload { name, mime_type, data });
-        }
-    }
-    let page = href!(files).resolve(cx);
-    let Some(upload) = upload else {
-        let no_file = Problem::new(StatusCode::BAD_REQUEST, "files.errors.no_file");
-        return Err(refused(cx, page, BackendError::Refused(no_file)));
-    };
-
-    match api::upload(cx, upload).await {
-        Ok(file) => done(href!(file_id::file, file_id::FileId(file.id)).resolve(cx)),
-        Err(err) => Err(refused(cx, page, err)),
-    }
+    let needs_script = Problem::new(StatusCode::BAD_REQUEST, "files.errors.needs_script");
+    Err(refused(
+        cx,
+        href!(files).resolve(cx),
+        BackendError::Refused(needs_script),
+    ))
 }

@@ -8,6 +8,8 @@ use std::str::FromStr;
 use anyhow::{Context, Result, bail};
 use secrecy::{ExposeSecret, SecretString};
 
+use crate::files::StorageKind;
+
 #[derive(Debug, Clone)]
 pub struct AppConfig {
     pub server: ServerConfig,
@@ -97,8 +99,25 @@ pub struct SessionsConfig {
 
 #[derive(Debug, Clone)]
 pub struct FilesConfig {
+    /// The storage new uploads go to.
+    pub storage: StorageKind,
+    /// The largest upload allowed, in bytes.
+    pub max_size: u64,
     pub upload_dir: String,
     pub base_url: String,
+    /// Signs the links to the local disk.
+    pub signing_key: SecretString,
+    pub s3: S3Config,
+}
+
+#[derive(Debug, Clone)]
+pub struct S3Config {
+    pub endpoint: String,
+    pub public_endpoint: String,
+    pub region: String,
+    pub bucket: String,
+    pub access_key: String,
+    pub secret_key: SecretString,
 }
 
 #[derive(Debug, Clone)]
@@ -142,8 +161,23 @@ impl AppConfig {
                 inactivity_timeout_seconds: env_parse("SESSION_INACTIVITY_TIMEOUT", 36_000)?,
             },
             files: FilesConfig {
+                storage: env_parse("FILES_STORAGE", StorageKind::S3)?,
+                max_size: env_parse("FILES_MAX_SIZE", 25 * 1024 * 1024)?,
                 upload_dir: env_or("FILES_UPLOAD_DIR", "uploads"),
                 base_url: env_or("FILES_BASE_URL", "/uploads"),
+                signing_key: env_or("FILES_SIGNING_KEY", "rust-axum-app-local-files-signing-key").into(),
+                s3: S3Config {
+                    endpoint: env_or("S3_ENDPOINT", "http://localhost:3900"),
+                    public_endpoint: env_or("S3_PUBLIC_ENDPOINT", &env_or("S3_ENDPOINT", "http://localhost:3900")),
+                    region: env_or("S3_REGION", "garage"),
+                    bucket: env_or("S3_BUCKET", "rust-axum-app-files"),
+                    access_key: env_or("S3_ACCESS_KEY", "GK3a7c1e9b5d2f4086a1c3e5b7"),
+                    secret_key: env_or(
+                        "S3_SECRET_KEY",
+                        "9d4f2b7e1a6c3058b9e2d7f4a1c6b3e8d5f2a9c7e4b1d8f3a6c9e2b5d7f1a4c8",
+                    )
+                    .into(),
+                },
             },
             emails: EmailsConfig {
                 smtp_host: env_or("SMTP_HOST", "localhost"),
@@ -167,6 +201,7 @@ impl AppConfig {
             database = %format_args!("{}:{}/{}", self.database.host, self.database.port, self.database.name),
             keycloak = %self.keycloak.realm_url,
             smtp_host = %self.emails.smtp_host,
+            files_storage = %self.files.storage,
             uploads_dir = %self.files.upload_dir,
             "configuration loaded"
         );
@@ -195,8 +230,14 @@ impl AppConfig {
             "AUTH_POST_LOGIN_URL",
             "REDIS_URL",
             "SESSION_COOKIE_SECURE",
+            "FILES_SIGNING_KEY",
         ];
-        for key in required {
+        let object_store = ["S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY", "S3_SECRET_KEY"];
+        let uses_object_store = self.files.storage == StorageKind::S3;
+        for key in required
+            .into_iter()
+            .chain(object_store.into_iter().filter(|_| uses_object_store))
+        {
             if env::var(key).map_or(true, |value| value.trim().is_empty()) {
                 bail!("{key} must be set when APP_ENVIRONMENT is not local");
             }
@@ -234,10 +275,18 @@ mod tests {
         config.database.password = "database-secret".to_owned().into();
         config.keycloak.client_secret = "keycloak-secret".to_owned().into();
         config.emails.smtp_password = "smtp-secret".to_owned().into();
+        config.files.signing_key = "signing-secret".to_owned().into();
+        config.files.s3.secret_key = "storage-secret".to_owned().into();
 
         let printed = format!("{config:?}");
 
-        for secret in ["database-secret", "keycloak-secret", "smtp-secret"] {
+        for secret in [
+            "database-secret",
+            "keycloak-secret",
+            "smtp-secret",
+            "signing-secret",
+            "storage-secret",
+        ] {
             assert!(!printed.contains(secret), "{secret} is printed");
         }
     }

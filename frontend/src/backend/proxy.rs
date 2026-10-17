@@ -41,14 +41,17 @@ pub async fn api(cx: &Cx, body: Body) -> Result<Response> {
     forward(cx, body).await
 }
 
-/// An uploaded file comes from a reader, not from this application, so it is
-/// only ever downloaded: no browser renders it on this origin, where a script
-/// in it would act with the reader's session.
-#[route([GET, HEAD] "/uploads/{*rest}")]
+/// The local disk's signed links: the browser sends the bytes of an upload here
+/// and downloads files from here. An uploaded file comes from a reader, not from
+/// this application, so it is only ever downloaded: no browser renders it on this
+/// origin, where a script in it would act with the reader's session.
+#[route([GET, HEAD, PUT] "/uploads/{*rest}")]
 pub async fn uploads(cx: &Cx, body: Body) -> Result<Response> {
     let mut response = forward(cx, body).await?;
     let response_headers = response.headers_mut();
-    response_headers.insert(CONTENT_DISPOSITION, HeaderValue::from_static("attachment"));
+    response_headers
+        .entry(CONTENT_DISPOSITION)
+        .or_insert(HeaderValue::from_static("attachment"));
     response_headers.insert(X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
     response_headers.insert(
         CONTENT_SECURITY_POLICY,

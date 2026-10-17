@@ -9,10 +9,16 @@ use crate::files::domain::FileRepository;
 pub struct FilesService<R, S> {
     pub(super) repository: R,
     pub(super) storage: S,
+    /// The largest upload allowed, in bytes.
+    pub(super) max_size: u64,
 }
 
 impl<R: FileRepository, S: FileStorage> FilesService<R, S> {
-    pub fn new(repository: R, storage: S) -> Self {
-        Self { repository, storage }
+    pub fn new(repository: R, storage: S, max_size: u64) -> Self {
+        Self {
+            repository,
+            storage,
+            max_size,
+        }
     }
 }
