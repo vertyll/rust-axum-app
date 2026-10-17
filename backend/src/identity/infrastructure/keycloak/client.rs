@@ -7,7 +7,7 @@ use serde::Deserialize;
 use tokio::sync::OnceCell;
 
 use super::{KeycloakSettings, SharedRefreshes};
-use crate::identity::application::ports::KeycloakClient;
+use crate::identity::application::ports::{KeycloakClient, SecondFactor};
 use crate::identity::application::session::TokenPair;
 use crate::identity::domain::IdentityError;
 
@@ -145,6 +145,56 @@ impl KeycloakClient for HttpKeycloakClient {
             Err(err) => tracing::warn!("Keycloak did not end the session: {err}"),
         }
     }
+
+    async fn second_factor(&self, access_token: &str) -> Result<Option<SecondFactor>, IdentityError> {
+        let response = self
+            .http
+            .get(format!(
+                "{}/account/credentials?type={OTP_CREDENTIAL}",
+                self.settings.realm_url
+            ))
+            .bearer_auth(access_token)
+            .header(reqwest::header::ACCEPT, "application/json")
+            .send()
+            .await
+            .map_err(unavailable)?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(IdentityError::IdentityProviderUnavailable(status.to_string()));
+        }
+        let credentials: Vec<CredentialType> = response.json().await.map_err(unavailable)?;
+        Ok(credentials
+            .into_iter()
+            .filter(|credential| credential.kind == OTP_CREDENTIAL)
+            .flat_map(|credential| credential.user_credential_metadatas)
+            .map(|metadata| SecondFactor {
+                credential_id: metadata.credential.id,
+            })
+            .next())
+    }
+}
+
+/// The credential type Keycloak's TOTP and HOTP setup stores.
+const OTP_CREDENTIAL: &str = "otp";
+
+/// One credential type in Keycloak's account API, with the person's credentials of it.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CredentialType {
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(default)]
+    user_credential_metadatas: Vec<CredentialMetadata>,
+}
+
+#[derive(Deserialize)]
+struct CredentialMetadata {
+    credential: Credential,
+}
+
+#[derive(Deserialize)]
+struct Credential {
+    id: String,
 }
 
 #[derive(Deserialize)]
@@ -168,8 +218,9 @@ mod tests {
     use std::time::Duration;
 
     use axum::Router;
-    use axum::http::StatusCode;
-    use axum::routing::post;
+    use axum::http::header::AUTHORIZATION;
+    use axum::http::{HeaderMap, StatusCode};
+    use axum::routing::{get, post};
 
     use super::HttpKeycloakClient;
     use crate::identity::application::ports::KeycloakClient;
@@ -190,11 +241,15 @@ mod tests {
                 }
             }),
         );
+        (client_for(app).await, calls)
+    }
+
+    async fn client_for(app: Router) -> HttpKeycloakClient {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
-        let client = HttpKeycloakClient::new(
+        HttpKeycloakClient::new(
             KeycloakSettings {
                 realm_url: format!("http://{address}/realms/test"),
                 client_id: "client".into(),
@@ -204,8 +259,34 @@ mod tests {
             },
             SharedRefreshes::in_process_only(),
         )
-        .unwrap();
-        (client, calls)
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn the_second_factor_is_read_from_the_account_api_with_the_callers_token() {
+        let app = Router::new().route(
+            "/realms/test/account/credentials",
+            get(|headers: HeaderMap| async move {
+                assert_eq!(headers[AUTHORIZATION], "Bearer access-1");
+                r#"[{"type":"otp","category":"two-factor","userCredentialMetadatas":[{"credential":{"id":"otp-1","type":"otp","userLabel":"phone"}}]}]"#
+            }),
+        );
+        let client = client_for(app).await;
+
+        let factor = client.second_factor("access-1").await.unwrap();
+
+        assert_eq!(factor.map(|factor| factor.credential_id).as_deref(), Some("otp-1"));
+    }
+
+    #[tokio::test]
+    async fn no_second_factor_is_none() {
+        let app = Router::new().route(
+            "/realms/test/account/credentials",
+            get(|| async { r#"[{"type":"otp","category":"two-factor","userCredentialMetadatas":[]}]"# }),
+        );
+        let client = client_for(app).await;
+
+        assert_eq!(client.second_factor("access-1").await.unwrap(), None);
     }
 
     #[tokio::test]

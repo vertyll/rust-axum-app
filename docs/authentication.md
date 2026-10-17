@@ -35,7 +35,8 @@ sequenceDiagram
 
 1. The browser opens `GET /api/auth/authorize`. The application stores a fresh `state` and PKCE verifier in the session
    and redirects to Keycloak with the challenge. Optional parameters pass through: `register=true` opens the sign-up
-   page, and `kc_action` starts one of `CONFIGURE_TOTP`, `UPDATE_PASSWORD` or `delete_credential`. The `Accept-Language`
+   page, and `kc_action` starts one of `CONFIGURE_TOTP`, `UPDATE_PASSWORD` or `delete_credential:<id>` with a UUID
+   ([Account actions](#account-actions)); any other value is dropped. The `Accept-Language`
    header picks Keycloak's language when it is `pl` or `en`, as `ui_locales`. Keycloak shows a signed-in person the
    language stored on their account instead, so before a `kc_action` the application stores that language there, through
    the admin API.
@@ -48,6 +49,16 @@ sequenceDiagram
 
 The browser holds only the `RUST_AXUM_APP_SESSION` cookie: `HttpOnly`, `SameSite=Lax`, and `Secure` when
 `SESSION_COOKIE_SECURE=true`.
+
+## Account actions
+
+The account page changes the password and turns the second factor on and off on Keycloak's own pages, so no password
+and no TOTP secret passes through the application. `GET /api/users/me/second-factor` reads the caller's OTP credential
+from Keycloak's account API (`/realms/<realm>/account/credentials`) with the caller's own access token, which carries
+the `account` audience and the `manage-account` role every account gets, so the application needs no right to read
+anyone else's credentials. The page then offers `CONFIGURE_TOTP` when there is none and `delete_credential:<id>` when
+there is one: Keycloak asks the person to confirm, signs them in again when their sign-in is old, removes the
+credential only when it is theirs, and returns through the usual sign-in.
 
 ## Every request is authorized by a token
 

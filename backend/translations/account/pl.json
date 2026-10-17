@@ -12,6 +12,9 @@
   "account.security.description": "Te przyciski otwierają usługę logowania, która najpierw poprosi o hasło.",
   "account.security.password": "Zmień hasło",
   "account.security.title": "Bezpieczeństwo",
-  "account.security.totp": "Skonfiguruj uwierzytelnianie dwuskładnikowe",
+  "account.security.totp": "Włącz uwierzytelnianie dwuskładnikowe",
+  "account.security.totp_disable": "Wyłącz uwierzytelnianie dwuskładnikowe",
+  "account.security.totp_off": "Uwierzytelnianie dwuskładnikowe jest wyłączone.",
+  "account.security.totp_on": "Uwierzytelnianie dwuskładnikowe jest włączone.",
   "account.title": "Konto"
 }

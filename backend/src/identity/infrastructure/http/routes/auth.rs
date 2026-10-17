@@ -25,7 +25,9 @@ const TRANSACTION_KEY: &str = "identity.sign_in";
 const SCOPE: &str = "openid profile email";
 const SIGN_IN_FAILED: &str = "sign_in_failed";
 const STATE_MISMATCH: &str = "state_mismatch";
-const ALLOWED_ACTIONS: [&str; 3] = ["CONFIGURE_TOTP", "UPDATE_PASSWORD", "delete_credential"];
+const ALLOWED_ACTIONS: [&str; 2] = ["CONFIGURE_TOTP", "UPDATE_PASSWORD"];
+/// Keycloak's action removing one credential, named by its id: `delete_credential:<id>`.
+const DELETE_CREDENTIAL: &str = "delete_credential:";
 const UI_LOCALES: [&str; 2] = ["pl", "en"];
 const UI_THEMES: [&str; 3] = ["system", "light", "dark"];
 
@@ -88,11 +90,7 @@ async fn authorize<P: IdentityPorts>(
     if let Some(language) = language {
         params.push(("ui_locales", language));
     }
-    if let Some(action) = query
-        .kc_action
-        .as_deref()
-        .filter(|action| ALLOWED_ACTIONS.contains(action))
-    {
+    if let Some(action) = query.kc_action.as_deref().filter(|action| is_allowed_action(action)) {
         if let (Some(language), Some(signed_in)) =
             (language, session.get::<AuthSession>(SESSION_KEY).await.map_err(store)?)
         {
@@ -176,6 +174,16 @@ async fn logout<P: IdentityPorts>(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// An action Keycloak may run for a signed-in person: setting up the second factor,
+/// changing the password, or removing a credential named by its UUID, which Keycloak
+/// removes only when it is the person's own.
+fn is_allowed_action(action: &str) -> bool {
+    ALLOWED_ACTIONS.contains(&action)
+        || action
+            .strip_prefix(DELETE_CREDENTIAL)
+            .is_some_and(|id| uuid::Uuid::try_parse(id).is_ok())
+}
+
 fn preferred_language(headers: &HeaderMap) -> Option<&'static str> {
     let accepted = headers.get(header::ACCEPT_LANGUAGE)?.to_str().ok()?;
     accepted
@@ -213,7 +221,19 @@ fn encode(value: &str) -> String {
 mod tests {
     use axum::http::{HeaderMap, HeaderValue, header};
 
-    use super::{preferred_language, supported_theme, with_query};
+    use super::{is_allowed_action, preferred_language, supported_theme, with_query};
+
+    #[test]
+    fn passes_on_only_the_actions_of_the_account_page() {
+        assert!(is_allowed_action("CONFIGURE_TOTP"));
+        assert!(is_allowed_action("UPDATE_PASSWORD"));
+        assert!(is_allowed_action(
+            "delete_credential:90062308-97cf-410a-afe5-06680a07a349"
+        ));
+        assert!(!is_allowed_action("delete_credential"));
+        assert!(!is_allowed_action("delete_credential:otp&prompt=none"));
+        assert!(!is_allowed_action("delete_account"));
+    }
 
     #[test]
     fn picks_the_first_supported_language() {

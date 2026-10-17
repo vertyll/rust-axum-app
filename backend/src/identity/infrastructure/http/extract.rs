@@ -40,7 +40,25 @@ pub async fn authenticate<P: IdentityPorts>(
     };
     let caller = identity.authenticate(&token).await?;
     request.extensions_mut().insert(caller);
+    request.extensions_mut().insert(CallerToken(token));
     Ok(next.run(request).await)
+}
+
+/// The access token the [`authenticate`] layer verified, for a call Keycloak answers
+/// about the caller themselves. Requires the layer.
+#[derive(Clone)]
+pub struct CallerToken(pub String);
+
+impl<S: Send + Sync> FromRequestParts<S> for CallerToken {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<CallerToken>()
+            .cloned()
+            .ok_or_else(|| IdentityError::Unauthenticated.into())
+    }
 }
 
 async fn session_token<P: IdentityPorts>(

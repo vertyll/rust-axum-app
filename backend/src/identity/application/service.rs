@@ -2,7 +2,7 @@
 //! refresh and the mirror of Keycloak accounts the rest of the app joins to.
 //! Roles and what they grant are managed in [`roles`](super::roles).
 
-use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, TokenVerifier};
+use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, SecondFactor, TokenVerifier};
 use crate::identity::application::session::{AuthSession, Caller, TokenPair};
 use crate::identity::domain::{
     Grants, IdentityError, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
@@ -64,6 +64,11 @@ impl<P: IdentityPorts> IdentityService<P> {
         let verified = self.verifier.verify(access_token).await?;
         let (user, roles) = self.sync(&verified.identity).await?;
         Ok(Caller::new(&user, Grants::of(&roles)))
+    }
+
+    /// The caller's second factor, read from Keycloak with their own access token.
+    pub async fn second_factor(&self, access_token: &str) -> Result<Option<SecondFactor>, IdentityError> {
+        self.keycloak.second_factor(access_token).await
     }
 
     pub async fn get_user(&self, id: UserId) -> Result<User, IdentityError> {
@@ -130,6 +135,17 @@ mod tests {
 
     fn role(name: &str) -> RoleName {
         RoleName::parse(name).unwrap()
+    }
+
+    #[tokio::test]
+    async fn the_second_factor_is_the_one_keycloak_holds() {
+        let harness = Harness::new().await;
+        assert_eq!(harness.service.second_factor("access").await.unwrap(), None);
+
+        harness.keycloak.set_second_factor("otp-1");
+
+        let factor = harness.service.second_factor("access").await.unwrap().unwrap();
+        assert_eq!(factor.credential_id, "otp-1");
     }
 
     #[tokio::test]

@@ -1,15 +1,24 @@
+use reqwest::Method;
+use serde::Deserialize;
 use topcoat::Result;
 use topcoat::context::Cx;
 use topcoat::router::page;
-use topcoat::view::{View, attributes, view};
+use topcoat::view::{View, attributes, component, view};
 
 use crate::auth::require_auth;
 use crate::backend::proxy::{KeycloakAction, keycloak_action};
+use crate::backend::{self, BackendError};
 use crate::components::badge::{BadgeVariant, badge};
 use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
 use crate::components::card::{card, card_content, card_description, card_header, card_title};
 use crate::components::page_header::page_header;
 use crate::i18n::texts;
+
+/// The reader's second factor, as the back-end reads it from Keycloak.
+#[derive(Debug, Deserialize)]
+struct SecondFactor {
+    credential_id: Option<String>,
+}
 
 #[page]
 pub(crate) async fn account(cx: &Cx) -> Result<impl View> {
@@ -77,35 +86,56 @@ pub(crate) async fn account(cx: &Cx) -> Result<impl View> {
                     }
                 )
             )
-            card(
-                attrs: attributes! { class="md:col-span-2" },
-                card_header(
-                    card_title(<h2>(texts.t("account.security.title"))</h2>)
-                    card_description((texts.t("account.security.description")))
-                )
-                card_content(
-                    <div class="flex flex-col gap-2 sm:flex-row">
-                        <a
-                            href=(keycloak_action(cx, KeycloakAction::UpdatePassword))
-                            class=(button_variants(
-                                ButtonVariant::Outline,
-                                ButtonSize::Md,
-                            ))
-                        >
-                            (texts.t("account.security.password"))
-                        </a>
-                        <a
-                            href=(keycloak_action(cx, KeycloakAction::ConfigureTotp))
-                            class=(button_variants(
-                                ButtonVariant::Outline,
-                                ButtonSize::Md,
-                            ))
-                        >
-                            (texts.t("account.security.totp"))
-                        </a>
-                    </div>
-                )
-            )
+            security_card()
         </div>
+    })
+}
+
+/// Changing the password and turning the second factor on or off, each on
+/// Keycloak's own pages.
+#[component]
+async fn security_card(cx: &Cx) -> Result<impl View> {
+    let texts = texts(cx).await?;
+    let second_factor: SecondFactor =
+        backend::json(cx, backend::request(cx, Method::GET, "/api/users/me/second-factor"))
+            .await
+            .map_err(BackendError::into_page_error)?;
+    let (totp_action, totp_label, totp_status) = match second_factor.credential_id {
+        Some(id) => (
+            KeycloakAction::DeleteCredential(id),
+            "account.security.totp_disable",
+            "account.security.totp_on",
+        ),
+        None => (
+            KeycloakAction::ConfigureTotp,
+            "account.security.totp",
+            "account.security.totp_off",
+        ),
+    };
+    Ok(view! {
+        card(
+            attrs: attributes! { class="md:col-span-2" },
+            card_header(
+                card_title(<h2>(texts.t("account.security.title"))</h2>)
+                card_description((texts.t("account.security.description")))
+            )
+            card_content(
+                <p class="mb-4 text-sm">(texts.t(totp_status))</p>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                    <a
+                        href=(keycloak_action(cx, &KeycloakAction::UpdatePassword))
+                        class=(button_variants(ButtonVariant::Outline, ButtonSize::Md))
+                    >
+                        (texts.t("account.security.password"))
+                    </a>
+                    <a
+                        href=(keycloak_action(cx, &totp_action))
+                        class=(button_variants(ButtonVariant::Outline, ButtonSize::Md))
+                    >
+                        (texts.t(totp_label))
+                    </a>
+                </div>
+            )
+        )
     })
 }

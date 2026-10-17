@@ -12,6 +12,9 @@
   "account.security.description": "These open the sign-in service, which asks for your password first.",
   "account.security.password": "Change password",
   "account.security.title": "Security",
-  "account.security.totp": "Set up two-factor authentication",
+  "account.security.totp": "Turn on two-factor authentication",
+  "account.security.totp_disable": "Turn off two-factor authentication",
+  "account.security.totp_off": "Two-factor authentication is off.",
+  "account.security.totp_on": "Two-factor authentication is on.",
   "account.title": "Account"
 }

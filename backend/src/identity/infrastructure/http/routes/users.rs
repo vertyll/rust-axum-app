@@ -11,8 +11,8 @@ use crate::identity::application::ports::IdentityPorts;
 use crate::identity::application::service::IdentityService;
 use crate::identity::domain::UserId;
 use crate::identity::infrastructure::http::error::ApiError;
-use crate::identity::infrastructure::http::extract::{Auth, Permitted};
-use crate::identity::infrastructure::http::responses::{GrantsResponse, UserResponse};
+use crate::identity::infrastructure::http::extract::{Auth, CallerToken, Permitted};
+use crate::identity::infrastructure::http::responses::{GrantsResponse, SecondFactorResponse, UserResponse};
 use crate::shared_http::pagination::{PageQuery, PageResponse};
 use crate::shared_http::problem::{PathParam, QueryParams};
 
@@ -21,6 +21,7 @@ pub fn users_router<P: IdentityPorts>(identity: Arc<IdentityService<P>>) -> Rout
         .route("/", get(list_users))
         .route("/me", get(me))
         .route("/me/permissions", get(my_permissions))
+        .route("/me/second-factor", get(my_second_factor))
         .route("/{id}", get(get_user))
         .with_state(identity)
 }
@@ -34,6 +35,13 @@ async fn me<P: IdentityPorts>(
 
 async fn my_permissions(Auth(caller): Auth) -> Json<GrantsResponse> {
     Json(GrantsResponse::from(&caller.grants))
+}
+
+async fn my_second_factor<P: IdentityPorts>(
+    State(identity): Identity<P>,
+    CallerToken(token): CallerToken,
+) -> Result<Json<SecondFactorResponse>, ApiError> {
+    Ok(Json(identity.second_factor(&token).await?.into()))
 }
 
 async fn list_users<P: IdentityPorts>(

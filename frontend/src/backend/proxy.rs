@@ -74,20 +74,23 @@ pub fn register(cx: &Cx) -> String {
         .resolve(cx)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum KeycloakAction {
     UpdatePassword,
     ConfigureTotp,
+    /// Removes the credential with this id, after Keycloak asks the reader to confirm.
+    DeleteCredential(String),
 }
 
-pub fn keycloak_action(cx: &Cx, action: KeycloakAction) -> String {
+pub fn keycloak_action(cx: &Cx, action: &KeycloakAction) -> String {
     #[derive(Serialize)]
     struct Action {
-        kc_action: &'static str,
+        kc_action: String,
     }
     let kc_action = match action {
-        KeycloakAction::UpdatePassword => "UPDATE_PASSWORD",
-        KeycloakAction::ConfigureTotp => "CONFIGURE_TOTP",
+        KeycloakAction::UpdatePassword => "UPDATE_PASSWORD".to_owned(),
+        KeycloakAction::ConfigureTotp => "CONFIGURE_TOTP".to_owned(),
+        KeycloakAction::DeleteCredential(id) => format!("delete_credential:{id}"),
     };
     href!(api, Rest(["auth", "authorize"]))
         .query(Action { kc_action })
