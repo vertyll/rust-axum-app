@@ -8,6 +8,7 @@ on:
       - "frontend/**"
       - "backend/translations/**"
       - "backend/src/*/messages/**"
+      - "keycloak/themes/**"
       - ".github/workflows/frontend.yml"
   pull_request:
     branches: [main]
@@ -15,6 +16,7 @@ on:
       - "frontend/**"
       - "backend/translations/**"
       - "backend/src/*/messages/**"
+      - "keycloak/themes/**"
       - ".github/workflows/frontend.yml"
   workflow_dispatch:
 

@@ -27,6 +27,7 @@ const SIGN_IN_FAILED: &str = "sign_in_failed";
 const STATE_MISMATCH: &str = "state_mismatch";
 const ALLOWED_ACTIONS: [&str; 3] = ["CONFIGURE_TOTP", "UPDATE_PASSWORD", "delete_credential"];
 const UI_LOCALES: [&str; 2] = ["pl", "en"];
+const UI_THEMES: [&str; 3] = ["system", "light", "dark"];
 
 struct AuthState<P: IdentityPorts> {
     identity: Arc<IdentityService<P>>,
@@ -59,6 +60,8 @@ struct AuthorizeQuery {
     kc_action: Option<String>,
     #[serde(default)]
     register: bool,
+    /// The color theme the reader chose in the client, which Keycloak's pages open in.
+    theme: Option<String>,
 }
 
 async fn authorize<P: IdentityPorts>(
@@ -81,7 +84,8 @@ async fn authorize<P: IdentityPorts>(
         ("code_challenge", &challenge),
         ("code_challenge_method", pkce::CHALLENGE_METHOD),
     ];
-    if let Some(language) = preferred_language(&headers) {
+    let language = preferred_language(&headers);
+    if let Some(language) = language {
         params.push(("ui_locales", language));
     }
     if let Some(action) = query
@@ -89,10 +93,18 @@ async fn authorize<P: IdentityPorts>(
         .as_deref()
         .filter(|action| ALLOWED_ACTIONS.contains(action))
     {
+        if let (Some(language), Some(signed_in)) =
+            (language, session.get::<AuthSession>(SESSION_KEY).await.map_err(store)?)
+        {
+            state.identity.keep_account_language(&signed_in, language).await;
+        }
         params.push(("kc_action", action));
     }
     if query.register {
         params.push(("prompt", "create"));
+    }
+    if let Some(theme) = supported_theme(query.theme.as_deref()) {
+        params.push(("ui_theme", theme));
     }
     Ok(Redirect::to(&with_query(&keycloak.endpoint("auth"), &params)))
 }
@@ -173,6 +185,10 @@ fn preferred_language(headers: &HeaderMap) -> Option<&'static str> {
         .find_map(|language| UI_LOCALES.into_iter().find(|supported| *supported == language))
 }
 
+fn supported_theme(theme: Option<&str>) -> Option<&'static str> {
+    UI_THEMES.into_iter().find(|supported| Some(*supported) == theme)
+}
+
 fn with_query(base: &str, params: &[(&str, &str)]) -> String {
     let query = params
         .iter()
@@ -197,7 +213,7 @@ fn encode(value: &str) -> String {
 mod tests {
     use axum::http::{HeaderMap, HeaderValue, header};
 
-    use super::{preferred_language, with_query};
+    use super::{preferred_language, supported_theme, with_query};
 
     #[test]
     fn picks_the_first_supported_language() {
@@ -208,6 +224,13 @@ mod tests {
         );
         assert_eq!(preferred_language(&headers), Some("pl"));
         assert_eq!(preferred_language(&HeaderMap::new()), None);
+    }
+
+    #[test]
+    fn passes_on_only_a_theme_keycloak_knows() {
+        assert_eq!(supported_theme(Some("dark")), Some("dark"));
+        assert_eq!(supported_theme(Some("sepia")), None);
+        assert_eq!(supported_theme(None), None);
     }
 
     #[test]

@@ -2,7 +2,7 @@
 //! refresh and the mirror of Keycloak accounts the rest of the app joins to.
 //! Roles and what they grant are managed in [`roles`](super::roles).
 
-use crate::identity::application::ports::{IdentityPorts, KeycloakClient, TokenVerifier};
+use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, TokenVerifier};
 use crate::identity::application::session::{AuthSession, Caller, TokenPair};
 use crate::identity::domain::{
     Grants, IdentityError, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
@@ -74,6 +74,17 @@ impl<P: IdentityPorts> IdentityService<P> {
         self.users.page(request).await
     }
 
+    /// Makes Keycloak show the signed-in person's account pages, such as setting
+    /// up a second factor, in the language they use here. Keycloak prefers the
+    /// language stored on the account to the one a sign-in asks for, so the
+    /// account's is set first; when that fails, the pages open in the stored one.
+    pub async fn keep_account_language(&self, session: &AuthSession, language: &str) {
+        let account = &session.identity.keycloak_id;
+        if let Err(err) = self.realm.set_language(account, language).await {
+            tracing::warn!(keycloak_id = %account, "could not store the account's language in Keycloak: {err}");
+        }
+    }
+
     /// Mirrors the account and the roles of the token this application
     /// knows; a realm role with no role here, such as Keycloak's own
     /// `offline_access`, grants nothing and is left out.
@@ -119,6 +130,31 @@ mod tests {
 
     fn role(name: &str) -> RoleName {
         RoleName::parse(name).unwrap()
+    }
+
+    #[tokio::test]
+    async fn the_account_pages_follow_the_language_used_here() {
+        let harness = Harness::new().await;
+        let session = harness.service.sign_in("code", "verifier").await.unwrap();
+
+        harness.service.keep_account_language(&session, "pl").await;
+
+        assert_eq!(
+            harness.realm.calls().last(),
+            Some(&format!("language {} pl", session.identity.keycloak_id))
+        );
+    }
+
+    #[tokio::test]
+    async fn a_language_keycloak_does_not_store_leaves_the_account_pages_as_they_are() {
+        let harness = Harness::new().await;
+        let session = harness.service.sign_in("code", "verifier").await.unwrap();
+        let before = harness.realm.calls();
+        harness.realm.fail();
+
+        harness.service.keep_account_language(&session, "pl").await;
+
+        assert_eq!(harness.realm.calls(), before);
     }
 
     #[tokio::test]

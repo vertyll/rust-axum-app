@@ -10,6 +10,7 @@ mod components;
 mod config;
 mod forms;
 mod i18n;
+mod theme;
 
 use topcoat::asset::{AssetBundle, RouterBuilderAssetExt};
 use topcoat::cookie::RouterBuilderCookieExt;

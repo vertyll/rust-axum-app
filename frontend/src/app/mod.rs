@@ -6,6 +6,7 @@ mod language;
 mod legal;
 mod navigation;
 mod sign_out;
+mod theme;
 
 use topcoat::Result;
 use topcoat::context::Cx;
@@ -62,7 +63,7 @@ async fn root_layout(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
 
     Ok(view! {
         <!DOCTYPE html>
-        <html lang=(texts.lang().code())>
+        <html lang=(texts.lang().code()) data-theme=(crate::theme::theme(cx).code())>
             <head>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">

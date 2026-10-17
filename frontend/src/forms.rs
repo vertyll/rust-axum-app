@@ -77,3 +77,23 @@ pub fn refused_with<K: Into<String>>(
         other => internal_server_error(other).into(),
     }
 }
+
+/// The page to return to after a choice such as the language, only when it is a
+/// path on this site, so the form cannot send the reader elsewhere.
+pub fn back_within_this_site(back: &str) -> Option<String> {
+    let on_this_site = back.starts_with('/') && !back.starts_with("//") && !back.contains('\\');
+    on_this_site.then(|| back.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::back_within_this_site;
+
+    #[test]
+    fn returns_only_to_paths_on_this_site() {
+        assert_eq!(back_within_this_site("/files?x=1").as_deref(), Some("/files?x=1"));
+        assert_eq!(back_within_this_site("//evil.example"), None);
+        assert_eq!(back_within_this_site("/\\evil.example"), None);
+        assert_eq!(back_within_this_site("https://evil.example"), None);
+    }
+}

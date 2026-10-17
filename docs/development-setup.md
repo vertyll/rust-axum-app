@@ -35,6 +35,18 @@ front-end's `/legal/terms` and `/legal/privacy`:
 > The realm lives in the `keycloak-data` volume afterwards, so a change to the export file only takes effect after
 > `docker compose -f docker-compose.local.yml down -v`.
 
+Compose mounts the sign-in theme ([Authentication: The sign-in pages](authentication.md#the-sign-in-pages)) into
+Keycloak, which in development reads it afresh on every page, so a change shows on a reload. A realm imported before the
+export named the theme gets it, and the base URL its links lead to, without a reset:
+
+```bash
+podman exec rust-axum-app-keycloak-1 sh -c 'cd /opt/keycloak/bin \
+  && ./kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin \
+  && ./kcadm.sh update realms/rust-axum-app -s loginTheme=rust-axum-app -s emailTheme=rust-axum-app \
+  && id=$(./kcadm.sh get clients -r rust-axum-app -q clientId=rust-axum-app --fields id --format csv --noquotes) \
+  && ./kcadm.sh update clients/$id -r rust-axum-app -s baseUrl=http://localhost:3000/'
+```
+
 ## Run the back-end
 
 From `backend/`:

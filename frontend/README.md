@@ -9,29 +9,30 @@ and every page calls the back-end's API with the browser's session cookie.
 The code is grouped by feature. A feature's module holds its pages, its form routes and, in `api.rs`, its calls to the
 back-end; its URL is its module's path, so `app/files/file_id` serves `/files/{file_id}`.
 
-| Path                         | Holds                                                                                              |
-|------------------------------|----------------------------------------------------------------------------------------------------|
-| `src/app`                    | the layout, the home page, the security headers and every feature below                            |
-| `src/app/navigation`         | the top bar with the modules, the account and language menus, and the side bar with the sections   |
-| `src/app/files`              | the files: list, upload, details, changes; `api.rs` calls `/api/files`                             |
-| `src/app/account`            | the reader's account, what their roles grant, password and second factor                           |
-| `src/app/admin/users`        | the accounts and their roles; `api.rs` calls `/api/users` and `/api/admin/users`                   |
-| `src/app/admin/roles`        | the roles and what each grants; `api.rs` calls `/api/admin/roles` and `/api/admin/permissions`     |
-| `src/app/admin/translations` | the message catalog; `api.rs` calls `/api/admin/translations`                                      |
-| `src/app/legal`              | the terms of use and the privacy policy, written in the catalog                                    |
-| `src/auth`                   | who is signed in and what their roles grant; `api.rs` calls `/api/users/me` and `/api/auth/logout` |
-| `src/i18n`                   | the reader's language and the catalog; `api.rs` calls `/api/translations/{language}`               |
-| `src/backend`                | what the features' calls share: the HTTP client, problem documents, and the proxy                  |
-| `src/forms.rs`               | how a form answers: `303 See Other` when accepted, the same page with the refusal when not         |
-| `src/components`             | the Topcoat UI components, installed with `topcoat ui add`, and the application's own              |
-| `styles.css`                 | the Tailwind input and the theme `topcoat ui init` installed                                       |
+| Path                         | Holds                                                                                                   |
+|------------------------------|---------------------------------------------------------------------------------------------------------|
+| `src/app`                    | the layout, the home page, the security headers and every feature below                                 |
+| `src/app/navigation`         | the top bar with the modules, the account, theme and language menus, and the side bar with the sections |
+| `src/app/files`              | the files: list, upload, details, changes; `api.rs` calls `/api/files`                                  |
+| `src/app/account`            | the reader's account, what their roles grant, password and second factor                                |
+| `src/app/admin/users`        | the accounts and their roles; `api.rs` calls `/api/users` and `/api/admin/users`                        |
+| `src/app/admin/roles`        | the roles and what each grants; `api.rs` calls `/api/admin/roles` and `/api/admin/permissions`          |
+| `src/app/admin/translations` | the message catalog; `api.rs` calls `/api/admin/translations`                                           |
+| `src/app/legal`              | the terms of use and the privacy policy, written in the catalog                                         |
+| `src/auth`                   | who is signed in and what their roles grant; `api.rs` calls `/api/users/me` and `/api/auth/logout`      |
+| `src/i18n`                   | the reader's language and the catalog; `api.rs` calls `/api/translations/{language}`                    |
+| `src/theme.rs`               | the reader's color theme, from the `theme` cookie that `app/theme` sets                                 |
+| `src/backend`                | what the features' calls share: the HTTP client, problem documents, and the proxy                       |
+| `src/forms.rs`               | how a form answers: `303 See Other` when accepted, the same page with the refusal when not              |
+| `src/components`             | the Topcoat UI components, installed with `topcoat ui add`, and the application's own                   |
+| `styles.css`                 | the Tailwind input and the tokens, each a light and a dark color                                        |
 
 `src/components` stays flat, as `topcoat ui` installs and updates its components there; a component one feature alone
 uses lives in that feature's module.
 
 ## Navigation and tables
 
-The top bar holds the modules (Start, Files, Administration), the account menu and the
+The top bar holds the modules (Start, Files, Administration), the account menu, the theme menu and the
 language menu; the side bar on the left holds the sections of the open module, such as Translations, Roles and Users
 under Administration, each shown only when the reader's roles grant it. On a phone the modules fold into a menu, and
 the sections are listed under the bar. The menus are `<details>` elements, so they work without scripts.
@@ -47,6 +48,14 @@ The pages are built from the components in `src/components`: those `topcoat ui` 
 such as `icon` (a Heroicon by name), `dropdown`, `pagination`, `data_table`, `row_actions`,
 `back_link`, `page_header`, `text_field`, `confirm` and `feedback`. The icons are Heroicons 2.2.0 (MIT),
 kept in `components/icons.rs`.
+
+## Theme
+
+The theme menu offers System, Light and Dark, kept in the `theme` cookie and written on `<html data-theme>`; a reader
+who chose nothing gets System. Each token of `styles.css` holds a light and a dark color in `light-dark()`, and
+`data-theme` sets the `color-scheme` that picks between them, so System follows the reader's system without a script,
+and the page never flashes the other theme while it loads. Keycloak's pages wear the same colors
+([Authentication: The sign-in pages](../docs/authentication.md#the-sign-in-pages)).
 
 ## Pages
 

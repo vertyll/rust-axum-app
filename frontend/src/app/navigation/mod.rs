@@ -10,7 +10,7 @@ use topcoat::router::request::uri;
 use topcoat::runtime::link;
 use topcoat::view::{View, attributes, class, component, view};
 
-use super::{account, admin, files, home, language, sign_out};
+use super::{account, admin, files, home, language, sign_out, theme};
 use crate::auth::{CurrentUser, Permission, fetch_current_user};
 use crate::backend::proxy;
 use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
@@ -19,6 +19,7 @@ use crate::components::dropdown::{
 };
 use crate::components::icon::{Icon, IconSize, icon};
 use crate::i18n::{Lang, texts};
+use crate::theme::Theme;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Module {
@@ -174,7 +175,7 @@ pub async fn navbar(cx: &Cx) -> Result<impl View> {
                         href: href!(home),
                         attrs: attributes! {
                             class=(class!(
-                                "text-lg font-bold",
+                                "text-lg font-bold whitespace-nowrap",
                                 "hidden md:block" if current.is_some(),
                             ))
                         },
@@ -241,6 +242,7 @@ pub async fn navbar(cx: &Cx) -> Result<impl View> {
                             account_items()
                         )
                     }
+                    theme_menu()
                     language_menu()
                     if current.is_none() {
                         <a
@@ -320,6 +322,55 @@ fn language_name_key(lang: Lang) -> &'static str {
     match lang {
         Lang::Pl => "layout.language.pl",
         Lang::En => "layout.language.en",
+    }
+}
+
+/// Each choice posts the form, so the theme changes without scripts.
+#[component]
+async fn theme_menu(cx: &Cx) -> Result<impl View> {
+    let texts = texts(cx).await?;
+    let back = uri(cx).path_and_query().map_or("/", |path| path.as_str()).to_owned();
+    let current = crate::theme::theme(cx);
+    Ok(view! {
+        dropdown(
+            label: texts.t("layout.theme.label"),
+            trigger: view! { icon(name: theme_icon(current), size: IconSize::Sm) }.into(),
+            <form method="post" action=(href!(theme::change_theme))>
+                <input type="hidden" name="back" value=(back)>
+                for choice in Theme::ALL {
+                    <button
+                        type="submit"
+                        name="theme"
+                        value=(choice.code())
+                        aria-pressed=(if choice == current { "true" } else { "false" })
+                        class=(if choice == current {
+                            DROPDOWN_ITEM_ACTIVE
+                        } else {
+                            DROPDOWN_ITEM
+                        })
+                    >
+                        icon(name: theme_icon(choice), size: IconSize::Sm)
+                        <span>(texts.t(theme_name_key(choice)))</span>
+                    </button>
+                }
+            </form>
+        )
+    })
+}
+
+fn theme_icon(theme: Theme) -> Icon {
+    match theme {
+        Theme::System => Icon::ComputerDesktop,
+        Theme::Light => Icon::Sun,
+        Theme::Dark => Icon::Moon,
+    }
+}
+
+fn theme_name_key(theme: Theme) -> &'static str {
+    match theme {
+        Theme::System => "layout.theme.system",
+        Theme::Light => "layout.theme.light",
+        Theme::Dark => "layout.theme.dark",
     }
 }
 

@@ -1,0 +1,424 @@
+/* The front-end's look on Keycloak's pages. The tokens below are the ones
+   `frontend/styles.css` defines, each a light and a dark color that
+   `color-scheme` picks from, so these pages follow the reader's system as the
+   app does; a test keeps the two lists equal. PatternFly reads them through
+   its own variables, which are set here on `:root` and so win over its light
+   and dark defaults. */
+
+:root {
+  color-scheme: light dark;
+  --background: light-dark(oklch(0.9875 0.003 260), oklch(0.17 0.012 260));
+  --foreground: light-dark(oklch(0.24 0.012 260), oklch(0.93 0.006 260));
+  --card: light-dark(oklch(0.995 0.003 260), oklch(0.22 0.012 260));
+  --card-foreground: light-dark(oklch(0.24 0.012 260), oklch(0.93 0.006 260));
+  --popover: light-dark(oklch(0.995 0.003 260), oklch(0.22 0.012 260));
+  --popover-foreground: light-dark(oklch(0.24 0.012 260), oklch(0.93 0.006 260));
+  --muted-foreground: light-dark(oklch(0.51 0.014 260), oklch(0.68 0.012 260));
+  --primary: light-dark(oklch(0.21 0.02 260), oklch(0.92 0.008 260));
+  --primary-foreground: light-dark(oklch(0.985 0.003 260), oklch(0.21 0.015 260));
+  --destructive: light-dark(oklch(0.55 0.2 27), oklch(0.66 0.18 25));
+  --destructive-foreground: light-dark(oklch(0.99 0.012 27), oklch(0.14 0.02 25));
+  --border: light-dark(oklch(0.9 0.008 260), oklch(0.3 0.012 260));
+  --ring: light-dark(oklch(0.32 0.02 260), oklch(0.6 0.02 260));
+  --sidebar: light-dark(oklch(0.995 0.003 260), oklch(0.22 0.012 260));
+  --sidebar-foreground: light-dark(oklch(0.24 0.012 260), oklch(0.93 0.006 260));
+  --sidebar-primary: light-dark(oklch(0.21 0.02 260), oklch(0.92 0.008 260));
+  --sidebar-primary-foreground: light-dark(oklch(0.985 0.003 260), oklch(0.21 0.015 260));
+  --sidebar-accent: color-mix(in oklab, var(--sidebar-foreground) 10%, var(--sidebar));
+  --sidebar-accent-foreground: light-dark(oklch(0.24 0.012 260), oklch(0.93 0.006 260));
+  --sidebar-border: light-dark(oklch(0.9 0.008 260), oklch(0.3 0.012 260));
+  --sidebar-ring: light-dark(oklch(0.32 0.02 260), oklch(0.6 0.02 260));
+  --shadow-xs: 0 1px 2px light-dark(oklch(0.24 0.02 260 / 12%), oklch(0 0 0 / 35%));
+  --shadow-sm:
+    0 1px 2px light-dark(oklch(0.24 0.02 260 / 10%), oklch(0 0 0 / 35%)),
+    0 2px 8px -2px light-dark(oklch(0.24 0.02 260 / 9%), oklch(0 0 0 / 30%));
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root {
+  --pf-v5-global--FontFamily--text: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --pf-v5-global--FontFamily--heading: "Geist", ui-sans-serif, system-ui, sans-serif;
+  /* PatternFly re-points its colors per component at a `--dark-*` variant (on a light surface) or a `--light-*` one
+     (on a dark one, such as the header over its picture). Every variant gets the app's color, so each component
+     draws in it, whatever surface PatternFly assumed. */
+  --pf-v5-global--BackgroundColor--100: var(--card);
+  --pf-v5-global--BackgroundColor--200: var(--background);
+  --pf-v5-global--BackgroundColor--light-100: var(--card);
+  --pf-v5-global--BackgroundColor--dark-100: var(--background);
+  --pf-v5-global--Color--100: var(--foreground);
+  --pf-v5-global--Color--dark-100: var(--foreground);
+  --pf-v5-global--Color--light-100: var(--foreground);
+  --pf-v5-global--Color--200: var(--muted-foreground);
+  --pf-v5-global--Color--dark-200: var(--muted-foreground);
+  --pf-v5-global--Color--light-200: var(--muted-foreground);
+  --pf-v5-global--BorderColor--100: var(--border);
+  --pf-v5-global--BorderColor--dark-100: var(--border);
+  --pf-v5-global--BorderColor--light-100: var(--border);
+  --pf-v5-global--BorderColor--200: var(--border);
+  --pf-v5-global--BorderColor--300: var(--border);
+  --pf-v5-global--BorderColor--400: var(--border);
+  --pf-v5-global--primary-color--100: var(--primary);
+  --pf-v5-global--primary-color--dark-100: var(--primary);
+  --pf-v5-global--primary-color--light-100: var(--primary);
+  --pf-v5-global--primary-color--200: color-mix(in oklab, var(--primary) 90%, var(--background));
+  --pf-v5-global--primary-color--300: var(--primary);
+  --pf-v5-global--link--Color: var(--foreground);
+  --pf-v5-global--link--Color--hover: var(--muted-foreground);
+  --pf-v5-global--link--Color--dark: var(--foreground);
+  --pf-v5-global--link--Color--dark--hover: var(--muted-foreground);
+  --pf-v5-global--link--Color--light: var(--foreground);
+  --pf-v5-global--link--Color--light--hover: var(--muted-foreground);
+  --pf-v5-global--danger-color--100: var(--destructive);
+  --pf-v5-global--active-color--100: var(--ring);
+  --pf-v5-global--active-color--300: var(--ring);
+  --pf-v5-global--BorderRadius--sm: 0.375rem;
+  --pf-v5-global--BoxShadow--md: var(--shadow-sm);
+  --keycloak-card-top-color: transparent;
+}
+
+/* Buttons define their colors on the button itself, in light and in dark, so they are set here, as the app's. */
+.pf-v5-c-button {
+  --pf-v5-c-button--BorderRadius: 0.375rem;
+  --pf-v5-c-button--m-primary--Color: var(--primary-foreground);
+  --pf-v5-c-button--m-primary--hover--Color: var(--primary-foreground);
+  --pf-v5-c-button--m-primary--focus--Color: var(--primary-foreground);
+  --pf-v5-c-button--m-primary--active--Color: var(--primary-foreground);
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--primary);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: color-mix(in oklab, var(--primary) 90%, var(--background));
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: color-mix(in oklab, var(--primary) 90%, var(--background));
+  --pf-v5-c-button--m-primary--active--BackgroundColor: color-mix(in oklab, var(--primary) 80%, var(--background));
+  --pf-v5-c-button--m-secondary--Color: var(--foreground);
+  --pf-v5-c-button--m-secondary--hover--Color: var(--foreground);
+  --pf-v5-c-button--m-secondary--BorderColor: var(--border);
+  --pf-v5-c-button--m-secondary--hover--BorderColor: var(--border);
+  --pf-v5-c-button--m-secondary--hover--BackgroundColor: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+.login-pf body,
+#keycloak-bg {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--pf-v5-global--FontFamily--text);
+}
+
+/* The card's column: centered, with the app's 16 px gutter on a phone, so the card never meets the screen's edge. */
+.pf-v5-c-login {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  padding: 1.5rem 1rem;
+}
+
+.pf-v5-c-login__container {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .pf-v5-c-login {
+    padding: 3rem 2rem;
+  }
+}
+
+.pf-v5-c-login__main {
+  margin: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.pf-v5-c-login__main-header {
+  display: block;
+  padding: 1.5rem 1.5rem 0;
+  border-top: 0;
+}
+
+.pf-v5-c-login__main-body {
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+/* The card's footer would add its own padding to the card's, out of line with the fields. */
+.pf-v5-c-login__main-footer {
+  padding: 0;
+}
+
+.pf-v5-c-login__main-footer-band {
+  margin: 1.5rem 0 0;
+  padding: 1.25rem 0 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.pf-v5-c-login__main-body .subtitle {
+  margin-bottom: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.pf-v5-c-button.pf-m-control {
+  --pf-v5-c-button--m-control--BackgroundColor: var(--background);
+  --pf-v5-c-button--m-control--Color: var(--muted-foreground);
+  --pf-v5-c-button--m-control--hover--Color: var(--foreground);
+  --pf-v5-c-button--m-control--hover--BackgroundColor: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --pf-v5-c-button--m-control--focus--BackgroundColor: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --pf-v5-c-button--m-control--active--BackgroundColor: color-mix(in oklab, var(--foreground) 10%, var(--background));
+  --pf-v5-c-button--m-control--active--after--BorderBottomColor: var(--border);
+  --pf-v5-c-button--m-control--BorderRadius: 0 0.375rem 0.375rem 0;
+  --pf-v5-c-button--m-control--after--BorderTopColor: var(--border);
+  --pf-v5-c-button--m-control--after--BorderRightColor: var(--border);
+  --pf-v5-c-button--m-control--after--BorderBottomColor: var(--border);
+  --pf-v5-c-button--m-control--after--BorderLeftColor: var(--border);
+  --pf-v5-c-button--m-control--hover--after--BorderBottomColor: var(--border);
+  --pf-v5-c-button--m-control--focus--after--BorderBottomColor: var(--ring);
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.pf-v5-c-button.pf-m-control::after {
+  border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.pf-v5-c-input-group .pf-v5-c-form-control,
+.pf-v5-c-input-group .pf-v5-c-form-control::before,
+.pf-v5-c-input-group .pf-v5-c-form-control::after {
+  border-radius: 0.375rem 0 0 0.375rem;
+}
+
+#kc-page-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Fields: a hairline border all round and the app's ring on focus, instead of PatternFly's underline. */
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--BackgroundColor: var(--background);
+  --pf-v5-c-form-control--before--BorderTopColor: var(--border);
+  --pf-v5-c-form-control--before--BorderRightColor: var(--border);
+  --pf-v5-c-form-control--before--BorderLeftColor: var(--border);
+  --pf-v5-c-form-control--before--BorderBottomColor: var(--border);
+  --pf-v5-c-form-control--after--BorderBottomColor: var(--border);
+  --pf-v5-c-form-control--hover--after--BorderBottomColor: var(--border);
+  --pf-v5-c-form-control--focus--after--BorderBottomColor: var(--border);
+  border-radius: 0.375rem;
+}
+
+.pf-v5-c-form-control::before,
+.pf-v5-c-form-control::after {
+  border-radius: 0.375rem;
+}
+
+.pf-v5-c-form-control:focus-within {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 40%, transparent);
+}
+
+.pf-v5-c-login__main a:not(.pf-v5-c-button) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.kc-app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 4rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+
+.kc-app-bar__inner {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+}
+
+.kc-app-bar__brand {
+  color: var(--foreground);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.75rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.kc-app-bar__brand:hover {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.kc-app-bar__menus {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.kc-app-menu {
+  position: relative;
+}
+
+.kc-app-menu__trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.kc-app-menu__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.kc-app-menu__trigger:hover {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+.kc-app-menu__trigger:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kc-app-menu__code {
+  text-transform: uppercase;
+}
+
+.kc-app-menu__panel {
+  position: absolute;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  min-width: 11rem;
+  flex-direction: column;
+  margin-top: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+.kc-app-menu__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.kc-app-menu__item:hover {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.kc-app-menu__item--active {
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  font-weight: 500;
+}
+
+.kc-app-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.kc-app-icon--system,
+.kc-app-icon--light,
+.kc-app-icon--dark {
+  display: none;
+}
+
+[data-theme="system"] .kc-app-icon--system,
+[data-theme="light"] .kc-app-icon--light,
+[data-theme="dark"] .kc-app-icon--dark {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .kc-app-bar__inner {
+    padding: 0 1rem;
+  }
+
+  .kc-app-menu__trigger {
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+.kc-app-footer {
+  border-top: 1px solid var(--border);
+}
+
+.kc-app-footer__links {
+  display: flex;
+  max-width: 64rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 auto;
+  padding: 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.kc-app-footer__links a {
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.kc-app-footer__links a:hover {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+/* PatternFly takes the markers and spacing off lists, which the terms need back. */
+#kc-registration-terms-text p,
+#kc-registration-terms-text ul,
+.pf-v5-u-mb-md-on-md > p,
+.pf-v5-u-mb-md-on-md > ul {
+  margin: 0 0 0.75rem;
+}
+
+#kc-registration-terms-text ul,
+.pf-v5-u-mb-md-on-md > ul {
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+#kc-registration-terms-text li + li,
+.pf-v5-u-mb-md-on-md > ul > li + li {
+  margin-top: 0.25rem;
+}

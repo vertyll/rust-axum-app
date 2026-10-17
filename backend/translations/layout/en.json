@@ -24,5 +24,9 @@
   "layout.nav.translations": "Translations",
   "layout.nav.users": "Users",
   "layout.sidebar.label": "Sections",
-  "layout.sign_out": "Sign out"
+  "layout.sign_out": "Sign out",
+  "layout.theme.dark": "Dark",
+  "layout.theme.label": "Theme",
+  "layout.theme.light": "Light",
+  "layout.theme.system": "System"
 }

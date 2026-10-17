@@ -259,6 +259,10 @@ impl RealmAdmin for FakeRealm {
     async fn remove_role(&self, account: &KeycloakId, name: &RoleName) -> Result<(), IdentityError> {
         self.record(format!("remove {account} {}", name.realm_role()))
     }
+
+    async fn set_language(&self, account: &KeycloakId, language: &str) -> Result<(), IdentityError> {
+        self.record(format!("language {account} {language}"))
+    }
 }
 
 #[derive(Clone)]

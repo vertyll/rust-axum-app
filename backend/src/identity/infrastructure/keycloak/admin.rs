@@ -12,6 +12,7 @@ use crate::identity::domain::{IdentityError, KeycloakId, RoleName};
 
 const TIMEOUT: Duration = Duration::from_secs(10);
 const EXPIRY_SKEW: Duration = Duration::from_secs(30);
+const LOCALE_ATTRIBUTE: &str = "locale";
 
 /// Keycloak's admin REST API, called as this application's service account,
 /// which the realm grants `manage-realm` and `manage-users` of
@@ -151,6 +152,36 @@ impl RealmAdmin for HttpRealmAdmin {
 
     async fn remove_role(&self, account: &KeycloakId, name: &RoleName) -> Result<(), IdentityError> {
         self.role_mapping(Method::DELETE, account, name).await
+    }
+
+    async fn set_language(&self, account: &KeycloakId, language: &str) -> Result<(), IdentityError> {
+        let path = format!("users/{account}");
+        let response = self
+            .request(Method::GET, &path)
+            .await?
+            .send()
+            .await
+            .map_err(unavailable)?;
+        if response.status() == StatusCode::NOT_FOUND {
+            return Err(IdentityError::UserNotFound);
+        }
+        let mut user: serde_json::Value = checked(response)?.json().await.map_err(unavailable)?;
+        if user["attributes"][LOCALE_ATTRIBUTE][0] == language {
+            return Ok(());
+        }
+        // Keycloak replaces the account with what is sent, so it goes back whole, with only its language changed.
+        if !user["attributes"].is_object() {
+            user["attributes"] = serde_json::json!({});
+        }
+        user["attributes"][LOCALE_ATTRIBUTE] = serde_json::json!([language]);
+        let response = self
+            .request(Method::PUT, &path)
+            .await?
+            .json(&user)
+            .send()
+            .await
+            .map_err(unavailable)?;
+        checked(response).map(drop)
     }
 }
 

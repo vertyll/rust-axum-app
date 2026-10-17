@@ -35,8 +35,10 @@ sequenceDiagram
 
 1. The browser opens `GET /api/auth/authorize`. The application stores a fresh `state` and PKCE verifier in the session
    and redirects to Keycloak with the challenge. Optional parameters pass through: `register=true` opens the sign-up
-   page, and `kc_action` starts one of `CONFIGURE_TOTP`, `UPDATE_PASSWORD` or `delete_credential`. The
-   `Accept-Language` header picks Keycloak's language when it is `pl` or `en`.
+   page, and `kc_action` starts one of `CONFIGURE_TOTP`, `UPDATE_PASSWORD` or `delete_credential`. The `Accept-Language`
+   header picks Keycloak's language when it is `pl` or `en`, as `ui_locales`. Keycloak shows a signed-in person the
+   language stored on their account instead, so before a `kc_action` the application stores that language there, through
+   the admin API.
 2. Keycloak returns to `GET /api/auth/callback`. The application checks that the `state` is the one it issued to this
    browser, exchanges the code with the confidential client `rust-axum-app` and its secret, verifies the access token
    and mirrors the account into PostgreSQL.
@@ -72,6 +74,46 @@ cookie's removal on to the browser and returns home.
 
 An unsafe request from another site gets no token: [Cross-site
 requests](../backend/src/identity/docs/mechanisms/cross-site-requests.md).
+
+## The sign-in pages
+
+Keycloak draws the sign-in, sign-up, password reset, terms and second-factor pages, and the mails it sends, with the
+theme in [`keycloak/themes/rust-axum-app`](../keycloak/themes/rust-axum-app), so they look like the front-end:
+
+| Part                      | Holds                                                                                        |
+|---------------------------|----------------------------------------------------------------------------------------------|
+| `login/theme.properties`  | extends Keycloak's `keycloak.v2`, whose templates draw every page                            |
+| `login/template.ftl`      | the page frame: the front-end's top bar, with the theme and language menus, and its footer   |
+| `login/resources`         | `css/app.css`, the front-end's colors, font and card on PatternFly; `js/theme.js`, the theme |
+| `login/messages`          | the texts of the bar and the footer, in Polish and English, as the front-end words them      |
+| `email/html/template.ftl` | the frame of every mail; the texts stay Keycloak's own, in Polish and English                |
+
+The theme menu offers System, Light and Dark, as the front-end's does. The sign-in starts in the theme the reader chose
+in the front-end: the front-end's proxy adds it to `/api/auth/authorize`, the back-end passes it to Keycloak as
+`ui_theme`, and `theme.js` keeps it in the browser for Keycloak's address, where a choice in its own menu replaces it.
+A realm that turns dark mode off gets the light theme and no menu.
+
+`template.ftl` is a copy of `keycloak.v2`'s own, changed only where it says `rust-axum-app`. Keycloak builds its pages
+from that template, so after an upgrade of Keycloak the copy is compared with the new release's and brought up to date.
+The Keycloak theme workflow does the comparison: `keycloak/check-template.sh` fails when the template in the Keycloak
+image of `docker-compose.local.yml` is not the one the copy was made from, recorded as `parentTemplateSha256` in
+`theme.properties`, which changes with the copy. The colors are a copy of the front-end's tokens, and the front-end's
+`keycloak_theme` test fails when the two differ. A mail's colors are those tokens as hex, since mail clients read
+neither `oklch()` nor `light-dark()`. The links of the bar and the footer lead to the client's base URL, `baseUrl` in
+the realm.
+
+The realm names the theme in `loginTheme` and `emailTheme`. Locally, compose mounts the folder into Keycloak. A
+Keycloak that serves several applications, each in its own realm, takes it as a JAR in `/opt/keycloak/providers`:
+
+```bash
+keycloak/build-theme.sh   # writes keycloak/target/rust-axum-app-keycloak-theme.jar
+```
+
+`keycloak/Dockerfile` builds an image holding that JAR in `/themes`, which the Keycloak theme workflow publishes on a
+`keycloak-theme-v*` tag.
+
+The realm file of that Keycloak names `rust-axum-app` in `loginTheme` and `emailTheme`, and another theme replaces
+it by its own JAR and those two fields.
 
 ## Code
 

@@ -44,7 +44,7 @@ pub async fn dropdown(
             ontoggle=(ON_TOGGLE)
         >
             <summary
-                class="flex cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-foreground/5"
+                class="flex cursor-pointer list-none items-center gap-1 rounded-md px-2 py-2 text-sm font-medium transition-colors hover:bg-foreground/5 md:gap-2 md:px-3"
                 aria-label=(label)
             >
                 (trigger)
