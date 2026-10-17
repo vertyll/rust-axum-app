@@ -13,7 +13,6 @@ use topcoat::router::request::headers;
 use topcoat::router::{Body, Method, StatusCode};
 
 use crate::backend::{BackendError, Problem};
-use crate::keycloak;
 
 #[derive(Debug, Clone)]
 pub struct FormFailure {
@@ -49,7 +48,8 @@ pub fn refused(cx: &Cx, page: impl AsRef<str>, error: BackendError) -> topcoat::
 
 /// The answer to a form the back-end did not accept. A refusal is shown on
 /// the page at `page`, with the `values` the reader typed; an ended session
-/// sends the reader to sign in again, and anything else is a server error.
+/// sends the reader back to that page, which, like every page that needs a
+/// session, then asks them to sign in; anything else is a server error.
 pub fn refused_with<K: Into<String>>(
     cx: &Cx,
     page: impl AsRef<str>,
@@ -57,9 +57,7 @@ pub fn refused_with<K: Into<String>>(
     values: impl IntoIterator<Item = (K, String)>,
 ) -> topcoat::Error {
     match error {
-        BackendError::Refused(problem) if problem.status == StatusCode::UNAUTHORIZED => {
-            see_other(keycloak::sign_in(cx)).into()
-        }
+        BackendError::Refused(problem) if problem.status == StatusCode::UNAUTHORIZED => see_other(page).into(),
         BackendError::Refused(problem) => {
             let mut get_headers = headers(cx).clone();
             get_headers.remove(CONTENT_TYPE);
