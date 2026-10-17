@@ -11,6 +11,7 @@ mod config;
 mod forms;
 mod i18n;
 mod keycloak;
+mod keycloak_cookies;
 mod theme;
 
 use topcoat::asset::{AssetBundle, RouterBuilderAssetExt};
@@ -41,6 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let router = app::router()
         .route(backend::proxy::api)
         .route(backend::proxy::uploads)
+        .route(keycloak::authorize)
         .cookies()
         .assets(AssetBundle::load()?)
         .runtime()

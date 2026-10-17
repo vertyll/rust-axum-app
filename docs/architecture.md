@@ -14,7 +14,7 @@ flowchart LR
 
     browser -- "RUST_AXUM_APP_SESSION cookie" --> front
     front -- "pages call the API; /api, /uploads passed on" --> back
-    back -- "sign-in, refresh, token keys, realm roles" --> kc
+    back -- "sign-in, refresh, token keys, realm roles, account API" --> kc
     back --> redis
     back --> pg
     back -- "signs links, checks objects" --> files
@@ -33,13 +33,14 @@ of its own.
 
 ## A modular monolith with hexagonal modules
 
-The back-end is one binary made of three modules, each split into the same three layers:
+The back-end is one binary made of four modules, each split into the same three layers:
 
-| Module                                                  | Holds                                                                         |
-|---------------------------------------------------------|-------------------------------------------------------------------------------|
-| [`identity`](../backend/src/identity/README.md)         | sign-in, sessions, token verification and the accounts mirrored from Keycloak |
-| [`files`](../backend/src/files/README.md)               | uploads in a bucket or on the local disk, with their metadata in PostgreSQL   |
-| [`translations`](../backend/src/translations/README.md) | the message catalog, its defaults and the admin overrides                     |
+| Module                                                          | Holds                                                                         |
+|-----------------------------------------------------------------|-------------------------------------------------------------------------------|
+| [`identity`](../backend/src/identity/README.md)                 | sign-in, sessions, token verification and the accounts mirrored from Keycloak |
+| [`keycloak_account`](../backend/src/keycloak_account/README.md) | the second factor and the language kept on the person's Keycloak account      |
+| [`files`](../backend/src/files/README.md)                       | uploads in a bucket or on the local disk, with their metadata in PostgreSQL   |
+| [`translations`](../backend/src/translations/README.md)         | the message catalog, its defaults and the admin overrides                     |
 
 | Layer            | Holds                                                                        |
 |------------------|------------------------------------------------------------------------------|
@@ -52,17 +53,18 @@ module's `application/testing` holds in-memory fakes of its ports, so a use case
 Keycloak.
 
 Between modules, one uses another only through the public API its `mod.rs` re-exports, and only in one direction:
-`files` uses the auth guards of `identity`, and `identity` never imports `files`. What every module shares sits in two
-modules of its own: `shared_kernel` holds plain value types a domain may use, such as a page request or the messages a
-module ships, with no I/O; `shared_http` holds what the HTTP adapters share, the RFC 9457 problem documents and the
-paging parameters and responses.
+`files`, `translations` and `keycloak_account` use the auth guards of `identity`, `keycloak_account` uses the languages
+of `translations`, and `identity` imports none of them. What every module shares sits in two modules of its own:
+`shared_kernel` holds plain value types a domain may use, such as a page request or the messages a module ships, with no
+I/O; `shared_http` holds what the HTTP adapters share, the RFC 9457 problem documents and the paging parameters and
+responses.
 
 ## The composition root
 
 `backend/src/bootstrap` is the only place that names a concrete adapter. A service is generic over its ports, and
-`bootstrap` fixes them with type aliases (`AppIdentityService`, `AppFilesService`, `AppTranslationsService`), so wiring
-is resolved at compile time with no container and no trait objects. Adding a port to `identity` is one associated type
-in `IdentityPorts`.
+`bootstrap` fixes them with type aliases (`AppIdentityService`, `AppKeycloakAccountService`, `AppFilesService`,
+`AppTranslationsService`), so wiring is resolved at compile time with no container and no trait objects. Adding a port
+to `identity` is one associated type in `IdentityPorts`.
 
 `bootstrap` also decides which routers sit behind the auth guard; a module only provides its routes.
 

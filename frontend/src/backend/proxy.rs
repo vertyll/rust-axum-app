@@ -7,19 +7,16 @@
 //! so the back-end's own cross-site check still applies; only the hop-by-hop
 //! headers are dropped. Redirects come back to the browser unfollowed.
 
-use reqwest::header::{ACCEPT_LANGUAGE, CONTENT_DISPOSITION, CONTENT_SECURITY_POLICY, HOST, X_CONTENT_TYPE_OPTIONS};
-use serde::Serialize;
+use reqwest::header::{CONTENT_DISPOSITION, CONTENT_SECURITY_POLICY, HOST, X_CONTENT_TYPE_OPTIONS};
 use topcoat::Result;
 use topcoat::context::Cx;
 use topcoat::router::error::not_found;
 use topcoat::router::header::{HeaderMap, HeaderName, HeaderValue};
 use topcoat::router::request::{headers, method, uri};
 use topcoat::router::response::Response;
-use topcoat::router::{Body, StatusCode, href, path_param, route};
+use topcoat::router::{Body, StatusCode, path_param, route};
 
 use super::backend;
-use crate::i18n::lang;
-use crate::theme::{Theme, theme};
 
 path_param!(pub *rest);
 
@@ -60,32 +57,24 @@ pub async fn uploads(cx: &Cx, body: Body) -> Result<Response> {
     Ok(response)
 }
 
-pub fn sign_in(cx: &Cx) -> String {
-    href!(api, Rest(["auth", "authorize"])).resolve(cx)
-}
-
-pub fn register(cx: &Cx) -> String {
-    #[derive(Serialize)]
-    struct Register {
-        register: bool,
-    }
-    href!(api, Rest(["auth", "authorize"]))
-        .query(Register { register: true })
-        .resolve(cx)
-}
-
 async fn forward(cx: &Cx, body: Body) -> Result<Response> {
+    forward_changed(cx, body, |_, _| {}).await
+}
+
+/// Passes the request on as [`forward`] does, after `change` has adjusted
+/// its path and query and the headers that go on.
+pub async fn forward_changed(
+    cx: &Cx,
+    body: Body,
+    change: impl FnOnce(&mut String, &mut HeaderMap),
+) -> Result<Response> {
     // The URL parser would resolve `..`, reaching paths outside the prefix.
     if has_dot_segment(uri(cx).path()) {
         return Err(not_found().into());
     }
     let mut path_and_query = uri(cx).path_and_query().map_or("/", |path| path.as_str()).to_owned();
     let mut request_headers = passed_on(headers(cx));
-    // Keycloak shows its pages in the language and the theme the reader chose here.
-    if uri(cx).path() == "/api/auth/authorize" {
-        request_headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static(lang(cx).code()));
-        path_and_query = with_theme(&path_and_query, theme(cx));
-    }
+    change(&mut path_and_query, &mut request_headers);
 
     let backend = backend(cx);
     let sent = backend
@@ -115,17 +104,6 @@ async fn forward(cx: &Cx, body: Body) -> Result<Response> {
     let response_headers = passed_on(response.headers());
     *response.headers_mut() = response_headers;
     Ok(response.map(Body::new))
-}
-
-/// The path and query with `theme` set to the reader's, in place of any the request carried.
-fn with_theme(path_and_query: &str, theme: Theme) -> String {
-    let (path, query) = path_and_query.split_once('?').unwrap_or((path_and_query, ""));
-    let mut pairs = form_urlencoded::Serializer::new(String::new());
-    for (name, value) in form_urlencoded::parse(query.as_bytes()).filter(|(name, _)| name != "theme") {
-        pairs.append_pair(&name, &value);
-    }
-    pairs.append_pair("theme", theme.code());
-    format!("{path}?{}", pairs.finish())
 }
 
 fn has_dot_segment(path: &str) -> bool {
@@ -159,21 +137,6 @@ fn passed_on(headers: &HeaderMap) -> HeaderMap {
 
 #[cfg(test)]
 mod tests {
-    use super::with_theme;
-    use crate::theme::Theme;
-
-    #[test]
-    fn the_theme_of_the_reader_replaces_any_the_request_carried() {
-        assert_eq!(
-            with_theme("/api/auth/authorize", Theme::Dark),
-            "/api/auth/authorize?theme=dark"
-        );
-        assert_eq!(
-            with_theme("/api/auth/authorize?register=true&theme=light", Theme::System),
-            "/api/auth/authorize?register=true&theme=system"
-        );
-    }
-
     use topcoat::router::header::{HeaderMap, HeaderValue};
 
     use super::{has_dot_segment, passed_on};

@@ -1,5 +1,7 @@
 //! The choices the reader shares with Keycloak's pages, in cookies both read
-//! and write.
+//! and write. The theme and the language read them here; the `keycloak`
+//! module, which reads the theme and the language, sits above them, so the
+//! two never depend on each other.
 
 use topcoat::context::{Cx, app_context};
 use topcoat::cookie::{Cookie, Cookies, SameSite, cookies};
@@ -68,7 +70,18 @@ fn shared_cookie_domain(host: &str) -> Option<&str> {
 
 #[cfg(test)]
 mod tests {
-    use super::shared_cookie_domain;
+    use super::{Preference, shared_cookie_domain};
+
+    /// Keycloak's theme names the cookies after the realm, so a renamed realm
+    /// must rename them here too.
+    #[test]
+    fn the_cookies_are_named_after_the_realm() {
+        let export: serde_json::Value =
+            serde_json::from_str(include_str!("../../keycloak/realm-export.json")).expect("the realm export is JSON");
+        let realm = export["realm"].as_str().expect("the realm export names the realm");
+        assert_eq!(Preference::Theme.cookie(), format!("ui_theme_{realm}"));
+        assert_eq!(Preference::Language.cookie(), format!("ui_locale_{realm}"));
+    }
 
     #[test]
     fn a_shared_cookie_lives_under_the_parent_domain() {

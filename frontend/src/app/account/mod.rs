@@ -88,7 +88,7 @@ pub(crate) async fn account(cx: &Cx) -> Result<impl View> {
 #[component]
 async fn security_card(cx: &Cx) -> Result<impl View> {
     let texts = texts(cx).await?;
-    let second_factor = keycloak::second_factor(cx)
+    let second_factor: keycloak::SecondFactor = keycloak::second_factor(cx)
         .await
         .map_err(BackendError::into_page_error)?;
     let totp_action = second_factor.toggle();

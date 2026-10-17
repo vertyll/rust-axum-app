@@ -20,7 +20,7 @@ use topcoat::router::request::headers;
 
 use crate::backend::Problem;
 use crate::config::AppConfig;
-use crate::keycloak::{self, Preference};
+use crate::keycloak_cookies::{self, Preference};
 
 pub const LANG_COOKIE: &str = "lang";
 
@@ -76,7 +76,7 @@ impl fmt::Display for Lang {
 /// pages, else the first their browser asks for that the catalog has, else
 /// Polish.
 pub fn lang(cx: &Cx) -> Lang {
-    keycloak::chosen(cx, Preference::Language)
+    keycloak_cookies::chosen(cx, Preference::Language)
         .and_then(|code| code.parse().ok())
         .or_else(|| {
             cookies(cx)
@@ -102,7 +102,7 @@ pub fn remember(cx: &Cx, lang: Lang) {
         .permanent()
         .build();
     cookies(cx).add(own);
-    keycloak::share(cx, Preference::Language, lang.code());
+    keycloak_cookies::share(cx, Preference::Language, lang.code());
 }
 
 #[derive(Debug)]

@@ -23,12 +23,4 @@ pub trait RealmAdmin: Clone + Send + Sync + 'static {
         account: &KeycloakId,
         name: &RoleName,
     ) -> impl Future<Output = Result<(), IdentityError>> + Send;
-
-    /// Stores the language Keycloak shows its pages to the account in, which
-    /// for a signed-in person comes before the language a sign-in asks for.
-    fn set_language(
-        &self,
-        account: &KeycloakId,
-        language: &str,
-    ) -> impl Future<Output = Result<(), IdentityError>> + Send;
 }

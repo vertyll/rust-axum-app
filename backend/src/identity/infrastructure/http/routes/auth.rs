@@ -91,14 +91,6 @@ async fn authorize<P: IdentityPorts>(
         params.push(("ui_locales", language));
     }
     if let Some(action) = query.kc_action.as_deref().filter(|action| is_allowed_action(action)) {
-        if let (Some(language), Some(signed_in)) =
-            (language, session.get::<AuthSession>(SESSION_KEY).await.map_err(store)?)
-        {
-            state
-                .identity
-                .keep_account_language(&signed_in.identity.keycloak_id, language)
-                .await;
-        }
         params.push(("kc_action", action));
     }
     if query.register {

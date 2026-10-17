@@ -8,18 +8,19 @@ An Axum API over PostgreSQL and Redis, built as a modular monolith with hexagona
 
 ## Layout
 
-| Path                  | Holds                                                                                  |
-|-----------------------|----------------------------------------------------------------------------------------|
-| `src/identity`        | sign-in, sessions, token verification, roles and the mirrored accounts                 |
-| `src/files`           | uploads in a bucket or on the local disk, through signed links; metadata in PostgreSQL |
-| `src/translations`    | the message catalog, its defaults and the admin overrides                              |
-| `src/shared_kernel`   | the value types every module's domain may use, such as a page request                  |
-| `src/shared_http`     | RFC 9457 problem documents, paging parameters and responses                            |
-| `src/bootstrap`       | the composition root: configuration, adapters and the router                           |
-| `src/bin/cli.rs`      | the `cli` binary, which drives the migrations                                          |
-| `src/*/messages`      | the messages each module answers with, in Polish and English                           |
-| `translations/<area>` | the front-end's texts, one folder per area of its pages, such as `layout` or `files`   |
-| `toasty`              | the migrations and the schema snapshots                                                |
+| Path                   | Holds                                                                                  |
+|------------------------|----------------------------------------------------------------------------------------|
+| `src/identity`         | sign-in, sessions, token verification, roles and the mirrored accounts                 |
+| `src/keycloak_account` | the second factor and the language kept on the person's Keycloak account               |
+| `src/files`            | uploads in a bucket or on the local disk, through signed links; metadata in PostgreSQL |
+| `src/translations`     | the message catalog, its defaults and the admin overrides                              |
+| `src/shared_kernel`    | the value types every module's domain may use, such as a page request                  |
+| `src/shared_http`      | RFC 9457 problem documents, paging parameters and responses                            |
+| `src/bootstrap`        | the composition root: configuration, adapters and the router                           |
+| `src/bin/cli.rs`       | the `cli` binary, which drives the migrations                                          |
+| `src/*/messages`       | the messages each module answers with, in Polish and English                           |
+| `translations/<area>`  | the front-end's texts, one folder per area of its pages, such as `layout` or `files`   |
+| `toasty`               | the migrations and the schema snapshots                                                |
 
 ## Modules
 
@@ -27,6 +28,8 @@ Each module is a hexagon of its own, with a README on its ports and adapters:
 
 - [identity](src/identity/README.md) – Sign-in through Keycloak, sessions, token verification, roles and the mirrored
   accounts.
+- [keycloak_account](src/keycloak_account/README.md) – The second factor and the language kept on the person's
+  Keycloak account.
 - [files](src/files/README.md) – Uploaded files: the bytes on a storage, the metadata in PostgreSQL.
 - [translations](src/translations/README.md) – The message catalog every error key and label resolves against.
 

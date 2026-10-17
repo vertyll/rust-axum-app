@@ -10,9 +10,10 @@ use topcoat::context::{Cx, try_request_context};
 use topcoat::router::error::{internal_server_error, rewrite, see_other};
 use topcoat::router::header::{CONTENT_LENGTH, CONTENT_TYPE};
 use topcoat::router::request::headers;
-use topcoat::router::{Body, Method, StatusCode, href};
+use topcoat::router::{Body, Method, StatusCode};
 
 use crate::backend::{BackendError, Problem};
+use crate::keycloak;
 
 #[derive(Debug, Clone)]
 pub struct FormFailure {
@@ -48,8 +49,7 @@ pub fn refused(cx: &Cx, page: impl AsRef<str>, error: BackendError) -> topcoat::
 
 /// The answer to a form the back-end did not accept. A refusal is shown on
 /// the page at `page`, with the `values` the reader typed; an ended session
-/// sends the reader home to sign in again, and anything else is a server
-/// error.
+/// sends the reader to sign in again, and anything else is a server error.
 pub fn refused_with<K: Into<String>>(
     cx: &Cx,
     page: impl AsRef<str>,
@@ -58,7 +58,7 @@ pub fn refused_with<K: Into<String>>(
 ) -> topcoat::Error {
     match error {
         BackendError::Refused(problem) if problem.status == StatusCode::UNAUTHORIZED => {
-            see_other(href!(crate::app::home).resolve(cx)).into()
+            see_other(keycloak::sign_in(cx)).into()
         }
         BackendError::Refused(problem) => {
             let mut get_headers = headers(cx).clone();

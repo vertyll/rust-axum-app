@@ -12,13 +12,13 @@ use topcoat::view::{View, attributes, class, component, view};
 
 use super::{account, admin, files, home, language, sign_out, theme};
 use crate::auth::{CurrentUser, Permission, fetch_current_user};
-use crate::backend::proxy;
 use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
 use crate::components::dropdown::{
     DROPDOWN_ITEM, DROPDOWN_ITEM_ACTIVE, DROPDOWN_ITEM_DESTRUCTIVE, DropdownAlign, dropdown,
 };
 use crate::components::icon::{Icon, IconSize, icon};
 use crate::i18n::{Lang, texts};
+use crate::keycloak;
 use crate::theme::Theme;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -246,7 +246,7 @@ pub async fn navbar(cx: &Cx) -> Result<impl View> {
                     language_menu()
                     if current.is_none() {
                         <a
-                            href=(proxy::sign_in(cx))
+                            href=(keycloak::sign_in(cx))
                             class=(button_variants(
                                 ButtonVariant::Primary,
                                 ButtonSize::Sm,

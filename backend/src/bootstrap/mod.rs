@@ -33,6 +33,9 @@ use crate::identity::infrastructure::keycloak::{
 };
 use crate::identity::infrastructure::persistence::{ToastyRoleRepository, ToastyUserRepository};
 use crate::identity::infrastructure::session_store::RedisSessionStore;
+use crate::keycloak_account::KeycloakAccountService;
+use crate::keycloak_account::infrastructure::http as keycloak_account_http;
+use crate::keycloak_account::infrastructure::keycloak::HttpAccountApi;
 use crate::shared_http::problem;
 use crate::shared_kernel::messages::Messages;
 use crate::translations::application::TranslationsService;
@@ -71,9 +74,10 @@ macro_rules! front_end {
     };
 }
 
-pub const MESSAGES: [Messages; 11] = [
+pub const MESSAGES: [Messages; 12] = [
     crate::shared_http::MESSAGES,
     crate::identity::MESSAGES,
+    crate::keycloak_account::MESSAGES,
     crate::files::MESSAGES,
     crate::translations::MESSAGES,
     front_end!("layout"),
@@ -87,12 +91,15 @@ pub const MESSAGES: [Messages; 11] = [
 
 pub type AppIdentityService = IdentityService<ProductionPorts>;
 
+pub type AppKeycloakAccountService = KeycloakAccountService<HttpAccountApi>;
+
 pub type AppFilesService = FilesService<ToastyFileRepository, Storages>;
 
 pub type AppTranslationsService = TranslationsService<ToastyTranslationRepository>;
 
 pub struct Services {
     pub identity: Arc<AppIdentityService>,
+    pub keycloak_account: Arc<AppKeycloakAccountService>,
     pub files: Arc<AppFilesService>,
     /// The local disk, which also serves its signed links under `/uploads`.
     pub local_files: LocalFileStorage,
@@ -112,6 +119,8 @@ pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> 
         HttpRealmAdmin::new(keycloak.clone())?,
         JwksTokenVerifier::new(&keycloak)?,
     );
+
+    let keycloak_account = KeycloakAccountService::new(HttpAccountApi::new(&keycloak.realm_url)?);
 
     let local_files = LocalFileStorage::new(
         &config.files.upload_dir,
@@ -140,6 +149,7 @@ pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> 
 
     Ok(Services {
         identity: Arc::new(identity),
+        keycloak_account: Arc::new(keycloak_account),
         files: Arc::new(files),
         local_files,
         translations: Arc::new(translations),
@@ -177,7 +187,10 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
             config.sessions.inactivity_timeout_seconds,
         )));
 
-    let users_routes = identity_http::users_router(services.identity.clone()).layer(auth_layer.clone());
+    // The account on Keycloak shares `/api/users/me` with the account mirrored here.
+    let users_routes = identity_http::users_router(services.identity.clone())
+        .merge(keycloak_account_http::account_router(services.keycloak_account.clone()))
+        .layer(auth_layer.clone());
 
     let files_routes = files_http::files_router(services.files.clone()).layer(auth_layer.clone());
 

@@ -24,10 +24,10 @@ use topcoat::view::{View, attributes, class, component, error_boundary, view};
 
 use self::navigation::{navbar, section_cards, sidebar};
 use crate::auth::fetch_current_user;
-use crate::backend::proxy;
 use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
 use crate::components::card::{card, card_content, card_description, card_header, card_title};
 use crate::i18n::texts;
+use crate::keycloak;
 
 not_found!();
 
@@ -166,7 +166,7 @@ async fn refusal_page(cx: &Cx, refusal: Refusal) -> Result<impl View> {
             card_content(
                 if refusal == Refusal::SignedOut {
                     <a
-                        href=(proxy::sign_in(cx))
+                        href=(keycloak::sign_in(cx))
                         class=(button_variants(ButtonVariant::Primary, ButtonSize::Md))
                     >
                         (texts.t("auth.sign_in"))
@@ -232,7 +232,7 @@ pub(crate) async fn home(cx: &Cx) -> Result<impl View> {
                     <p class="mb-8 text-muted-foreground">(texts.t("home.guest"))</p>
                     <div class="flex flex-col justify-center gap-3 sm:flex-row">
                         <a
-                            href=(proxy::sign_in(cx))
+                            href=(keycloak::sign_in(cx))
                             class=(button_variants(
                                 ButtonVariant::Primary,
                                 ButtonSize::Lg,
@@ -241,7 +241,7 @@ pub(crate) async fn home(cx: &Cx) -> Result<impl View> {
                             (texts.t("auth.sign_in"))
                         </a>
                         <a
-                            href=(proxy::register(cx))
+                            href=(keycloak::register(cx))
                             class=(button_variants(
                                 ButtonVariant::Outline,
                                 ButtonSize::Lg,

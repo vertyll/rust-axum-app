@@ -2,10 +2,10 @@
 //! refresh and the mirror of Keycloak accounts the rest of the app joins to.
 //! Roles and what they grant are managed in [`roles`](super::roles).
 
-use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, SecondFactor, TokenVerifier};
+use crate::identity::application::ports::{IdentityPorts, KeycloakClient, TokenVerifier};
 use crate::identity::application::session::{AuthSession, Caller, TokenPair};
 use crate::identity::domain::{
-    Grants, IdentityError, KeycloakId, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
+    Grants, IdentityError, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
 };
 use crate::shared_kernel::pagination::{PageRequest, PageResult};
 
@@ -66,27 +66,12 @@ impl<P: IdentityPorts> IdentityService<P> {
         Ok(Caller::new(&user, Grants::of(&roles)))
     }
 
-    /// The caller's second factor, read from Keycloak with their own access token.
-    pub async fn second_factor(&self, access_token: &str) -> Result<Option<SecondFactor>, IdentityError> {
-        self.keycloak.second_factor(access_token).await
-    }
-
     pub async fn get_user(&self, id: UserId) -> Result<User, IdentityError> {
         self.users.find_by_id(id).await?.ok_or(IdentityError::UserNotFound)
     }
 
     pub async fn list_users(&self, request: PageRequest) -> Result<PageResult<User>, IdentityError> {
         self.users.page(request).await
-    }
-
-    /// Makes Keycloak show the signed-in person's account pages, such as setting
-    /// up a second factor, in the language they use here. Keycloak prefers the
-    /// language stored on the account to the one a sign-in asks for, so the
-    /// account's is set first; when that fails, the pages open in the stored one.
-    pub async fn keep_account_language(&self, account: &KeycloakId, language: &str) {
-        if let Err(err) = self.realm.set_language(account, language).await {
-            tracing::warn!(keycloak_id = %account, "could not store the account's language in Keycloak: {err}");
-        }
     }
 
     /// Mirrors the account and the roles of the token this application
@@ -134,48 +119,6 @@ mod tests {
 
     fn role(name: &str) -> RoleName {
         RoleName::parse(name).unwrap()
-    }
-
-    #[tokio::test]
-    async fn the_second_factor_is_the_one_keycloak_holds() {
-        let harness = Harness::new().await;
-        assert_eq!(harness.service.second_factor("access").await.unwrap(), None);
-
-        harness.keycloak.set_second_factor("otp-1");
-
-        let factor = harness.service.second_factor("access").await.unwrap().unwrap();
-        assert_eq!(factor.credential_id, "otp-1");
-    }
-
-    #[tokio::test]
-    async fn the_account_pages_follow_the_language_used_here() {
-        let harness = Harness::new().await;
-        let session = harness.service.sign_in("code", "verifier").await.unwrap();
-
-        harness
-            .service
-            .keep_account_language(&session.identity.keycloak_id, "pl")
-            .await;
-
-        assert_eq!(
-            harness.realm.calls().last(),
-            Some(&format!("language {} pl", session.identity.keycloak_id))
-        );
-    }
-
-    #[tokio::test]
-    async fn a_language_keycloak_does_not_store_leaves_the_account_pages_as_they_are() {
-        let harness = Harness::new().await;
-        let session = harness.service.sign_in("code", "verifier").await.unwrap();
-        let before = harness.realm.calls();
-        harness.realm.fail();
-
-        harness
-            .service
-            .keep_account_language(&session.identity.keycloak_id, "pl")
-            .await;
-
-        assert_eq!(harness.realm.calls(), before);
     }
 
     #[tokio::test]

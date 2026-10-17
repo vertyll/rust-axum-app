@@ -4,6 +4,6 @@ mod realm_admin;
 mod token_verifier;
 
 pub use identity_ports::IdentityPorts;
-pub use keycloak_client::{KeycloakClient, SecondFactor};
+pub use keycloak_client::KeycloakClient;
 pub use realm_admin::RealmAdmin;
 pub use token_verifier::TokenVerifier;

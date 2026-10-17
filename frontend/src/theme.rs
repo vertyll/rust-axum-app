@@ -7,7 +7,7 @@ use topcoat::context::{Cx, app_context};
 use topcoat::cookie::{Cookie, Cookies, SameSite, cookies};
 
 use crate::config::AppConfig;
-use crate::keycloak::{self, Preference};
+use crate::keycloak_cookies::{self, Preference};
 
 pub const THEME_COOKIE: &str = "theme";
 
@@ -56,7 +56,7 @@ impl fmt::Display for Theme {
 
 /// The reader's theme: the one they last chose, here or on Keycloak's pages, else the system's.
 pub fn theme(cx: &Cx) -> Theme {
-    keycloak::chosen(cx, Preference::Theme)
+    keycloak_cookies::chosen(cx, Preference::Theme)
         .and_then(|code| code.parse().ok())
         .or_else(|| {
             cookies(cx)
@@ -76,7 +76,7 @@ pub fn remember(cx: &Cx, theme: Theme) {
         .permanent()
         .build();
     cookies(cx).add(own);
-    keycloak::share(cx, Preference::Theme, theme.code());
+    keycloak_cookies::share(cx, Preference::Theme, theme.code());
 }
 
 #[cfg(test)]

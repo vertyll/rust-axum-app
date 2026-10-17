@@ -4,10 +4,8 @@
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use topcoat::context::Cx;
-use topcoat::router::href;
 
 use crate::auth::fetch_current_user;
-use crate::backend::proxy::{Rest, api};
 use crate::backend::{self, BackendError};
 
 /// Keycloak shows a signed-in person their account's language, so a signed-in
@@ -35,23 +33,6 @@ pub enum AccountAction {
     ConfigureTotp,
     /// Removes the credential with this id, after Keycloak asks the reader to confirm.
     DeleteCredential(String),
-}
-
-/// Where the browser goes for an account action: the sign-in, asking Keycloak
-/// for that one page.
-pub fn account_action(cx: &Cx, action: &AccountAction) -> String {
-    #[derive(Serialize)]
-    struct Action {
-        kc_action: String,
-    }
-    let kc_action = match action {
-        AccountAction::UpdatePassword => "UPDATE_PASSWORD".to_owned(),
-        AccountAction::ConfigureTotp => "CONFIGURE_TOTP".to_owned(),
-        AccountAction::DeleteCredential(id) => format!("delete_credential:{id}"),
-    };
-    href!(api, Rest(["auth", "authorize"]))
-        .query(Action { kc_action })
-        .resolve(cx)
 }
 
 /// The reader's second factor, as the back-end reads it from Keycloak.

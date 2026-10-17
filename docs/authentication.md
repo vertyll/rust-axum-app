@@ -38,8 +38,8 @@ sequenceDiagram
    page, and `kc_action` starts one of `CONFIGURE_TOTP`, `UPDATE_PASSWORD` or `delete_credential:<id>` with a UUID
    ([Account actions](#account-actions)); any other value is dropped. The `Accept-Language`
    header picks Keycloak's language when it is `pl` or `en`, as `ui_locales`. Keycloak shows a signed-in person the
-   language stored on their account instead, so before a `kc_action` the application stores that language there, through
-   the admin API.
+   language stored on their account instead, so before a `kc_action` the front-end stores that language there, through
+   `PUT /api/users/me/language`.
 2. Keycloak returns to `GET /api/auth/callback`. The application checks that the `state` is the one it issued to this
    browser, exchanges the code with the confidential client `rust-axum-app` and its secret, verifies the access token
    and mirrors the account into PostgreSQL.
@@ -53,7 +53,8 @@ The browser holds only the `RUST_AXUM_APP_SESSION` cookie: `HttpOnly`, `SameSite
 ## Account actions
 
 The account page changes the password and turns the second factor on and off on Keycloak's own pages, so no password
-and no TOTP secret passes through the application. `GET /api/users/me/second-factor` reads the caller's OTP credential
+and no TOTP secret passes through the application. `GET /api/users/me/second-factor`, of the `keycloak_account`
+module, reads the caller's OTP credential
 from Keycloak's account API (`/realms/<realm>/account/credentials`) with the caller's own access token, which carries
 the `account` audience and the `manage-account` role every account gets, so the application needs no right to read
 anyone else's credentials. The page then offers `CONFIGURE_TOTP` when there is none and `delete_credential:<id>` when
@@ -140,7 +141,7 @@ it by its own JAR and those two fields.
 ## Code
 
 The paths are under `backend/src/`; the front-end's side is in its [README](../frontend/README.md), and what it shares
-with Keycloak's pages in `frontend/src/keycloak`.
+with Keycloak's pages in `frontend/src/keycloak` and `frontend/src/keycloak_cookies.rs`.
 
 | Path                                                 | Role                                               |
 |------------------------------------------------------|----------------------------------------------------|
@@ -151,3 +152,4 @@ with Keycloak's pages in `frontend/src/keycloak`.
 | `identity/infrastructure/keycloak/verifier.rs`       | token verification against Keycloak's keys         |
 | `identity/infrastructure/session_store.rs`           | the Redis session store                            |
 | `identity/application/service.rs`                    | sign-in, refresh, sign-out and the account mirror  |
+| `keycloak_account/`                                  | the second factor and the language on the account  |

@@ -2,7 +2,6 @@ use jiff::Timestamp;
 use serde::Serialize;
 
 use crate::identity::application::AuthSession;
-use crate::identity::application::ports::SecondFactor;
 use crate::identity::domain::{Grants, RegisteredPermission, Role, RoleName, User};
 
 #[derive(Debug, Serialize)]
@@ -119,23 +118,6 @@ impl From<&Grants> for GrantsResponse {
         Self {
             unrestricted: grants.is_unrestricted(),
             permissions: grants.permissions().iter().cloned().collect(),
-        }
-    }
-}
-
-/// Whether the caller set up a second factor, and the credential Keycloak's
-/// `delete_credential` action removes.
-#[derive(Debug, Serialize)]
-pub struct SecondFactorResponse {
-    pub enabled: bool,
-    pub credential_id: Option<String>,
-}
-
-impl From<Option<SecondFactor>> for SecondFactorResponse {
-    fn from(second_factor: Option<SecondFactor>) -> Self {
-        Self {
-            enabled: second_factor.is_some(),
-            credential_id: second_factor.map(|factor| factor.credential_id),
         }
     }
 }

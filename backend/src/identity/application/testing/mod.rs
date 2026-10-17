@@ -10,7 +10,7 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::identity::application::IdentityService;
 use crate::identity::application::permissions::CATALOGUE;
-use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, SecondFactor, TokenVerifier};
+use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, TokenVerifier};
 use crate::identity::application::session::{TokenPair, VerifiedToken};
 use crate::identity::domain::{
     Email, IdentityError, KeycloakId, KeycloakIdentity, NewUser, RegisteredPermission, Role, RoleName, RoleRepository,
@@ -100,18 +100,11 @@ impl UserRepository for InMemoryUsers {
 pub(crate) struct FakeKeycloak {
     issued: Arc<AtomicI64>,
     revoked: Arc<Mutex<Vec<String>>>,
-    second_factor: Arc<Mutex<Option<SecondFactor>>>,
 }
 
 impl FakeKeycloak {
     pub(crate) fn revoked(&self) -> Vec<String> {
         self.revoked.lock().unwrap().clone()
-    }
-
-    pub(crate) fn set_second_factor(&self, credential_id: &str) {
-        *self.second_factor.lock().unwrap() = Some(SecondFactor {
-            credential_id: credential_id.to_owned(),
-        });
     }
 
     fn issue(&self) -> TokenPair {
@@ -134,10 +127,6 @@ impl KeycloakClient for FakeKeycloak {
 
     async fn revoke(&self, refresh_token: &str) {
         self.revoked.lock().unwrap().push(refresh_token.to_string());
-    }
-
-    async fn second_factor(&self, _access_token: &str) -> Result<Option<SecondFactor>, IdentityError> {
-        Ok(self.second_factor.lock().unwrap().clone())
     }
 }
 
@@ -269,10 +258,6 @@ impl RealmAdmin for FakeRealm {
 
     async fn remove_role(&self, account: &KeycloakId, name: &RoleName) -> Result<(), IdentityError> {
         self.record(format!("remove {account} {}", name.realm_role()))
-    }
-
-    async fn set_language(&self, account: &KeycloakId, language: &str) -> Result<(), IdentityError> {
-        self.record(format!("language {account} {language}"))
     }
 }
 

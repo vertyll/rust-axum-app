@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use serde::Deserialize;
-use validator::{Validate, ValidationError};
+use validator::Validate;
 
 use crate::identity::application::{NewRole, RoleChanges};
 
@@ -48,29 +48,15 @@ impl From<RoleChangesRequest> for RoleChanges {
     }
 }
 
-/// The languages Keycloak's pages and this application both have.
+/// The languages Keycloak's pages and this application both have, which a
+/// sign-in asks Keycloak's pages for.
 pub(crate) const UI_LOCALES: [&str; 2] = ["pl", "en"];
-
-/// `PUT /users/me/language`: a language Keycloak's pages and this application both have.
-#[derive(Debug, Deserialize, Validate)]
-pub struct AccountLanguageRequest {
-    #[validate(custom(function = "supported_language", message = "validation.invalid"))]
-    pub language: String,
-}
-
-fn supported_language(language: &str) -> Result<(), ValidationError> {
-    if UI_LOCALES.contains(&language) {
-        Ok(())
-    } else {
-        Err(ValidationError::new("unsupported_language"))
-    }
-}
 
 #[cfg(test)]
 mod tests {
     use validator::Validate;
 
-    use super::{AccountLanguageRequest, NewRoleRequest};
+    use super::NewRoleRequest;
 
     #[test]
     fn a_role_takes_only_its_name_and_a_short_description() {
@@ -83,12 +69,19 @@ mod tests {
         assert!(request.validate().is_err());
     }
 
+    /// A sign-in asks Keycloak's pages for these languages, so the realm must have them.
     #[test]
-    fn an_account_takes_only_a_language_both_sides_have() {
-        let request: AccountLanguageRequest = serde_json::from_str(r#"{"language":"en"}"#).unwrap();
-        assert!(request.validate().is_ok());
-
-        let request: AccountLanguageRequest = serde_json::from_str(r#"{"language":"de"}"#).unwrap();
-        assert!(request.validate().is_err());
+    fn the_sign_in_asks_only_for_languages_the_realm_supports() {
+        let export: serde_json::Value = serde_json::from_str(include_str!("../../../../../keycloak/realm-export.json"))
+            .expect("the realm export is JSON");
+        let supported = export["supportedLocales"]
+            .as_array()
+            .expect("the realm names its locales");
+        for language in super::UI_LOCALES {
+            assert!(
+                supported.iter().any(|locale| locale == language),
+                "the realm does not support {language}"
+            );
+        }
     }
 }

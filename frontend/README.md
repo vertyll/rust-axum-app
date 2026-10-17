@@ -21,8 +21,9 @@ back-end; its URL is its module's path, so `app/files/file_id` serves `/files/{f
 | `src/app/legal`              | the terms of use and the privacy policy, written in the catalog                                         |
 | `src/auth`                   | who is signed in and what their roles grant; `api.rs` calls `/api/users/me` and `/api/auth/logout`      |
 | `src/i18n`                   | the reader's language and the catalog; `api.rs` calls `/api/translations/{language}`                    |
-| `src/theme.rs`               | the reader's color theme, from the `theme` cookie that `app/theme` sets                                 |
-| `src/keycloak`               | what the front-end shares with Keycloak's pages: theme, language, account actions                       |
+| `src/theme.rs`               | the reader's color theme, from the cookie shared with Keycloak's pages, else the `theme` cookie         |
+| `src/keycloak`               | Keycloak's pages: the sign-in in the reader's theme and language, account actions, the second factor    |
+| `src/keycloak_cookies.rs`    | the theme and language shared with Keycloak's pages, which the theme and the language read              |
 | `src/backend`                | what the features' calls share: the HTTP client, problem documents, and the proxy                       |
 | `src/forms.rs`               | how a form answers: `303 See Other` when accepted, the same page with the refusal when not              |
 | `src/components`             | the Topcoat UI components, installed with `topcoat ui add`, and the application's own                   |
@@ -52,8 +53,9 @@ kept in `components/icons.rs`.
 
 ## Theme
 
-The theme menu offers System, Light and Dark, kept in the `theme` cookie and written on `<html data-theme>`; a reader
-who chose nothing gets System. Each token of `styles.css` holds a light and a dark color in `light-dark()`, and
+The theme menu offers System, Light and Dark, kept in the `theme` cookie and in the cookie shared with Keycloak's pages,
+which is read first ([Authentication](../docs/authentication.md)), and written on `<html data-theme>`; a reader who
+chose nothing gets System. Each token of `styles.css` holds a light and a dark color in `light-dark()`, and
 `data-theme` sets the `color-scheme` that picks between them, so System follows the reader's system without a script,
 and the page never flashes the other theme while it loads. Keycloak's pages wear the same colors
 ([Authentication: The sign-in pages](../docs/authentication.md#the-sign-in-pages)).
@@ -100,8 +102,9 @@ page cannot be laid under another site's clicks.
 ## Text
 
 Every label and every error is a key of the back-end's catalog: `texts.t(key)`, `texts.t_with(key, args)`, and
-`texts.problem(&problem)` for a refusal. The language is the `lang` cookie, chosen in the header, then the browser's
-`Accept-Language`, then Polish; the proxy also hands it to Keycloak. A key missing from the reader's language is taken
+`texts.problem(&problem)` for a refusal. The language is the one chosen in the header or on Keycloak's pages, kept in a
+cookie both share, then the `lang` cookie, then the browser's `Accept-Language`, then Polish; the sign-in hands it to
+Keycloak. A key missing from the reader's language is taken
 from Polish and reported. Dates are shown in UTC, as the server does not know the reader's time zone.
 `tests/catalog.rs` fails when a page uses a key the catalog lacks in either language.
 
