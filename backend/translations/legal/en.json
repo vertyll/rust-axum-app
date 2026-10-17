@@ -16,7 +16,7 @@
   "legal.privacy.p5": "We keep the data until your account is deleted. As this is a demo project, it may also be deleted earlier, for example when the database is reset.",
   "legal.privacy.p6": "You have the right to access, rectify and erase your data, to restrict its processing, to data portability and to object. To exercise them, write to {email}. You also have the right to lodge a complaint with a data protection supervisory authority; in Poland, the President of the Personal Data Protection Office (UODO).",
   "legal.privacy.p7": "Providing the data is voluntary, but an account cannot be created without it. No decisions about you are based solely on automated processing, including profiling.",
-  "legal.privacy.p8": "The application uses only the cookies it needs for the session and sign-in, and one that remembers the language you chose. There is no analytics and no advertising.",
+  "legal.privacy.p8": "The application uses only the cookies it needs: the session and sign-in, and your chosen language and theme, which it shares with the sign-in page so the two look the same. There is no analytics and no advertising.",
   "legal.privacy.title": "Privacy policy",
   "legal.terms.h1": "1. What Rust Axum App is",
   "legal.terms.h2": "2. Your account",

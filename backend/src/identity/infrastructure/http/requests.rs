@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use serde::Deserialize;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 use crate::identity::application::{NewRole, RoleChanges};
 
@@ -48,11 +48,29 @@ impl From<RoleChangesRequest> for RoleChanges {
     }
 }
 
+/// The languages Keycloak's pages and this application both have.
+pub(crate) const UI_LOCALES: [&str; 2] = ["pl", "en"];
+
+/// `PUT /users/me/language`: a language Keycloak's pages and this application both have.
+#[derive(Debug, Deserialize, Validate)]
+pub struct AccountLanguageRequest {
+    #[validate(custom(function = "supported_language", message = "validation.invalid"))]
+    pub language: String,
+}
+
+fn supported_language(language: &str) -> Result<(), ValidationError> {
+    if UI_LOCALES.contains(&language) {
+        Ok(())
+    } else {
+        Err(ValidationError::new("unsupported_language"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use validator::Validate;
 
-    use super::NewRoleRequest;
+    use super::{AccountLanguageRequest, NewRoleRequest};
 
     #[test]
     fn a_role_takes_only_its_name_and_a_short_description() {
@@ -62,6 +80,15 @@ mod tests {
 
         let long = format!(r#"{{"name":"editor","description":"{}"}}"#, "a".repeat(256));
         let request: NewRoleRequest = serde_json::from_str(&long).unwrap();
+        assert!(request.validate().is_err());
+    }
+
+    #[test]
+    fn an_account_takes_only_a_language_both_sides_have() {
+        let request: AccountLanguageRequest = serde_json::from_str(r#"{"language":"en"}"#).unwrap();
+        assert!(request.validate().is_ok());
+
+        let request: AccountLanguageRequest = serde_json::from_str(r#"{"language":"de"}"#).unwrap();
         assert!(request.validate().is_err());
     }
 }

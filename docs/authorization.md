@@ -113,6 +113,7 @@ grants nothing.
 |---------------------------------------------|----------------|---------------------------------------------------------|
 | `GET /api/users/me/permissions`             | a session      | what the caller's roles grant: `unrestricted` and names |
 | `GET /api/users/me/second-factor`           | a session      | whether the caller set up a second factor, and its id   |
+| `PUT /api/users/me/language`                | a session      | stores the caller's language on their Keycloak account  |
 | `GET /api/admin/permissions`                | `ROLES_VIEW`   | the permissions, grouped by the module declaring them   |
 | `GET /api/admin/roles`                      | `ROLES_VIEW`   | every role and what it grants                           |
 | `GET /api/admin/roles/{name}`               | `ROLES_VIEW`   | one role                                                |

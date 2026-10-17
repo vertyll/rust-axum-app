@@ -5,7 +5,7 @@
 use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, SecondFactor, TokenVerifier};
 use crate::identity::application::session::{AuthSession, Caller, TokenPair};
 use crate::identity::domain::{
-    Grants, IdentityError, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
+    Grants, IdentityError, KeycloakId, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
 };
 use crate::shared_kernel::pagination::{PageRequest, PageResult};
 
@@ -83,8 +83,7 @@ impl<P: IdentityPorts> IdentityService<P> {
     /// up a second factor, in the language they use here. Keycloak prefers the
     /// language stored on the account to the one a sign-in asks for, so the
     /// account's is set first; when that fails, the pages open in the stored one.
-    pub async fn keep_account_language(&self, session: &AuthSession, language: &str) {
-        let account = &session.identity.keycloak_id;
+    pub async fn keep_account_language(&self, account: &KeycloakId, language: &str) {
         if let Err(err) = self.realm.set_language(account, language).await {
             tracing::warn!(keycloak_id = %account, "could not store the account's language in Keycloak: {err}");
         }
@@ -153,7 +152,10 @@ mod tests {
         let harness = Harness::new().await;
         let session = harness.service.sign_in("code", "verifier").await.unwrap();
 
-        harness.service.keep_account_language(&session, "pl").await;
+        harness
+            .service
+            .keep_account_language(&session.identity.keycloak_id, "pl")
+            .await;
 
         assert_eq!(
             harness.realm.calls().last(),
@@ -168,7 +170,10 @@ mod tests {
         let before = harness.realm.calls();
         harness.realm.fail();
 
-        harness.service.keep_account_language(&session, "pl").await;
+        harness
+            .service
+            .keep_account_language(&session.identity.keycloak_id, "pl")
+            .await;
 
         assert_eq!(harness.realm.calls(), before);
     }

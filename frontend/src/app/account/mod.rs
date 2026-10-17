@@ -6,13 +6,13 @@ use topcoat::router::page;
 use topcoat::view::{View, attributes, component, view};
 
 use crate::auth::require_auth;
-use crate::backend::proxy::{KeycloakAction, keycloak_action};
 use crate::backend::{self, BackendError};
 use crate::components::badge::{BadgeVariant, badge};
 use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
 use crate::components::card::{card, card_content, card_description, card_header, card_title};
 use crate::components::page_header::page_header;
 use crate::i18n::texts;
+use crate::keycloak::{AccountAction, account_action};
 
 /// The reader's second factor, as the back-end reads it from Keycloak.
 #[derive(Debug, Deserialize)]
@@ -102,12 +102,12 @@ async fn security_card(cx: &Cx) -> Result<impl View> {
             .map_err(BackendError::into_page_error)?;
     let (totp_action, totp_label, totp_status) = match second_factor.credential_id {
         Some(id) => (
-            KeycloakAction::DeleteCredential(id),
+            AccountAction::DeleteCredential(id),
             "account.security.totp_disable",
             "account.security.totp_on",
         ),
         None => (
-            KeycloakAction::ConfigureTotp,
+            AccountAction::ConfigureTotp,
             "account.security.totp",
             "account.security.totp_off",
         ),
@@ -123,13 +123,13 @@ async fn security_card(cx: &Cx) -> Result<impl View> {
                 <p class="mb-4 text-sm">(texts.t(totp_status))</p>
                 <div class="flex flex-col gap-2 sm:flex-row">
                     <a
-                        href=(keycloak_action(cx, &KeycloakAction::UpdatePassword))
+                        href=(account_action(cx, &AccountAction::UpdatePassword))
                         class=(button_variants(ButtonVariant::Outline, ButtonSize::Md))
                     >
                         (texts.t("account.security.password"))
                     </a>
                     <a
-                        href=(keycloak_action(cx, &totp_action))
+                        href=(account_action(cx, &totp_action))
                         class=(button_variants(ButtonVariant::Outline, ButtonSize::Md))
                     >
                         (texts.t(totp_label))

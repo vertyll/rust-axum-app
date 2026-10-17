@@ -6,17 +6,10 @@ use std::str::FromStr;
 use topcoat::context::{Cx, app_context};
 use topcoat::cookie::{Cookie, Cookies, SameSite, cookies};
 
-use topcoat::router::header::HOST;
-use topcoat::router::request::headers;
-
 use crate::config::AppConfig;
+use crate::keycloak::{self, Preference};
 
 pub const THEME_COOKIE: &str = "theme";
-
-/// The theme the reader last chose, here or on Keycloak's pages, which both read and write: a shared record rather
-/// than a message, so the two agree however the reader moves between them, through a sign-in, a cancelled account
-/// action, the browser's history or another tab. Keycloak's script reads it, so it is not `HttpOnly`.
-pub const SHARED_THEME_COOKIE: &str = "ui_theme_rust-axum-app";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Theme {
@@ -63,68 +56,32 @@ impl fmt::Display for Theme {
 
 /// The reader's theme: the one they last chose, here or on Keycloak's pages, else the system's.
 pub fn theme(cx: &Cx) -> Theme {
-    let jar = cookies(cx);
-    [SHARED_THEME_COOKIE, THEME_COOKIE]
-        .into_iter()
-        .find_map(|name| jar.get(name).and_then(|cookie| cookie.value().parse().ok()))
+    keycloak::chosen(cx, Preference::Theme)
+        .and_then(|code| code.parse().ok())
+        .or_else(|| {
+            cookies(cx)
+                .get(THEME_COOKIE)
+                .and_then(|cookie| cookie.value().parse().ok())
+        })
         .unwrap_or_default()
 }
 
-/// Remembers the reader's theme on this site, and in the cookie shared with Keycloak's pages, under the parent of this
-/// request's `Host`.
+/// Remembers the reader's theme on this site and for Keycloak's pages.
 pub fn remember(cx: &Cx, theme: Theme) {
-    let secure = app_context::<AppConfig>(cx).secure_cookies();
     let own = Cookie::build((THEME_COOKIE, theme.code()))
         .path("/")
         .http_only(true)
         .same_site(SameSite::Lax)
-        .secure(secure)
+        .secure(app_context::<AppConfig>(cx).secure_cookies())
         .permanent()
         .build();
-    let shared = Cookie::build((SHARED_THEME_COOKIE, theme.code()))
-        .path("/")
-        .same_site(SameSite::Lax)
-        .secure(secure)
-        .permanent();
-    let host = headers(cx).get(HOST).and_then(|host| host.to_str().ok());
-    let shared = match host.and_then(shared_cookie_domain) {
-        Some(domain) => shared.domain(domain.to_owned()),
-        None => shared,
-    };
-    let jar = cookies(cx);
-    jar.add(own);
-    jar.add(shared.build());
-}
-
-/// The domain a cookie shared with Keycloak lives under: the parent of this host. `localhost` and an IP address have
-/// none, as every port there already shares cookies.
-pub(crate) fn shared_cookie_domain(host: &str) -> Option<&str> {
-    let name = host.split(':').next().unwrap_or(host);
-    let is_address = name
-        .split('.')
-        .all(|label| label.bytes().all(|byte| byte.is_ascii_digit()));
-    if name.split('.').count() > 2 && !is_address {
-        name.split_once('.').map(|(_, parent)| parent)
-    } else {
-        None
-    }
+    cookies(cx).add(own);
+    keycloak::share(cx, Preference::Theme, theme.code());
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Theme, shared_cookie_domain};
-
-    #[test]
-    fn a_shared_cookie_lives_under_the_parent_domain() {
-        assert_eq!(shared_cookie_domain("app.vertyll.dev"), Some("vertyll.dev"));
-        assert_eq!(shared_cookie_domain("app.vertyll.dev:443"), Some("vertyll.dev"));
-    }
-
-    #[test]
-    fn localhost_and_an_address_share_cookies_without_a_domain() {
-        assert_eq!(shared_cookie_domain("localhost:3000"), None);
-        assert_eq!(shared_cookie_domain("127.0.0.1:3000"), None);
-    }
+    use super::Theme;
 
     #[test]
     fn a_theme_reads_back_from_its_code() {

@@ -6,6 +6,7 @@ use topcoat::router::{href, route};
 
 use crate::forms::{back_within_this_site, done};
 use crate::i18n::{Lang, remember};
+use crate::keycloak;
 
 #[derive(Deserialize)]
 struct LanguageChoice {
@@ -17,6 +18,7 @@ struct LanguageChoice {
 pub(crate) async fn change_language(cx: &Cx, Form(choice): Form<LanguageChoice>) -> Result<()> {
     if let Ok(lang) = choice.lang.parse::<Lang>() {
         remember(cx, lang);
+        keycloak::keep_account_language(cx, lang.code()).await?;
     }
     done(back_within_this_site(&choice.back).unwrap_or_else(|| href!(super::home).resolve(cx)))
 }

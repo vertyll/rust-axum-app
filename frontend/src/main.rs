@@ -10,6 +10,7 @@ mod components;
 mod config;
 mod forms;
 mod i18n;
+mod keycloak;
 mod theme;
 
 use topcoat::asset::{AssetBundle, RouterBuilderAssetExt};

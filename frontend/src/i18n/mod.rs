@@ -20,13 +20,9 @@ use topcoat::router::request::headers;
 
 use crate::backend::Problem;
 use crate::config::AppConfig;
-use crate::theme::shared_cookie_domain;
+use crate::keycloak::{self, Preference};
 
 pub const LANG_COOKIE: &str = "lang";
-
-/// The cookie Keycloak's pages leave a language chosen there in, named after the realm, as the sign-in returns to an
-/// address that carries nothing else.
-pub const SIGN_IN_LANG_COOKIE: &str = "ui_locale_rust-axum-app";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Lang {
@@ -76,12 +72,17 @@ impl fmt::Display for Lang {
     }
 }
 
-/// The reader's language: the one they chose, else the first their browser
-/// asks for that the catalog has, else Polish.
+/// The reader's language: the one they last chose, here or on Keycloak's
+/// pages, else the first their browser asks for that the catalog has, else
+/// Polish.
 pub fn lang(cx: &Cx) -> Lang {
-    cookies(cx)
-        .get(LANG_COOKIE)
-        .and_then(|cookie| cookie.value().parse().ok())
+    keycloak::chosen(cx, Preference::Language)
+        .and_then(|code| code.parse().ok())
+        .or_else(|| {
+            cookies(cx)
+                .get(LANG_COOKIE)
+                .and_then(|cookie| cookie.value().parse().ok())
+        })
         .or_else(|| {
             headers(cx)
                 .get(ACCEPT_LANGUAGE)
@@ -91,34 +92,17 @@ pub fn lang(cx: &Cx) -> Lang {
         .unwrap_or_default()
 }
 
-/// Remembers the reader's language on this site.
+/// Remembers the reader's language on this site and for Keycloak's pages.
 pub fn remember(cx: &Cx, lang: Lang) {
-    let cookie = Cookie::build((LANG_COOKIE, lang.code()))
+    let own = Cookie::build((LANG_COOKIE, lang.code()))
         .path("/")
         .http_only(true)
         .same_site(SameSite::Lax)
         .secure(app_context::<AppConfig>(cx).secure_cookies())
         .permanent()
         .build();
-    cookies(cx).add(cookie);
-}
-
-/// Takes over a language chosen on Keycloak's pages, once: remembers it here and removes the cookie it came in, from
-/// the domain Keycloak set it under. `host` is this request's `Host`.
-pub fn take_sign_in_language(cx: &Cx, host: Option<&str>) {
-    let jar = cookies(cx);
-    let Some(handed_over) = jar.get(SIGN_IN_LANG_COOKIE) else {
-        return;
-    };
-    if let Ok(lang) = handed_over.value().parse() {
-        remember(cx, lang);
-    }
-    let removal = Cookie::build(SIGN_IN_LANG_COOKIE).path("/");
-    let removal = match host.and_then(shared_cookie_domain) {
-        Some(domain) => removal.domain(domain.to_owned()),
-        None => removal,
-    };
-    jar.remove(removal.build());
+    cookies(cx).add(own);
+    keycloak::share(cx, Preference::Language, lang.code());
 }
 
 #[derive(Debug)]

@@ -108,11 +108,12 @@ Keycloak's script reads it. Being a shared record rather than a message, it keep
 moves between them: through a sign-in, a cancelled account action, whose redirect drops the `ui_theme` the front-end
 also sends, the browser's history or another tab.
 
-The language goes both ways too. Keycloak shows the sign-in page in `ui_locales`, and a signed-in person their account's
-language, which the application stores before a `kc_action` (above). A language chosen in Keycloak's own menu goes back
-in a cookie too, taken over once, as Keycloak itself keeps the language on the account: `language.js` leaves it in the
-cookie `ui_locale_rust-axum-app`, and the proxy takes it over into the `lang` cookie when the sign-in returns to
-`/api/auth/callback`, and removes it.
+The language goes both ways too. The language the reader last chose, in the front-end or in Keycloak's own menu, is kept
+in the cookie `ui_locale_rust-axum-app`, which both write, under the same domain as the theme's and for a year: the
+front-end writes it with its own `lang` cookie when the reader picks a language and reads it on every page, and
+`language.js` writes it on a choice in Keycloak's menu. Keycloak shows the sign-in page in `ui_locales` and a signed-in
+person their account's language, so the front-end stores a signed-in reader's choice there at once, through `PUT
+/api/users/me/language`, and again before a `kc_action`.
 
 `template.ftl` is a copy of `keycloak.v2`'s own, changed only where it says `rust-axum-app`. Keycloak builds its pages
 from that template, so after an upgrade of Keycloak the copy is compared with the new release's and brought up to date.
@@ -138,7 +139,8 @@ it by its own JAR and those two fields.
 
 ## Code
 
-The paths are under `backend/src/`; the front-end's side is in its [README](../frontend/README.md).
+The paths are under `backend/src/`; the front-end's side is in its [README](../frontend/README.md), and what it shares
+with Keycloak's pages in `frontend/src/keycloak.rs`.
 
 | Path                                                 | Role                                               |
 |------------------------------------------------------|----------------------------------------------------|

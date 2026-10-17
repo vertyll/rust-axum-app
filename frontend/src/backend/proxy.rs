@@ -18,7 +18,7 @@ use topcoat::router::response::Response;
 use topcoat::router::{Body, StatusCode, href, path_param, route};
 
 use super::backend;
-use crate::i18n::{lang, take_sign_in_language};
+use crate::i18n::lang;
 use crate::theme::{Theme, theme};
 
 path_param!(pub *rest);
@@ -74,29 +74,6 @@ pub fn register(cx: &Cx) -> String {
         .resolve(cx)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KeycloakAction {
-    UpdatePassword,
-    ConfigureTotp,
-    /// Removes the credential with this id, after Keycloak asks the reader to confirm.
-    DeleteCredential(String),
-}
-
-pub fn keycloak_action(cx: &Cx, action: &KeycloakAction) -> String {
-    #[derive(Serialize)]
-    struct Action {
-        kc_action: String,
-    }
-    let kc_action = match action {
-        KeycloakAction::UpdatePassword => "UPDATE_PASSWORD".to_owned(),
-        KeycloakAction::ConfigureTotp => "CONFIGURE_TOTP".to_owned(),
-        KeycloakAction::DeleteCredential(id) => format!("delete_credential:{id}"),
-    };
-    href!(api, Rest(["auth", "authorize"]))
-        .query(Action { kc_action })
-        .resolve(cx)
-}
-
 async fn forward(cx: &Cx, body: Body) -> Result<Response> {
     // The URL parser would resolve `..`, reaching paths outside the prefix.
     if has_dot_segment(uri(cx).path()) {
@@ -108,10 +85,6 @@ async fn forward(cx: &Cx, body: Body) -> Result<Response> {
     if uri(cx).path() == "/api/auth/authorize" {
         request_headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static(lang(cx).code()));
         path_and_query = with_theme(&path_and_query, theme(cx));
-    }
-    if uri(cx).path() == "/api/auth/callback" {
-        let host = headers(cx).get(HOST).and_then(|host| host.to_str().ok());
-        take_sign_in_language(cx, host);
     }
 
     let backend = backend(cx);

@@ -18,6 +18,7 @@ use crate::identity::application::ports::IdentityPorts;
 use crate::identity::application::service::IdentityService;
 use crate::identity::infrastructure::http::error::ApiError;
 use crate::identity::infrastructure::http::extract::{SESSION_KEY, sent_from_this_origin, store};
+use crate::identity::infrastructure::http::requests::UI_LOCALES;
 use crate::identity::infrastructure::http::responses::SessionResponse;
 use crate::identity::infrastructure::keycloak::pkce::{self, SignInTransaction};
 
@@ -28,7 +29,6 @@ const STATE_MISMATCH: &str = "state_mismatch";
 const ALLOWED_ACTIONS: [&str; 2] = ["CONFIGURE_TOTP", "UPDATE_PASSWORD"];
 /// Keycloak's action removing one credential, named by its id: `delete_credential:<id>`.
 const DELETE_CREDENTIAL: &str = "delete_credential:";
-const UI_LOCALES: [&str; 2] = ["pl", "en"];
 const UI_THEMES: [&str; 3] = ["system", "light", "dark"];
 
 struct AuthState<P: IdentityPorts> {
@@ -94,7 +94,10 @@ async fn authorize<P: IdentityPorts>(
         if let (Some(language), Some(signed_in)) =
             (language, session.get::<AuthSession>(SESSION_KEY).await.map_err(store)?)
         {
-            state.identity.keep_account_language(&signed_in, language).await;
+            state
+                .identity
+                .keep_account_language(&signed_in.identity.keycloak_id, language)
+                .await;
         }
         params.push(("kc_action", action));
     }

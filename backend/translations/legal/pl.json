@@ -16,7 +16,7 @@
   "legal.privacy.p5": "Dane przechowujemy do czasu usunięcia konta. Ponieważ to projekt demonstracyjny, mogą też zostać usunięte wcześniej, na przykład przy resecie bazy.",
   "legal.privacy.p6": "Masz prawo dostępu do swoich danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przeniesienia oraz sprzeciwu. Aby z nich skorzystać, napisz na {email}. Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych.",
   "legal.privacy.p7": "Podanie danych jest dobrowolne, ale bez nich nie da się założyć konta. Nie podejmujemy wobec Ciebie decyzji opartych wyłącznie na zautomatyzowanym przetwarzaniu, w tym profilowania.",
-  "legal.privacy.p8": "Aplikacja używa wyłącznie plików cookie niezbędnych do działania sesji i logowania oraz jednego, który zapamiętuje wybrany język. Nie używamy analityki ani reklam.",
+  "legal.privacy.p8": "Aplikacja używa wyłącznie niezbędnych plików cookie: sesji i logowania oraz wybranego języka i motywu, które dzieli ze stroną logowania, żeby obie wyglądały tak samo. Nie używamy analityki ani reklam.",
   "legal.privacy.title": "Polityka prywatności",
   "legal.terms.h1": "1. Czym jest Rust Axum App",
   "legal.terms.h2": "2. Konto",

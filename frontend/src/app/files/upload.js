@@ -13,12 +13,12 @@ async function upload(form) {
   const input = form.querySelector("input[type=file]");
   const submit = form.querySelector("[type=submit]");
   const progress = form.querySelector("[data-upload-progress]");
-  const error = form.querySelector("[data-upload-error]");
+  const errorField = form.querySelector("[data-upload-error]");
   const file = input.files[0];
   if (!file) {
     return;
   }
-  error.hidden = true;
+  errorField.hidden = true;
   submit.disabled = true;
   progress.hidden = false;
   progress.value = 0;
@@ -31,9 +31,9 @@ async function upload(form) {
     await send(ticket.upload, file, progress);
     await api(`${form.dataset.api}/${ticket.file.id}/confirm`);
     window.location.assign(`${form.dataset.files}/${ticket.file.id}`);
-  } catch (failure) {
-    error.textContent = message(form, failure);
-    error.hidden = false;
+  } catch (error) {
+    errorField.textContent = message(form, error);
+    errorField.hidden = false;
     progress.hidden = true;
     submit.disabled = false;
   }
@@ -64,8 +64,10 @@ function send(link, file, progress) {
         progress.value = event.loaded / event.total;
       }
     });
-    request.addEventListener("load", () => (request.status < 300 ? resolve() : reject({})));
-    request.addEventListener("error", () => reject({}));
+    request.addEventListener("load", () =>
+      request.status < 300 ? resolve() : reject(new Error(`the storage answered ${request.status}`)),
+    );
+    request.addEventListener("error", () => reject(new Error("the storage could not be reached")));
     request.send(file);
   });
 }
