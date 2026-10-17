@@ -91,13 +91,13 @@ requests](../backend/src/identity/docs/mechanisms/cross-site-requests.md).
 Keycloak draws the sign-in, sign-up, password reset, terms and second-factor pages, and the mails it sends, with the
 theme in [`keycloak/themes/rust-axum-app`](../keycloak/themes/rust-axum-app), so they look like the front-end:
 
-| Part                      | Holds                                                                                        |
-|---------------------------|----------------------------------------------------------------------------------------------|
-| `login/theme.properties`  | extends Keycloak's `keycloak.v2`, whose templates draw every page                            |
-| `login/template.ftl`      | the page frame: the front-end's top bar, with the theme and language menus, and its footer   |
-| `login/resources`         | `css/app.css`, the front-end's colors, font and card on PatternFly; `js/theme.js`, the theme |
-| `login/messages`          | the texts of the bar and the footer, in Polish and English, as the front-end words them      |
-| `email/html/template.ftl` | the frame of every mail; the texts stay Keycloak's own, in Polish and English                |
+| Part                      | Holds                                                                                                                                    |
+|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `login/theme.properties`  | extends Keycloak's `keycloak.v2`, whose templates draw every page                                                                        |
+| `login/template.ftl`      | the page frame: the front-end's top bar, with the theme and language menus, and its footer                                               |
+| `login/resources`         | `css/app.css`, the front-end's colors, font and card on PatternFly; `js/theme.js`, the theme; `js/language.js`, the language handed back |
+| `login/messages`          | the texts of the bar and the footer, in Polish and English, as the front-end words them                                                  |
+| `email/html/template.ftl` | the frame of every mail; the texts stay Keycloak's own, in Polish and English                                                            |
 
 The theme menu offers System, Light and Dark, as the front-end's does. The sign-in starts in the theme the reader chose
 in the front-end: the front-end's proxy adds it to `/api/auth/authorize`, the back-end passes it to Keycloak as
@@ -106,7 +106,14 @@ realm that turns dark mode off gets the light theme and no menu. A choice made i
 as the sign-in returns to an address that carries nothing else: `theme.js` leaves it in the cookie
 `ui_theme_rust-axum-app`, under the domain Keycloak shares with the front-end, the parent of Keycloak's host (on
 localhost, every port), and the front-end's proxy takes it over when the sign-in returns to `/api/auth/callback`, and
-removes the cookie.
+removes the cookie. A signed-in reader's account action reaches Keycloak's page through a redirect that drops
+`ui_theme`, so the proxy also leaves the front-end's theme in that cookie on `/api/auth/authorize`, and `theme.js`
+takes it from there when the address carries none.
+
+The language goes both ways too. Keycloak shows the sign-in page in `ui_locales`, and a signed-in person their
+account's language, which the application stores before a `kc_action` (above). A language chosen in Keycloak's own
+menu goes back as the theme does: `language.js` leaves it in the cookie `ui_locale_rust-axum-app`, and the proxy takes
+it over into the `lang` cookie when the sign-in returns to `/api/auth/callback`, and removes it.
 
 `template.ftl` is a copy of `keycloak.v2`'s own, changed only where it says `rust-axum-app`. Keycloak builds its pages
 from that template, so after an upgrade of Keycloak the copy is compared with the new release's and brought up to date.

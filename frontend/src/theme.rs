@@ -4,6 +4,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use topcoat::context::{Cx, app_context};
+use topcoat::cookie::time::Duration;
 use topcoat::cookie::{Cookie, Cookies, SameSite, cookies};
 
 use crate::config::AppConfig;
@@ -77,6 +78,22 @@ pub fn remember(cx: &Cx, theme: Theme) {
     cookies(cx).add(cookie);
 }
 
+/// Leaves the reader's theme in the cookie Keycloak's pages hand a theme back in, readable by their script: a signed-in
+/// reader's account action reaches those pages through a redirect that drops `ui_theme`. `host` is this request's
+/// `Host`.
+pub fn leave_theme_for_keycloak(cx: &Cx, host: Option<&str>) {
+    let cookie = Cookie::build((SIGN_IN_THEME_COOKIE, theme(cx).code()))
+        .path("/")
+        .same_site(SameSite::Lax)
+        .secure(app_context::<AppConfig>(cx).secure_cookies())
+        .max_age(Duration::days(1));
+    let cookie = match host.and_then(shared_cookie_domain) {
+        Some(domain) => cookie.domain(domain.to_owned()),
+        None => cookie,
+    };
+    cookies(cx).add(cookie.build());
+}
+
 /// Takes over a theme chosen on Keycloak's pages, once: remembers it here and removes the cookie it came in, from the
 /// domain Keycloak set it under. `host` is this request's `Host`.
 pub fn take_sign_in_theme(cx: &Cx, host: Option<&str>) {
@@ -97,7 +114,7 @@ pub fn take_sign_in_theme(cx: &Cx, host: Option<&str>) {
 
 /// The domain a cookie shared with Keycloak lives under: the parent of this host. `localhost` and an IP address have
 /// none, as every port there already shares cookies.
-fn shared_cookie_domain(host: &str) -> Option<&str> {
+pub(crate) fn shared_cookie_domain(host: &str) -> Option<&str> {
     let name = host.split(':').next().unwrap_or(host);
     let is_address = name
         .split('.')

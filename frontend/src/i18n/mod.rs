@@ -13,14 +13,20 @@ use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use reqwest::header::ACCEPT_LANGUAGE;
 use serde_json::Map;
-use topcoat::context::{Cx, memoize};
-use topcoat::cookie::{Cookies, cookies};
+use topcoat::context::{Cx, app_context, memoize};
+use topcoat::cookie::{Cookie, Cookies, SameSite, cookies};
 use topcoat::router::error::internal_server_error;
 use topcoat::router::request::headers;
 
 use crate::backend::Problem;
+use crate::config::AppConfig;
+use crate::theme::shared_cookie_domain;
 
 pub const LANG_COOKIE: &str = "lang";
+
+/// The cookie Keycloak's pages leave a language chosen there in, named after the realm, as the sign-in returns to an
+/// address that carries nothing else.
+pub const SIGN_IN_LANG_COOKIE: &str = "ui_locale_rust-axum-app";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Lang {
@@ -83,6 +89,36 @@ pub fn lang(cx: &Cx) -> Lang {
                 .and_then(Lang::preferred)
         })
         .unwrap_or_default()
+}
+
+/// Remembers the reader's language on this site.
+pub fn remember(cx: &Cx, lang: Lang) {
+    let cookie = Cookie::build((LANG_COOKIE, lang.code()))
+        .path("/")
+        .http_only(true)
+        .same_site(SameSite::Lax)
+        .secure(app_context::<AppConfig>(cx).secure_cookies())
+        .permanent()
+        .build();
+    cookies(cx).add(cookie);
+}
+
+/// Takes over a language chosen on Keycloak's pages, once: remembers it here and removes the cookie it came in, from
+/// the domain Keycloak set it under. `host` is this request's `Host`.
+pub fn take_sign_in_language(cx: &Cx, host: Option<&str>) {
+    let jar = cookies(cx);
+    let Some(handed_over) = jar.get(SIGN_IN_LANG_COOKIE) else {
+        return;
+    };
+    if let Ok(lang) = handed_over.value().parse() {
+        remember(cx, lang);
+    }
+    let removal = Cookie::build(SIGN_IN_LANG_COOKIE).path("/");
+    let removal = match host.and_then(shared_cookie_domain) {
+        Some(domain) => removal.domain(domain.to_owned()),
+        None => removal,
+    };
+    jar.remove(removal.build());
 }
 
 #[derive(Debug)]

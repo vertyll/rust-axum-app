@@ -14,6 +14,13 @@
     store(fromApp);
     address.searchParams.delete("ui_theme");
     window.history.replaceState(window.history.state, "", address);
+  } else {
+    // An account action of a signed-in reader reaches this page through a redirect that drops `ui_theme`, so the app
+    // also leaves its theme in the cookie it takes a choice made here back from.
+    const fromCookie = document.cookie.match(new RegExp(`(?:^|; )${cookieName()}=([^;]*)`))?.[1];
+    if (THEMES.includes(fromCookie)) {
+      store(fromCookie);
+    }
   }
 
   apply();
@@ -57,16 +64,21 @@
   // The app takes a choice made here over from the cookie `ui_theme_<realm>`, as the sign-in returns to an address
   // that carries nothing else. It lives under the domain Keycloak shares with the app, the parent of this host; on
   // localhost and an IP address every port already shares cookies.
-  function handOff(theme) {
+  function cookieName() {
     const realm = window.location.pathname.match(/\/realms\/([^/]+)\//)?.[1];
-    if (!realm) {
+    return realm ? `ui_theme_${realm}` : null;
+  }
+
+  function handOff(theme) {
+    const name = cookieName();
+    if (!name) {
       return;
     }
     const labels = window.location.hostname.split(".");
     const isAddress = labels.every((label) => /^\d+$/.test(label));
     const domain = labels.length > 2 && !isAddress ? `; Domain=${labels.slice(1).join(".")}` : "";
     const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `ui_theme_${realm}=${theme}; Path=/; Max-Age=86400; SameSite=Lax${domain}${secure}`;
+    document.cookie = `${name}=${theme}; Path=/; Max-Age=86400; SameSite=Lax${domain}${secure}`;
   }
 
   function store(theme) {

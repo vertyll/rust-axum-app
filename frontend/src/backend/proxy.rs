@@ -18,8 +18,8 @@ use topcoat::router::response::Response;
 use topcoat::router::{Body, StatusCode, href, path_param, route};
 
 use super::backend;
-use crate::i18n::lang;
-use crate::theme::{Theme, take_sign_in_theme, theme};
+use crate::i18n::{lang, take_sign_in_language};
+use crate::theme::{Theme, leave_theme_for_keycloak, take_sign_in_theme, theme};
 
 path_param!(pub *rest);
 
@@ -108,9 +108,12 @@ async fn forward(cx: &Cx, body: Body) -> Result<Response> {
     if uri(cx).path() == "/api/auth/authorize" {
         request_headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static(lang(cx).code()));
         path_and_query = with_theme(&path_and_query, theme(cx));
+        leave_theme_for_keycloak(cx, headers(cx).get(HOST).and_then(|host| host.to_str().ok()));
     }
     if uri(cx).path() == "/api/auth/callback" {
-        take_sign_in_theme(cx, headers(cx).get(HOST).and_then(|host| host.to_str().ok()));
+        let host = headers(cx).get(HOST).and_then(|host| host.to_str().ok());
+        take_sign_in_theme(cx, host);
+        take_sign_in_language(cx, host);
     }
 
     let backend = backend(cx);
