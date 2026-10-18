@@ -85,7 +85,9 @@ async fn root_layout(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
                                 if error.downcast_ref::<UnauthorizedError>().is_some() {
                                     return Err(see_other(keycloak::sign_in(cx)).into());
                                 }
-                                let refusal = if error.downcast_ref::<ForbiddenError>().is_some() {
+                                let refusal = if error
+                                    .downcast_ref::<ForbiddenError>()
+                                    .is_some() {
                                     Refusal::Forbidden
                                 } else if error.downcast_ref::<NotFoundError>().is_some() {
                                     Refusal::NotFound
@@ -161,10 +163,7 @@ async fn refusal_page(cx: &Cx, refusal: Refusal) -> Result<impl View> {
                 link(
                     href: href!(home),
                     attrs: attributes! {
-                        class=(button_variants(
-                            ButtonVariant::Outline,
-                            ButtonSize::Md,
-                        ))
+                        class=(button_variants(ButtonVariant::Outline, ButtonSize::Md))
                     },
                     (texts.t("errors.page.home"))
                 )
