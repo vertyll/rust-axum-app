@@ -181,6 +181,7 @@ root_domain = ".s3.localhost"
         let container = GenericImage::new("docker.io/dxflrs/garage", "v2.4.1")
             .with_exposed_port(ContainerPort::Tcp(3900))
             .with_wait_for(WaitFor::Nothing)
+            .with_startup_timeout(Duration::from_secs(120))
             .with_cmd(["/garage", "server", "--single-node", "--default-bucket"])
             .with_env_var("GARAGE_RPC_SECRET", SECRET_KEY)
             .with_env_var("GARAGE_DEFAULT_ACCESS_KEY", ACCESS_KEY)

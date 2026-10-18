@@ -89,7 +89,12 @@ mod tests {
 
     #[tokio::test]
     async fn sessions_live_under_the_application_prefix() {
-        let container = Redis::default().with_tag("8-alpine").start().await.unwrap();
+        let container = Redis::default()
+            .with_tag("8-alpine")
+            .with_startup_timeout(std::time::Duration::from_secs(120))
+            .start()
+            .await
+            .unwrap();
         let port = container.get_host_port_ipv4(6379).await.unwrap();
         let pool = Pool::new(
             Config::from_url(&format!("redis://127.0.0.1:{port}")).unwrap(),

@@ -160,6 +160,7 @@ fn sha256(value: &str) -> String {
 mod tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
 
     use fred::prelude::{ClientLike, Config, Pool};
     use testcontainers_modules::redis::Redis;
@@ -172,7 +173,12 @@ mod tests {
     use crate::identity::domain::IdentityError;
 
     async fn redis() -> (ContainerAsync<Redis>, Pool) {
-        let container = Redis::default().with_tag("8-alpine").start().await.unwrap();
+        let container = Redis::default()
+            .with_tag("8-alpine")
+            .with_startup_timeout(Duration::from_secs(120))
+            .start()
+            .await
+            .unwrap();
         let port = container.get_host_port_ipv4(6379).await.unwrap();
         let pool = Pool::new(
             Config::from_url(&format!("redis://127.0.0.1:{port}")).unwrap(),
