@@ -106,6 +106,9 @@ cargo test --locked
 The Redis-backed tests (the session store and the shared refresh) start Redis with Testcontainers, so Docker or Podman
 must be running. CI runs the same commands, then the Sonar analysis and the image build.
 
+The rules both applications' modules keep are checked from `architecture/` with the same three commands; see [its
+README](../architecture/README.md).
+
 ## Production
 
 The image runs with `APP_ENVIRONMENT=production`. Outside `local` the application refuses to start while any of these is

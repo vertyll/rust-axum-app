@@ -15,12 +15,13 @@ Every document in this repository, the module it belongs to, and what it covers.
 
 ## Overview
 
-| Document                                       | Module | Kind     | Covers                                                                      |
-|------------------------------------------------|--------|----------|-----------------------------------------------------------------------------|
-| [Development Setup](docs/development-setup.md) | —      | overview | Running the infrastructure, the application, migrations and checks.         |
-| [Architecture](docs/architecture.md)           | —      | overview | Modules, ports and adapters, the composition root, routes and the database. |
-| [Authentication](docs/authentication.md)       | —      | overview | Sign-in, token authorization and sign-out.                                  |
-| [Authorization](docs/authorization.md)         | —      | overview | Permissions each module declares, roles, what they grant and the endpoints. |
+| Document                                       | Module | Kind     | Covers                                                                           |
+|------------------------------------------------|--------|----------|----------------------------------------------------------------------------------|
+| [Development Setup](docs/development-setup.md) | —      | overview | Running the infrastructure, the application, migrations and checks.              |
+| [Architecture](docs/architecture.md)           | —      | overview | Modules, ports and adapters, the composition root, routes and the database.      |
+| [Authentication](docs/authentication.md)       | —      | overview | Sign-in, token authorization and sign-out.                                       |
+| [Authorization](docs/authorization.md)         | —      | overview | Permissions each module declares, roles, what they grant and the endpoints.      |
+| [Architecture tests](architecture/README.md)   | —      | overview | The rules the modules keep, how they are read from the source, and running them. |
 
 ## Mechanisms
 

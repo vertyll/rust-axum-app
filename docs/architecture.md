@@ -59,6 +59,9 @@ of `translations`, and `identity` imports none of them. What every module shares
 I/O; `shared_http` holds what the HTTP adapters share, the RFC 9457 problem documents and the paging parameters and
 responses.
 
+These rules are checked on every change by the [architecture tests](../architecture/README.md), which read the source:
+a module reached past its `mod.rs`, a domain that imports an adapter or a cycle between modules fails the build.
+
 ## The composition root
 
 `backend/src/bootstrap` is the only place that names a concrete adapter. A service is generic over its ports, and

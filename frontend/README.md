@@ -146,6 +146,9 @@ cargo test --locked
 The formatter is given the sources by name: on its own it walks every folder, `target/` too, where the code generated
 for the dependencies is not formatted.
 
+The rules between its modules, such as components knowing no page, are checked by the [architecture
+tests](../architecture/README.md).
+
 ## Production
 
 The image builds the binary and its asset bundle together, as the bundle must come from the same build, and runs with
