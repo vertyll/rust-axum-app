@@ -1,12 +1,12 @@
 mod admin;
-mod client;
 pub mod pkce;
 mod shared_refresh;
+mod token_endpoint;
 mod verifier;
 
 pub use admin::HttpRealmAdmin;
-pub use client::HttpKeycloakClient;
 pub use shared_refresh::SharedRefreshes;
+pub use token_endpoint::HttpTokenEndpoint;
 pub use verifier::JwksTokenVerifier;
 
 use secrecy::SecretString;

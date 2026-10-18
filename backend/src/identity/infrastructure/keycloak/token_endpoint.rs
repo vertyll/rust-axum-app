@@ -7,7 +7,7 @@ use serde::Deserialize;
 use tokio::sync::OnceCell;
 
 use super::{KeycloakSettings, SharedRefreshes};
-use crate::identity::application::ports::KeycloakClient;
+use crate::identity::application::ports::TokenEndpoint;
 use crate::identity::application::session::TokenPair;
 use crate::identity::domain::IdentityError;
 
@@ -22,14 +22,14 @@ type SharedRefresh = Arc<OnceCell<Result<TokenPair, IdentityError>>>;
 /// refresh token is never presented twice. Replicas agree on the same
 /// refresh through [`SharedRefreshes`].
 #[derive(Clone)]
-pub struct HttpKeycloakClient {
+pub struct HttpTokenEndpoint {
     http: reqwest::Client,
     settings: Arc<KeycloakSettings>,
     refreshes: Arc<Mutex<HashMap<String, (Instant, SharedRefresh)>>>,
     shared: SharedRefreshes,
 }
 
-impl HttpKeycloakClient {
+impl HttpTokenEndpoint {
     pub fn new(settings: KeycloakSettings, shared: SharedRefreshes) -> Result<Self, IdentityError> {
         let http = reqwest::Client::builder()
             .timeout(TIMEOUT)
@@ -100,7 +100,7 @@ impl HttpKeycloakClient {
     }
 }
 
-impl KeycloakClient for HttpKeycloakClient {
+impl TokenEndpoint for HttpTokenEndpoint {
     async fn exchange(&self, code: &str, code_verifier: &str) -> Result<TokenPair, IdentityError> {
         let callback_url = self.settings.callback_url.clone();
         self.token(
@@ -171,12 +171,12 @@ mod tests {
     use axum::http::StatusCode;
     use axum::routing::post;
 
-    use super::HttpKeycloakClient;
-    use crate::identity::application::ports::KeycloakClient;
+    use super::HttpTokenEndpoint;
+    use crate::identity::application::ports::TokenEndpoint;
     use crate::identity::domain::IdentityError;
     use crate::identity::infrastructure::keycloak::{KeycloakSettings, SharedRefreshes};
 
-    async fn keycloak(status: StatusCode, delay: Duration) -> (HttpKeycloakClient, Arc<AtomicUsize>) {
+    async fn keycloak(status: StatusCode, delay: Duration) -> (HttpTokenEndpoint, Arc<AtomicUsize>) {
         let calls = Arc::new(AtomicUsize::new(0));
         let counter = calls.clone();
         let app = Router::new().route(
@@ -193,12 +193,12 @@ mod tests {
         (client_for(app).await, calls)
     }
 
-    async fn client_for(app: Router) -> HttpKeycloakClient {
+    async fn client_for(app: Router) -> HttpTokenEndpoint {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
-        HttpKeycloakClient::new(
+        HttpTokenEndpoint::new(
             KeycloakSettings {
                 realm_url: format!("http://{address}/realms/test"),
                 client_id: "client".into(),

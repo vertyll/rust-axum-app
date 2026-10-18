@@ -14,7 +14,7 @@ permissions in [Authorization](../../../docs/authorization.md).
 |------------------|------------------------|------------------------------------------------------------------|
 | `UserRepository` | `ToastyUserRepository` | the mirrored accounts in PostgreSQL                              |
 | `RoleRepository` | `ToastyRoleRepository` | the roles, what they grant and the registry of permissions       |
-| `KeycloakClient` | `HttpKeycloakClient`   | code exchange, refresh and revocation                            |
+| `TokenEndpoint`  | `HttpTokenEndpoint`    | code exchange, refresh and revocation                            |
 | `RealmAdmin`     | `HttpRealmAdmin`       | realm roles made, removed, given and taken through the admin API |
 | `TokenVerifier`  | `JwksTokenVerifier`    | signature, issuer, expiry and audience of a token                |
 

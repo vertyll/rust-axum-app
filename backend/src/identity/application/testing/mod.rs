@@ -10,7 +10,7 @@ use jiff::{SignedDuration, Timestamp};
 
 use crate::identity::application::IdentityService;
 use crate::identity::application::permissions::CATALOGUE;
-use crate::identity::application::ports::{IdentityPorts, KeycloakClient, RealmAdmin, TokenVerifier};
+use crate::identity::application::ports::{IdentityPorts, RealmAdmin, TokenEndpoint, TokenVerifier};
 use crate::identity::application::session::{TokenPair, VerifiedToken};
 use crate::identity::domain::{
     Email, IdentityError, KeycloakId, KeycloakIdentity, NewUser, RegisteredPermission, Role, RoleName, RoleRepository,
@@ -97,12 +97,12 @@ impl UserRepository for InMemoryUsers {
 }
 
 #[derive(Clone, Default)]
-pub(crate) struct FakeKeycloak {
+pub(crate) struct FakeTokens {
     issued: Arc<AtomicI64>,
     revoked: Arc<Mutex<Vec<String>>>,
 }
 
-impl FakeKeycloak {
+impl FakeTokens {
     pub(crate) fn revoked(&self) -> Vec<String> {
         self.revoked.lock().unwrap().clone()
     }
@@ -116,7 +116,7 @@ impl FakeKeycloak {
     }
 }
 
-impl KeycloakClient for FakeKeycloak {
+impl TokenEndpoint for FakeTokens {
     async fn exchange(&self, _code: &str, _code_verifier: &str) -> Result<TokenPair, IdentityError> {
         Ok(self.issue())
     }
@@ -267,7 +267,7 @@ pub(crate) struct TestPorts;
 impl IdentityPorts for TestPorts {
     type Users = InMemoryUsers;
     type Roles = InMemoryRoles;
-    type Keycloak = FakeKeycloak;
+    type Tokens = FakeTokens;
     type Realm = FakeRealm;
     type Verifier = FakeVerifier;
 }
@@ -276,7 +276,7 @@ pub(crate) struct Harness {
     pub(crate) service: IdentityService<TestPorts>,
     pub(crate) users: InMemoryUsers,
     pub(crate) roles: InMemoryRoles,
-    pub(crate) keycloak: FakeKeycloak,
+    pub(crate) tokens: FakeTokens,
     pub(crate) realm: FakeRealm,
     pub(crate) verifier: FakeVerifier,
 }
@@ -286,13 +286,13 @@ impl Harness {
     pub(crate) async fn new() -> Self {
         let users = InMemoryUsers::default();
         let roles = InMemoryRoles::default();
-        let keycloak = FakeKeycloak::default();
+        let tokens = FakeTokens::default();
         let realm = FakeRealm::default();
         let verifier = FakeVerifier::default();
         let service = IdentityService::new(
             users.clone(),
             roles.clone(),
-            keycloak.clone(),
+            tokens.clone(),
             realm.clone(),
             verifier.clone(),
         );
@@ -301,7 +301,7 @@ impl Harness {
             service,
             users,
             roles,
-            keycloak,
+            tokens,
             realm,
             verifier,
         }

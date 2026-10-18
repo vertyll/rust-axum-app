@@ -13,7 +13,7 @@ seconds of it is left.
 
 A refresh therefore runs once per refresh token:
 
-- within one instance, `HttpKeycloakClient` lets the first request refresh and hands its result to the others;
+- within one instance, `HttpTokenEndpoint` lets the first request refresh and hands its result to the others;
 - across instances, `SharedRefreshes` takes a lock in Redis; the instance holding it refreshes and leaves the new tokens
   in Redis for 30 seconds, where the others pick them up. When Redis is unreachable an instance refreshes on its own.
 

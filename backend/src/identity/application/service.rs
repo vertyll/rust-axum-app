@@ -2,7 +2,7 @@
 //! refresh and the mirror of Keycloak accounts the rest of the app joins to.
 //! Roles and what they grant are managed in [`roles`](super::roles).
 
-use crate::identity::application::ports::{IdentityPorts, KeycloakClient, TokenVerifier};
+use crate::identity::application::ports::{IdentityPorts, TokenEndpoint, TokenVerifier};
 use crate::identity::application::session::{AuthSession, Caller, TokenPair};
 use crate::identity::domain::{
     Grants, IdentityError, KeycloakIdentity, NewUser, Role, RoleRepository, User, UserId, UserRepository,
@@ -13,23 +13,17 @@ use crate::shared_kernel::pagination::{PageRequest, PageResult};
 pub struct IdentityService<P: IdentityPorts> {
     pub(super) users: P::Users,
     pub(super) roles: P::Roles,
-    keycloak: P::Keycloak,
+    tokens: P::Tokens,
     pub(super) realm: P::Realm,
     verifier: P::Verifier,
 }
 
 impl<P: IdentityPorts> IdentityService<P> {
-    pub fn new(
-        users: P::Users,
-        roles: P::Roles,
-        keycloak: P::Keycloak,
-        realm: P::Realm,
-        verifier: P::Verifier,
-    ) -> Self {
+    pub fn new(users: P::Users, roles: P::Roles, tokens: P::Tokens, realm: P::Realm, verifier: P::Verifier) -> Self {
         Self {
             users,
             roles,
-            keycloak,
+            tokens,
             realm,
             verifier,
         }
@@ -38,10 +32,10 @@ impl<P: IdentityPorts> IdentityService<P> {
     /// Redeems the code, then mirrors the account; a session Keycloak opened
     /// for an account that could not be stored is revoked again.
     pub async fn sign_in(&self, code: &str, code_verifier: &str) -> Result<AuthSession, IdentityError> {
-        let tokens = self.keycloak.exchange(code, code_verifier).await?;
+        let tokens = self.tokens.exchange(code, code_verifier).await?;
         let session = self.open(tokens, IdentityError::SignInRejected).await?;
         if let Err(err) = self.sync(&session.identity).await {
-            self.keycloak.revoke(&session.refresh_token).await;
+            self.tokens.revoke(&session.refresh_token).await;
             return Err(err);
         }
         tracing::info!(keycloak_id = %session.identity.keycloak_id, "signed in");
@@ -49,12 +43,12 @@ impl<P: IdentityPorts> IdentityService<P> {
     }
 
     pub async fn refresh(&self, session: &AuthSession) -> Result<AuthSession, IdentityError> {
-        let tokens = self.keycloak.refresh(&session.refresh_token).await?;
+        let tokens = self.tokens.refresh(&session.refresh_token).await?;
         self.open(tokens, IdentityError::SessionExpired).await
     }
 
     pub async fn sign_out(&self, session: &AuthSession) {
-        self.keycloak.revoke(&session.refresh_token).await;
+        self.tokens.revoke(&session.refresh_token).await;
         tracing::info!(keycloak_id = %session.identity.keycloak_id, "signed out");
     }
 
@@ -139,7 +133,7 @@ mod tests {
         let result = harness.service.sign_in("code", "verifier").await;
 
         assert!(matches!(result, Err(IdentityError::PersistenceFailure(_))));
-        assert_eq!(harness.keycloak.revoked(), vec!["refresh-1".to_string()]);
+        assert_eq!(harness.tokens.revoked(), vec!["refresh-1".to_string()]);
     }
 
     #[tokio::test]

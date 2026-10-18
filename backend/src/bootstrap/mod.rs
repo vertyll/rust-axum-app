@@ -29,7 +29,7 @@ use crate::identity::application::ports::IdentityPorts;
 use crate::identity::domain::{Catalogue, IdentityError};
 use crate::identity::infrastructure::http as identity_http;
 use crate::identity::infrastructure::keycloak::{
-    HttpKeycloakClient, HttpRealmAdmin, JwksTokenVerifier, KeycloakSettings, SharedRefreshes,
+    HttpRealmAdmin, HttpTokenEndpoint, JwksTokenVerifier, KeycloakSettings, SharedRefreshes,
 };
 use crate::identity::infrastructure::persistence::{ToastyRoleRepository, ToastyUserRepository};
 use crate::identity::infrastructure::session_store::RedisSessionStore;
@@ -53,7 +53,7 @@ pub struct ProductionPorts;
 impl IdentityPorts for ProductionPorts {
     type Users = ToastyUserRepository;
     type Roles = ToastyRoleRepository;
-    type Keycloak = HttpKeycloakClient;
+    type Tokens = HttpTokenEndpoint;
     type Realm = HttpRealmAdmin;
     type Verifier = JwksTokenVerifier;
 }
@@ -112,7 +112,7 @@ pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> 
     let identity: AppIdentityService = IdentityService::new(
         ToastyUserRepository::new(db.clone()),
         ToastyRoleRepository::new(db.clone()),
-        HttpKeycloakClient::new(
+        HttpTokenEndpoint::new(
             keycloak.clone(),
             SharedRefreshes::new(redis, &config.sessions.redis_key_prefix),
         )?,
