@@ -151,7 +151,7 @@ with Keycloak's pages in `frontend/src/keycloak` and `frontend/src/keycloak_cook
 |------------------------------------------------------|----------------------------------------------------|
 | `identity/infrastructure/http/routes/auth.rs`        | authorize, callback, session, logout               |
 | `identity/infrastructure/http/extract.rs`            | the `authenticate` middleware, `Auth`, `Permitted` |
-| `identity/infrastructure/keycloak/client.rs`         | code exchange, refresh, revocation                 |
+| `identity/infrastructure/keycloak/token_endpoint.rs` | code exchange, refresh, revocation                 |
 | `identity/infrastructure/keycloak/shared_refresh.rs` | one refresh per refresh token across instances     |
 | `identity/infrastructure/keycloak/verifier.rs`       | token verification against Keycloak's keys         |
 | `identity/infrastructure/session_store.rs`           | the Redis session store                            |
