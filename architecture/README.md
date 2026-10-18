@@ -9,14 +9,15 @@ names the line that broke it.
 The rules live in [`tests/backend.rs`](tests/backend.rs) and [`tests/frontend.rs`](tests/frontend.rs), one test per
 rule, each saying why it holds.
 
-| Crate     | Rules                                                                                                     |
-|-----------|-----------------------------------------------------------------------------------------------------------|
-| back-end  | the modules form no cycle, and each is reached only through what its `mod.rs` exports, but by `bootstrap` |
-| back-end  | the `domain` knows neither `application` nor an adapter, and the `application` knows no adapter           |
-| back-end  | `shared_kernel` uses no other module, `shared_http` only the kernel, and no module depends on `bootstrap` |
-| front-end | the modules and the pages form no cycle, and only the entry point and the router know the pages           |
-| front-end | components know no page and no session, and the back-end client knows no user interface                   |
-| front-end | `keycloak` is reached through its root                                                                    |
+| Crate     | Rules                                                                                                                     |
+|-----------|---------------------------------------------------------------------------------------------------------------------------|
+| back-end  | the modules form no cycle, and each is reached only through its `contracts`, or `identity`'s `guards`, but by `bootstrap` |
+| back-end  | the `domain` knows neither `application` nor an adapter, the `application` knows no adapter, and neither takes a guard    |
+| back-end  | `shared_kernel` uses no other module, `shared_http` only the kernel, and no module depends on `bootstrap`                 |
+| back-end  | a module's `contracts` carry no adapter and nothing of `shared_http`                                                      |
+| front-end | the modules and the pages form no cycle, and only the entry point and the router know the pages                           |
+| front-end | components know no page and no session, and the back-end client knows no user interface                                   |
+| front-end | `keycloak` is reached through its root                                                                                    |
 
 They describe the [back-end's architecture](../docs/architecture.md) and the [front-end's
 layout](../frontend/README.md#layout).
@@ -27,8 +28,8 @@ layout](../frontend/README.md#layout).
 the compiler does, inline ones and `#[path]` included. It records each path one module writes to another: every path of
 a `use` declaration, groups and renames expanded, and every path in the code that starts with `crate`, `self`, `super`,
 a child module or a module a `use` brought in. Each points at the deepest module on its path, so
-`crate::identity::Permitted` is a use of `identity`'s root and `crate::identity::domain::user::UserId` one of its
-domain.
+`crate::identity::contracts::Permission` is a use of `identity`'s contracts and `crate::identity::domain::user::UserId`
+one of its domain.
 
 A rule is one of three, each finished by `because`, which the failure shows:
 

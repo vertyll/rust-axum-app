@@ -9,8 +9,6 @@ pub mod application;
 pub mod domain;
 pub mod infrastructure;
 
-pub use application::KeycloakAccountService;
-
 pub const MESSAGES: crate::shared_kernel::messages::Messages = crate::shared_kernel::messages::Messages {
     owner: "keycloak_account",
     pl: include_str!("messages/pl.json"),

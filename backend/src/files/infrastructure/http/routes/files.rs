@@ -13,7 +13,7 @@ use crate::files::domain::{FileId, FileRepository};
 use crate::files::infrastructure::http::error::ApiError;
 use crate::files::infrastructure::http::requests::{UpdateFileRequest, UploadTicketRequest};
 use crate::files::infrastructure::http::responses::{FileResponse, LinkResponse, UploadTicketResponse};
-use crate::identity::Permitted;
+use crate::identity::guards::Permitted;
 use crate::shared_http::pagination::{PageQuery, PageResponse};
 use crate::shared_http::problem::{JsonBody, PathParam, QueryParams};
 

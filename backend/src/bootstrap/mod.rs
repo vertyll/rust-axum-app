@@ -23,8 +23,8 @@ use crate::files::application::permissions::CATALOGUE as FILES_CATALOGUE;
 use crate::files::infrastructure::http as files_http;
 use crate::files::infrastructure::persistence::ToastyFileRepository;
 use crate::files::infrastructure::storage::{LocalFileStorage, S3FileStorage, S3Settings, Storages};
-use crate::identity::CATALOGUE as IDENTITY_CATALOGUE;
 use crate::identity::application::IdentityService;
+use crate::identity::application::permissions::CATALOGUE as IDENTITY_CATALOGUE;
 use crate::identity::application::ports::IdentityPorts;
 use crate::identity::domain::{Catalogue, IdentityError};
 use crate::identity::infrastructure::http as identity_http;
@@ -33,7 +33,7 @@ use crate::identity::infrastructure::keycloak::{
 };
 use crate::identity::infrastructure::persistence::{ToastyRoleRepository, ToastyUserRepository};
 use crate::identity::infrastructure::session_store::RedisSessionStore;
-use crate::keycloak_account::KeycloakAccountService;
+use crate::keycloak_account::application::KeycloakAccountService;
 use crate::keycloak_account::infrastructure::http as keycloak_account_http;
 use crate::keycloak_account::infrastructure::keycloak::HttpAccountApi;
 use crate::shared_http::problem;

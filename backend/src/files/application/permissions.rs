@@ -1,6 +1,6 @@
 //! What the files module checks: reading files, and changing them.
 
-use crate::identity::{Catalogue, Declared, Permission};
+use crate::identity::contracts::{Catalogue, Declared, Permission};
 
 pub struct FilesView;
 

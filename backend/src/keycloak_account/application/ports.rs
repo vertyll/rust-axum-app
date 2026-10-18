@@ -1,5 +1,5 @@
 use crate::keycloak_account::domain::{KeycloakAccountError, SecondFactor};
-use crate::translations::Language;
+use crate::translations::contracts::Language;
 
 /// Keycloak's account API, called with the person's own access token, which
 /// answers about that person alone.

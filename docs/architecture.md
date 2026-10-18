@@ -52,15 +52,19 @@ Dependencies point inwards: `infrastructure` implements the ports of `applicatio
 module's `application/testing` holds in-memory fakes of its ports, so a use case is tested without a database or
 Keycloak.
 
-Between modules, one uses another only through the public API its `mod.rs` re-exports, and only in one direction:
-`files`, `translations` and `keycloak_account` use the auth guards of `identity`, `keycloak_account` uses the languages
-of `translations`, and `identity` imports none of them. What every module shares sits in two modules of its own:
-`shared_kernel` holds plain value types a domain may use, such as a page request or the messages a module ships, with no
-I/O; `shared_http` holds what the HTTP adapters share, the RFC 9457 problem documents and the paging parameters and
-responses.
+Between modules, one uses another only through what that module publishes, and only in one direction. A module that
+others use publishes its `contracts`, the words of its domain any layer may use, and `identity` also publishes its
+`guards`, the extractors other modules' HTTP adapters take. `files` and `translations` declare their permissions in
+`identity::contracts` and guard their routes with `identity::guards`, `keycloak_account` takes the caller's token from
+`identity::guards` and the languages from `translations::contracts`, and `identity` imports none of them.
+
+What every module shares sits in two modules of its own: `shared_kernel` holds plain value types a domain may use, such
+as a page request or the messages a module ships, with no I/O; `shared_http` holds what the HTTP adapters share, the
+RFC 9457 problem documents and the paging parameters and responses.
 
 These rules are checked on every change by the [architecture tests](../architecture/README.md), which read the source:
-a module reached past its `mod.rs`, a domain that imports an adapter or a cycle between modules fails the build.
+a module reached past what it publishes, a guard taken by a domain or an application, a domain that imports an adapter
+or a cycle between modules fails the build.
 
 ## The composition root
 

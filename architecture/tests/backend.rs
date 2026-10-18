@@ -10,8 +10,14 @@ static BACKEND: LazyLock<Architecture> = LazyLock::new(|| {
         .expect("the back-end's source is a valid crate")
 });
 
-/// The modules that each own a capability, as opposed to the shared ones and the composition root.
-const MODULES: [&str; 4] = ["identity", "files", "keycloak_account", "translations"];
+/// The modules that each own a capability, and what each publishes to the others: `contracts`, which any layer may use,
+/// and `guards`, which only adapters take.
+const MODULES: [(&str, &[&str]); 4] = [
+    ("identity", &["contracts", "guards"]),
+    ("translations", &["contracts"]),
+    ("files", &[]),
+    ("keycloak_account", &[]),
+];
 
 fn check(rules: &[Rule]) {
     if let Err(violations) = BACKEND.check(rules) {
@@ -27,16 +33,43 @@ fn modules_depend_on_one_another_without_cycles() {
 }
 
 #[test]
-fn a_module_is_reached_only_through_what_its_root_exports() {
-    let rule = MODULES
+fn a_module_is_reached_only_through_what_it_publishes() {
+    let rules: Vec<Rule> = MODULES
         .iter()
-        .fold(
-            Rule::through_root("a module is reached through its root"),
-            |rule, module| rule.module(module),
-        )
-        .except_from("bootstrap::**")
-        .because("its domain, application and adapters are its own; only the composition root wires them");
-    check(&[rule]);
+        .map(|(module, published)| {
+            published
+                .iter()
+                .fold(
+                    Rule::forbid(format!("{module} is reached through what it publishes"))
+                        .from("**")
+                        .except_from(&format!("{module}::**"))
+                        .except_from("bootstrap::**")
+                        .except_from("crate")
+                        .to(&format!("{module}::**")),
+                    |rule, part| rule.except_to(&format!("{module}::{part}::**")),
+                )
+                .because("its domain, application and adapters are its own; only the composition root wires them")
+        })
+        .collect();
+    check(&rules);
+}
+
+#[test]
+fn only_adapters_take_identitys_guards() {
+    check(&[Rule::forbid("identity's guards serve HTTP adapters")
+        .from("*::domain::**")
+        .from("*::application::**")
+        .to("identity::guards::**")
+        .because("a guard is an HTTP extractor; a domain or an application knows no transport")]);
+}
+
+#[test]
+fn what_a_module_publishes_carries_no_adapter() {
+    check(&[Rule::forbid("contracts are the published language")
+        .from("*::contracts::**")
+        .to("*::infrastructure::**")
+        .to("shared_http::**")
+        .because("every layer of another module may use them, so they hold the domain's words and nothing else")]);
 }
 
 #[test]

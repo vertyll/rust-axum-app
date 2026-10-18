@@ -8,11 +8,11 @@ use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
 use super::ApiError;
-use crate::identity::CallerToken;
+use crate::identity::guards::CallerToken;
 use crate::keycloak_account::application::{AccountApi, KeycloakAccountService};
 use crate::keycloak_account::domain::SecondFactor;
 use crate::shared_http::problem::JsonBody;
-use crate::translations::Language;
+use crate::translations::contracts::Language;
 
 type Account<A> = State<Arc<KeycloakAccountService<A>>>;
 
@@ -93,7 +93,7 @@ mod tests {
         let supported = export["supportedLocales"]
             .as_array()
             .expect("the realm names its locales");
-        for language in crate::translations::Language::ALL {
+        for language in crate::translations::contracts::Language::ALL {
             assert!(
                 supported.iter().any(|locale| locale == language.code()),
                 "the realm does not support {language}"

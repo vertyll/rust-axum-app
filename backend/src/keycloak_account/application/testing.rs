@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::keycloak_account::application::ports::AccountApi;
 use crate::keycloak_account::domain::{KeycloakAccountError, SecondFactor};
-use crate::translations::Language;
+use crate::translations::contracts::Language;
 
 /// An account API in memory: the second factor it holds, and each language
 /// stored, as `<token> <language>`.

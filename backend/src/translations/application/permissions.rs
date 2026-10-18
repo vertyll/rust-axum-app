@@ -1,7 +1,7 @@
 //! What the translations module checks. Reading a language's catalogue
 //! needs no account.
 
-use crate::identity::{Catalogue, Declared, Permission};
+use crate::identity::contracts::{Catalogue, Declared, Permission};
 
 pub struct TranslationsView;
 

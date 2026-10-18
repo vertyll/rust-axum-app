@@ -3,7 +3,7 @@
 
 use crate::keycloak_account::application::ports::AccountApi;
 use crate::keycloak_account::domain::{KeycloakAccountError, SecondFactor};
-use crate::translations::Language;
+use crate::translations::contracts::Language;
 
 #[derive(Clone)]
 pub struct KeycloakAccountService<A: AccountApi> {
@@ -35,7 +35,7 @@ impl<A: AccountApi> KeycloakAccountService<A> {
 mod tests {
     use super::KeycloakAccountService;
     use crate::keycloak_account::application::testing::FakeAccountApi;
-    use crate::translations::Language;
+    use crate::translations::contracts::Language;
 
     #[tokio::test]
     async fn the_second_factor_is_the_one_keycloak_holds() {

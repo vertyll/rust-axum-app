@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use crate::keycloak_account::application::AccountApi;
 use crate::keycloak_account::domain::{KeycloakAccountError, SecondFactor};
-use crate::translations::Language;
+use crate::translations::contracts::Language;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -136,7 +136,7 @@ mod tests {
 
     use super::HttpAccountApi;
     use crate::keycloak_account::application::AccountApi;
-    use crate::translations::Language;
+    use crate::translations::contracts::Language;
 
     async fn account_api(app: Router) -> HttpAccountApi {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();

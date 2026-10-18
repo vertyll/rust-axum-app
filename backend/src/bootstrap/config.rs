@@ -8,7 +8,7 @@ use std::str::FromStr;
 use anyhow::{Context, Result, bail};
 use secrecy::{ExposeSecret, SecretString};
 
-use crate::files::StorageKind;
+use crate::files::domain::StorageKind;
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {

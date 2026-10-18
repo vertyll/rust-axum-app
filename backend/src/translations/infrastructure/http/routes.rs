@@ -10,7 +10,7 @@ use validator::Validate;
 use super::error::ApiError;
 use super::requests::TranslationRequest;
 use super::responses::TranslationResponse;
-use crate::identity::Permitted;
+use crate::identity::guards::Permitted;
 use crate::shared_http::pagination::{PageQuery, PageResponse};
 use crate::shared_http::problem::{JsonBody, PathParam, QueryParams};
 use crate::translations::application::TranslationsService;

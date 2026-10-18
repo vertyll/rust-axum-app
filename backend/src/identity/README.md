@@ -1,9 +1,14 @@
 # identity
 
 Signs people in through Keycloak, keeps their sessions, verifies their tokens and mirrors their accounts, and holds the
-roles and what they grant. Every other module that needs to know who is calling uses `Auth`, `Permitted` or
-`CallerToken` (the caller's access token, for calls Keycloak answers about the caller) from here and nothing else, and
-declares its own permissions with `Permission` and `Catalogue`.
+roles and what they grant. Other modules use only what it publishes:
+
+| Module                | Holds                                                          | Used by                        |
+|-----------------------|----------------------------------------------------------------|--------------------------------|
+| `identity::contracts` | `Permission`, `Declared`, `Catalogue`, `StockRole`             | any layer of another module    |
+| `identity::guards`    | `Auth`, `Permitted`, `CallerToken` (the caller's access token) | another module's HTTP adapters |
+
+A module declares its own permissions with the contracts, and a handler states what it needs with a guard.
 
 The sign-in flow, sessions and refreshing are described in [Authentication](../../../docs/authentication.md); roles and
 permissions in [Authorization](../../../docs/authorization.md).

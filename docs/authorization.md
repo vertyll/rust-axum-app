@@ -142,6 +142,6 @@ permission's name as the `permission` argument.
 1. Declare it as a type implementing `Permission` in the module's `application/permissions.rs`, and add it to the
    module's `CATALOGUE`.
 2. A new module adds its `CATALOGUE` to `bootstrap::CATALOGUES`.
-3. Guard the handler with `Permitted<ThePermission>`.
+3. Guard the handler with `identity::guards::Permitted<ThePermission>`.
 
 Nothing else changes: the next start registers it, and `admin` holds it at once.
