@@ -152,7 +152,6 @@ fn current_module(cx: &Cx, modules: &[(Module, Vec<Section>)]) -> Option<(Module
         .cloned()
 }
 
-/// Opening one menu closes the others, as each is a `<details>` of its own.
 const ITEM: &str =
     "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-foreground/5";
 const ITEM_ACTIVE: &str = "flex items-center gap-2 rounded-md bg-foreground/5 px-3 py-2 text-sm font-medium";

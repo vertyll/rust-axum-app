@@ -69,7 +69,6 @@ mod tests {
         assert!(request.validate().is_err());
     }
 
-    /// A sign-in asks Keycloak's pages for these languages, so the realm must have them.
     #[test]
     fn the_sign_in_asks_only_for_languages_the_realm_supports() {
         let export: serde_json::Value = serde_json::from_str(include_str!("../../../../../keycloak/realm-export.json"))
