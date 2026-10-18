@@ -7,8 +7,6 @@
   "errors.page.home": "Go to the home page",
   "errors.page.not_found.body": "The page you are looking for does not exist or has been removed.",
   "errors.page.not_found.title": "Page not found",
-  "errors.page.signed_out.body": "This page is for signed-in users, or your session has ended.",
-  "errors.page.signed_out.title": "Sign in to continue",
   "layout.footer.label": "Legal",
   "layout.language.en": "English",
   "layout.language.label": "Language",

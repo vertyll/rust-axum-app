@@ -37,16 +37,36 @@ pub async fn authorize(cx: &Cx, body: Body) -> Result<Response> {
     .await
 }
 
-pub fn sign_in(cx: &Cx) -> String {
-    href!(authorize).resolve(cx)
+#[derive(Serialize)]
+struct SignIn<'a> {
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    register: bool,
+    return_to: &'a str,
 }
 
+/// The sign-in, which returns to the page this request is for once the
+/// person is signed in.
+pub fn sign_in(cx: &Cx) -> String {
+    href!(authorize)
+        .query(SignIn {
+            register: false,
+            return_to: this_page(cx),
+        })
+        .resolve(cx)
+}
+
+/// The sign-up, which returns to the page this request is for, as the sign-in does.
 pub fn register(cx: &Cx) -> String {
-    #[derive(Serialize)]
-    struct Register {
-        register: bool,
-    }
-    href!(authorize).query(Register { register: true }).resolve(cx)
+    href!(authorize)
+        .query(SignIn {
+            register: true,
+            return_to: this_page(cx),
+        })
+        .resolve(cx)
+}
+
+fn this_page(cx: &Cx) -> &str {
+    uri(cx).path_and_query().map_or("/", |page| page.as_str())
 }
 
 /// Where the browser goes for an account action: the sign-in, asking Keycloak

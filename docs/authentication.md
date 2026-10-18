@@ -39,11 +39,15 @@ sequenceDiagram
    ([Account actions](#account-actions)); any other value is dropped. The `Accept-Language`
    header picks Keycloak's language when it is `pl` or `en`, as `ui_locales`. Keycloak shows a signed-in person the
    language stored on their account instead, so before a `kc_action` the front-end stores that language there, through
-   `PUT /api/users/me/language`.
+   `PUT /api/users/me/language`. `return_to` names the page to come back to: a path on the front-end's own site, kept
+   in the session, and dropped when it is anything else, so the sign-in cannot send the browser elsewhere. The
+   front-end passes the page the reader is on with every sign-in, and a page that needs a session answers a signed-out
+   reader with `303` to the sign-in, so they come back to that page signed in.
 2. Keycloak returns to `GET /api/auth/callback`. The application checks that the `state` is the one it issued to this
    browser, exchanges the code with the confidential client `rust-axum-app` and its secret, verifies the access token
    and mirrors the account into PostgreSQL.
-3. It then issues a new session identifier, stores the tokens in the session and redirects to `AUTH_POST_LOGIN_URL`.
+3. It then issues a new session identifier, stores the tokens in the session and redirects to the `return_to` page, on
+   the address of `AUTH_POST_LOGIN_URL`, or to `AUTH_POST_LOGIN_URL` itself when none was given.
    When the account cannot be written it ends the Keycloak session again; any failure redirects with
    `?error=sign_in_failed`, and a `state` this browser was not given with `?error=state_mismatch`.
 

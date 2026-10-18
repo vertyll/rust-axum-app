@@ -23,6 +23,9 @@ use crate::identity::infrastructure::http::responses::SessionResponse;
 use crate::identity::infrastructure::keycloak::pkce::{self, SignInTransaction};
 
 const TRANSACTION_KEY: &str = "identity.sign_in";
+/// The page of the client the sign-in returns to, kept in the session while Keycloak signs the person in.
+const RETURN_KEY: &str = "identity.return_to";
+const MOST_RETURN_LENGTH: usize = 2048;
 const SCOPE: &str = "openid profile email";
 const SIGN_IN_FAILED: &str = "sign_in_failed";
 const STATE_MISMATCH: &str = "state_mismatch";
@@ -64,6 +67,8 @@ struct AuthorizeQuery {
     register: bool,
     /// The color theme the reader chose in the client, which Keycloak's pages open in.
     theme: Option<String>,
+    /// The page of the client to return to once signed in, a path on the client's own site.
+    return_to: Option<String>,
 }
 
 async fn authorize<P: IdentityPorts>(
@@ -74,6 +79,10 @@ async fn authorize<P: IdentityPorts>(
 ) -> Result<Redirect, ApiError> {
     let transaction = SignInTransaction::new();
     session.insert(TRANSACTION_KEY, &transaction).await.map_err(store)?;
+    match query.return_to.as_deref().and_then(page_on_this_site) {
+        Some(page) => session.insert(RETURN_KEY, page).await.map_err(store)?,
+        None => drop(session.remove::<String>(RETURN_KEY).await.map_err(store)?),
+    }
 
     let keycloak = &state.settings.keycloak;
     let challenge = pkce::challenge_of(&transaction.code_verifier);
@@ -119,6 +128,7 @@ async fn callback<P: IdentityPorts>(
         .await
         .map_err(store)?;
     let post_login = &state.settings.post_login_url;
+    let return_to = session.remove::<String>(RETURN_KEY).await.map_err(store)?;
 
     if let Some(error) = query.error {
         tracing::debug!("Keycloak returned an authorization error: {error}");
@@ -137,7 +147,7 @@ async fn callback<P: IdentityPorts>(
         Ok(signed_in) => {
             session.cycle_id().await.map_err(store)?;
             session.insert(SESSION_KEY, &signed_in).await.map_err(store)?;
-            Ok(Redirect::to(post_login))
+            Ok(Redirect::to(&landing(post_login, return_to.as_deref())))
         }
         Err(err) => {
             tracing::warn!("sign-in could not be completed: {err}");
@@ -179,6 +189,24 @@ fn is_allowed_action(action: &str) -> bool {
             .is_some_and(|id| uuid::Uuid::try_parse(id).is_ok())
 }
 
+/// A path on the client's own site, so the sign-in cannot send the browser elsewhere: one
+/// that starts with a single `/`, with no backslash and no control character.
+fn page_on_this_site(path: &str) -> Option<&str> {
+    let on_this_site = path.starts_with('/')
+        && !path.starts_with("//")
+        && !path.contains('\\')
+        && !path.chars().any(char::is_control)
+        && path.len() <= MOST_RETURN_LENGTH;
+    on_this_site.then_some(path)
+}
+
+/// Where a completed sign-in lands: the page it was started from, on the client's
+/// address, or the client's start page.
+fn landing(post_login: &str, page: Option<&str>) -> String {
+    page.and_then(|page| url::Url::parse(post_login).ok()?.join(page).ok())
+        .map_or_else(|| post_login.to_owned(), String::from)
+}
+
 fn preferred_language(headers: &HeaderMap) -> Option<&'static str> {
     let accepted = headers.get(header::ACCEPT_LANGUAGE)?.to_str().ok()?;
     accepted
@@ -216,7 +244,32 @@ fn encode(value: &str) -> String {
 mod tests {
     use axum::http::{HeaderMap, HeaderValue, header};
 
-    use super::{is_allowed_action, preferred_language, supported_theme, with_query};
+    use super::{is_allowed_action, landing, page_on_this_site, preferred_language, supported_theme, with_query};
+
+    #[test]
+    fn a_sign_in_returns_only_to_a_page_of_the_clients_own_site() {
+        assert_eq!(page_on_this_site("/files/7?tab=history"), Some("/files/7?tab=history"));
+        for elsewhere in [
+            "https://evil.test/",
+            "//evil.test/",
+            "/\\evil.test",
+            "files",
+            "/a\nb",
+            "",
+        ] {
+            assert_eq!(page_on_this_site(elsewhere), None, "{elsewhere:?}");
+        }
+        assert_eq!(page_on_this_site(&format!("/{}", "a".repeat(2048))), None);
+    }
+
+    #[test]
+    fn a_completed_sign_in_lands_on_the_page_it_started_from() {
+        assert_eq!(
+            landing("http://localhost:3000/", Some("/files/7?tab=history")),
+            "http://localhost:3000/files/7?tab=history"
+        );
+        assert_eq!(landing("http://localhost:3000/", None), "http://localhost:3000/");
+    }
 
     #[test]
     fn passes_on_only_the_actions_of_the_account_page() {

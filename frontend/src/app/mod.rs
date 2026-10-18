@@ -10,7 +10,7 @@ mod theme;
 
 use topcoat::Result;
 use topcoat::context::Cx;
-use topcoat::router::error::{ForbiddenError, NotFoundError, UnauthorizedError};
+use topcoat::router::error::{ForbiddenError, NotFoundError, UnauthorizedError, see_other};
 use topcoat::router::header::{
     CONTENT_SECURITY_POLICY, HeaderValue, REFERRER_POLICY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
 };
@@ -81,11 +81,11 @@ async fn root_layout(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
                     <div class="mx-auto w-full max-w-5xl">
                         error_boundary(
                             fallback: |error| {
-                                let refusal = if error
-                                    .downcast_ref::<UnauthorizedError>()
-                                    .is_some() {
-                                    Refusal::SignedOut
-                                } else if error.downcast_ref::<ForbiddenError>().is_some() {
+                                // A page that needs a session sends the reader to sign in, and back here after.
+                                if error.downcast_ref::<UnauthorizedError>().is_some() {
+                                    return Err(see_other(keycloak::sign_in(cx)).into());
+                                }
+                                let refusal = if error.downcast_ref::<ForbiddenError>().is_some() {
                                     Refusal::Forbidden
                                 } else if error.downcast_ref::<NotFoundError>().is_some() {
                                     Refusal::NotFound
@@ -130,7 +130,6 @@ async fn site_footer(cx: &Cx, signed_in: bool) -> Result<impl View> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Refusal {
-    SignedOut,
     Forbidden,
     NotFound,
 }
@@ -139,11 +138,6 @@ enum Refusal {
 async fn refusal_page(cx: &Cx, refusal: Refusal) -> Result<impl View> {
     let texts = texts(cx).await?;
     let (status, title, body) = match refusal {
-        Refusal::SignedOut => (
-            StatusCode::UNAUTHORIZED,
-            "errors.page.signed_out.title",
-            "errors.page.signed_out.body",
-        ),
         Refusal::Forbidden => (
             StatusCode::FORBIDDEN,
             "errors.page.forbidden.title",
@@ -164,25 +158,16 @@ async fn refusal_page(cx: &Cx, refusal: Refusal) -> Result<impl View> {
                 card_description((texts.t(body)))
             )
             card_content(
-                if refusal == Refusal::SignedOut {
-                    <a
-                        href=(keycloak::sign_in(cx))
-                        class=(button_variants(ButtonVariant::Primary, ButtonSize::Md))
-                    >
-                        (texts.t("auth.sign_in"))
-                    </a>
-                } else {
-                    link(
-                        href: href!(home),
-                        attrs: attributes! {
-                            class=(button_variants(
-                                ButtonVariant::Outline,
-                                ButtonSize::Md,
-                            ))
-                        },
-                        (texts.t("errors.page.home"))
-                    )
-                }
+                link(
+                    href: href!(home),
+                    attrs: attributes! {
+                        class=(button_variants(
+                            ButtonVariant::Outline,
+                            ButtonSize::Md,
+                        ))
+                    },
+                    (texts.t("errors.page.home"))
+                )
             )
         )
     })

@@ -7,8 +7,6 @@
   "errors.page.home": "Przejdź na stronę główną",
   "errors.page.not_found.body": "Strona, której szukasz, nie istnieje albo została usunięta.",
   "errors.page.not_found.title": "Nie znaleziono strony",
-  "errors.page.signed_out.body": "Ta strona jest dla zalogowanych użytkowników albo Twoja sesja wygasła.",
-  "errors.page.signed_out.title": "Zaloguj się, aby kontynuować",
   "layout.footer.label": "Informacje prawne",
   "layout.language.en": "English",
   "layout.language.label": "Język",
