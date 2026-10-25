@@ -114,7 +114,7 @@ Start the infrastructure and the back-end first ([Development Setup](../docs/dev
 is built into `.tools/` once:
 
 ```bash
-cargo install topcoat-cli --version 0.10.0 --locked --root .tools
+cargo install topcoat-cli --version 0.11.0 --locked --root .tools
 ```
 
 Then:

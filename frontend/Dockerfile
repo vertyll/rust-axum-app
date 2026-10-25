@@ -2,7 +2,7 @@ ARG RUST_IMAGE=rust:1.99-slim-trixie
 ARG RUNTIME_IMAGE=debian:trixie-slim
 
 FROM ${RUST_IMAGE} AS tools
-RUN cargo install topcoat-cli --version 0.10.0 --locked
+RUN cargo install topcoat-cli --version 0.11.0 --locked
 
 FROM tools AS build
 WORKDIR /workspace

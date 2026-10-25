@@ -69,7 +69,7 @@ the front-end's `backend/translations/`. It listens on `http://localhost:8080`, 
 From `frontend/`, after building the Topcoat CLI into `.tools/` once:
 
 ```bash
-cargo install topcoat-cli --version 0.10.0 --locked --root .tools
+cargo install topcoat-cli --version 0.11.0 --locked --root .tools
 .tools/bin/topcoat dev
 ```
 

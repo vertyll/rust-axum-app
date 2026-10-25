@@ -5,7 +5,7 @@
 for (const form of document.querySelectorAll("form[data-upload]")) {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    upload(form);
+    void upload(form);
   });
 }
 
