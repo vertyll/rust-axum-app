@@ -1,4 +1,4 @@
-ARG RUST_IMAGE=rust:1.99-slim-trixie
+ARG RUST_IMAGE=rust:1-slim-trixie
 ARG RUNTIME_IMAGE=debian:trixie-slim
 
 FROM ${RUST_IMAGE} AS deps
