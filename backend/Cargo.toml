@@ -34,7 +34,7 @@ self_named_module_files = "warn"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1"
-aws-sdk-s3 = { version = "1.152", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio"] }
+aws-sdk-s3 = { version = "1.155", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio"] }
 axum = { version = "0.8.9", features = ["multipart", "macros"] }
 base64 = "0.23"
 bytes = "1"
