@@ -10,7 +10,8 @@ use crate::identity::application::ports::{IdentityPorts, RealmAdmin};
 use crate::identity::application::service::IdentityService;
 use crate::identity::domain::role_rules::{check_removal, check_restriction, check_taking};
 use crate::identity::domain::{
-    Catalogue, IdentityError, RegisteredPermission, Role, RoleName, RoleRepository, UserId, UserRepository,
+    Catalogue, IdentityError, PermissionRegistry, RegisteredPermission, Role, RoleName, RoleRepository, UserId,
+    UserRepository,
 };
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,12 @@ impl<P: IdentityPorts> IdentityService<P> {
     /// stock roles that do not exist yet and gives the existing ones only the
     /// permissions never registered before, so an administrator's changes
     /// survive every start.
+    ///
+    /// Each role and the registry are written in a transaction of their own,
+    /// not in one together. A permission no module declares any more is
+    /// withdrawn from every role first and dropped from the registry after,
+    /// so a failure part way leaves it registered and granted by fewer roles,
+    /// never granted while unregistered; the next start finishes the work.
     pub async fn register(&self, catalogues: &[Catalogue]) -> Result<(), IdentityError> {
         let declared = RegisteredPermission::declared_in(catalogues);
         let names: BTreeSet<&str> = declared.iter().map(|permission| permission.name.as_str()).collect();
@@ -57,15 +64,21 @@ impl<P: IdentityPorts> IdentityService<P> {
         }
 
         let seen: BTreeSet<String> = self
-            .roles
-            .permissions()
+            .registry
+            .list()
             .await?
             .into_iter()
             .map(|permission| permission.name)
             .collect();
-        self.roles.register(&declared).await?;
-
+        let withdrawn: BTreeSet<String> = seen
+            .iter()
+            .filter(|name| !names.contains(name.as_str()))
+            .cloned()
+            .collect();
         let now = Timestamp::now();
+        self.withdraw(&withdrawn, now).await?;
+        self.registry.register(&declared).await?;
+
         for stock in stock_roles {
             let name = RoleName::parse(stock.name)?;
             let grants = stock.grants.iter().map(|grant| (*grant).to_owned());
@@ -99,7 +112,7 @@ impl<P: IdentityPorts> IdentityService<P> {
     }
 
     pub async fn permissions(&self) -> Result<Vec<RegisteredPermission>, IdentityError> {
-        self.roles.permissions().await
+        self.registry.list().await
     }
 
     pub async fn list_roles(&self) -> Result<Vec<Role>, IdentityError> {
@@ -194,14 +207,29 @@ impl<P: IdentityPorts> IdentityService<P> {
         Ok(())
     }
 
+    /// Takes the permissions no module declares any more from every role that
+    /// grants them, saving each role whole.
+    async fn withdraw(&self, withdrawn: &BTreeSet<String>, at: Timestamp) -> Result<(), IdentityError> {
+        if withdrawn.is_empty() {
+            return Ok(());
+        }
+        for mut role in self.roles.list().await? {
+            if role.withdraw(withdrawn, at) {
+                self.roles.update(&role).await?;
+                tracing::info!(role = %role.name, "permissions withdrawn: no module declares them any more");
+            }
+        }
+        Ok(())
+    }
+
     async fn role(&self, name: &RoleName) -> Result<Role, IdentityError> {
         self.roles.find(name).await?.ok_or(IdentityError::RoleNotFound)
     }
 
     async fn check_registered(&self, permissions: &BTreeSet<String>) -> Result<(), IdentityError> {
         let registered: BTreeSet<String> = self
-            .roles
-            .permissions()
+            .registry
+            .list()
             .await?
             .into_iter()
             .map(|permission| permission.name)
@@ -328,6 +356,15 @@ mod tests {
 
         let auditor = harness.service.get_role("auditor").await.unwrap();
         assert_eq!(auditor.permissions, names(&["USERS_VIEW"]));
+        let registered: Vec<String> = harness
+            .service
+            .permissions()
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|permission| permission.name)
+            .collect();
+        assert_eq!(registered, ["USERS_VIEW"]);
     }
 
     #[tokio::test]

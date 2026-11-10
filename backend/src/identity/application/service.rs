@@ -13,16 +13,25 @@ use crate::shared_kernel::pagination::{PageRequest, PageResult};
 pub struct IdentityService<P: IdentityPorts> {
     pub(super) users: P::Users,
     pub(super) roles: P::Roles,
+    pub(super) registry: P::Permissions,
     tokens: P::Tokens,
     pub(super) realm: P::Realm,
     verifier: P::Verifier,
 }
 
 impl<P: IdentityPorts> IdentityService<P> {
-    pub fn new(users: P::Users, roles: P::Roles, tokens: P::Tokens, realm: P::Realm, verifier: P::Verifier) -> Self {
+    pub fn new(
+        users: P::Users,
+        roles: P::Roles,
+        registry: P::Permissions,
+        tokens: P::Tokens,
+        realm: P::Realm,
+        verifier: P::Verifier,
+    ) -> Self {
         Self {
             users,
             roles,
+            registry,
             tokens,
             realm,
             verifier,

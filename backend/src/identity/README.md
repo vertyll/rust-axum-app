@@ -15,16 +15,17 @@ permissions in [Authorization](../../../docs/authorization.md).
 
 ## Ports
 
-| Port             | Adapter                | What it does                                                     |
-|------------------|------------------------|------------------------------------------------------------------|
-| `UserRepository` | `ToastyUserRepository` | the mirrored accounts in PostgreSQL                              |
-| `RoleRepository` | `ToastyRoleRepository` | the roles, what they grant and the registry of permissions       |
-| `TokenEndpoint`  | `HttpTokenEndpoint`    | code exchange, refresh and revocation                            |
-| `RealmAdmin`     | `HttpRealmAdmin`       | realm roles made, removed, given and taken through the admin API |
-| `TokenVerifier`  | `JwksTokenVerifier`    | signature, issuer, expiry and audience of a token                |
+| Port                 | Adapter                    | What it does                                                     |
+|----------------------|----------------------------|------------------------------------------------------------------|
+| `UserRepository`     | `ToastyUserRepository`     | the mirrored accounts in PostgreSQL                              |
+| `RoleRepository`     | `ToastyRoleRepository`     | the roles and what they grant                                    |
+| `PermissionRegistry` | `ToastyPermissionRegistry` | the permissions the modules declare, rewritten at every start    |
+| `TokenEndpoint`      | `HttpTokenEndpoint`        | code exchange, refresh and revocation                            |
+| `RealmAdmin`         | `HttpRealmAdmin`           | realm roles made, removed, given and taken through the admin API |
+| `TokenVerifier`      | `JwksTokenVerifier`        | signature, issuer, expiry and audience of a token                |
 
-`IdentityPorts` bundles the five as associated types, so the service has one type parameter and `bootstrap` names the
-production adapters in one place (`ProductionPorts`). `application/testing` holds in-memory fakes of all five.
+`IdentityPorts` bundles the six as associated types, so the service has one type parameter and `bootstrap` names the
+production adapters in one place (`ProductionPorts`). `application/testing` holds in-memory fakes of all six.
 
 ## Accounts mirror Keycloak
 

@@ -99,6 +99,20 @@ pub struct Role {
     pub updated_at: Timestamp,
 }
 
+impl Role {
+    /// Takes `withdrawn` from what the role grants, and says whether it held
+    /// any of them. An unrestricted role still holds every permission there is.
+    pub fn withdraw(&mut self, withdrawn: &BTreeSet<String>, at: Timestamp) -> bool {
+        let before = self.permissions.len();
+        self.permissions.retain(|name| !withdrawn.contains(name));
+        let changed = self.permissions.len() != before;
+        if changed {
+            self.updated_at = at;
+        }
+        changed
+    }
+}
+
 /// What a caller may do: the union of what their roles grant.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Grants {
@@ -173,6 +187,18 @@ mod tests {
         assert!(grants.allows("X") && grants.allows("Y"));
         assert!(!grants.allows("Z"));
         assert!(!grants.is_unrestricted());
+    }
+
+    #[test]
+    fn withdrawing_takes_only_what_the_role_holds() {
+        let mut role = role("auditor", false, &["X", "Y"]);
+        let later = Timestamp::UNIX_EPOCH + jiff::SignedDuration::from_secs(1);
+
+        assert!(!role.withdraw(&BTreeSet::from(["Z".to_owned()]), later));
+        assert_eq!(role.updated_at, Timestamp::UNIX_EPOCH);
+        assert!(role.withdraw(&BTreeSet::from(["Y".to_owned(), "Z".to_owned()]), later));
+        assert_eq!(role.permissions, BTreeSet::from(["X".to_owned()]));
+        assert_eq!(role.updated_at, later);
     }
 
     #[test]

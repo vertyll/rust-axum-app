@@ -13,8 +13,8 @@ use crate::identity::application::permissions::CATALOGUE;
 use crate::identity::application::ports::{IdentityPorts, RealmAdmin, TokenEndpoint, TokenVerifier};
 use crate::identity::application::session::{TokenPair, VerifiedToken};
 use crate::identity::domain::{
-    Email, IdentityError, KeycloakId, KeycloakIdentity, NewUser, RegisteredPermission, Role, RoleName, RoleRepository,
-    User, UserId, UserRepository,
+    Email, IdentityError, KeycloakId, KeycloakIdentity, NewUser, PermissionRegistry, RegisteredPermission, Role,
+    RoleName, RoleRepository, User, UserId, UserRepository,
 };
 
 pub(crate) fn identity(roles: Vec<RoleName>) -> KeycloakIdentity {
@@ -170,7 +170,6 @@ impl TokenVerifier for FakeVerifier {
 #[derive(Clone, Default)]
 pub(crate) struct InMemoryRoles {
     roles: Arc<Mutex<BTreeMap<RoleName, Role>>>,
-    permissions: Arc<Mutex<Vec<RegisteredPermission>>>,
 }
 
 impl RoleRepository for InMemoryRoles {
@@ -200,8 +199,15 @@ impl RoleRepository for InMemoryRoles {
         self.roles.lock().unwrap().remove(name);
         Ok(())
     }
+}
 
-    async fn permissions(&self) -> Result<Vec<RegisteredPermission>, IdentityError> {
+#[derive(Clone, Default)]
+pub(crate) struct InMemoryPermissions {
+    permissions: Arc<Mutex<Vec<RegisteredPermission>>>,
+}
+
+impl PermissionRegistry for InMemoryPermissions {
+    async fn list(&self) -> Result<Vec<RegisteredPermission>, IdentityError> {
         let mut permissions = self.permissions.lock().unwrap().clone();
         permissions.sort();
         Ok(permissions)
@@ -209,10 +215,6 @@ impl RoleRepository for InMemoryRoles {
 
     async fn register(&self, declared: &[RegisteredPermission]) -> Result<(), IdentityError> {
         *self.permissions.lock().unwrap() = declared.to_vec();
-        for role in self.roles.lock().unwrap().values_mut() {
-            role.permissions
-                .retain(|name| declared.iter().any(|permission| &permission.name == name));
-        }
         Ok(())
     }
 }
@@ -267,6 +269,7 @@ pub(crate) struct TestPorts;
 impl IdentityPorts for TestPorts {
     type Users = InMemoryUsers;
     type Roles = InMemoryRoles;
+    type Permissions = InMemoryPermissions;
     type Tokens = FakeTokens;
     type Realm = FakeRealm;
     type Verifier = FakeVerifier;
@@ -292,6 +295,7 @@ impl Harness {
         let service = IdentityService::new(
             users.clone(),
             roles.clone(),
+            InMemoryPermissions::default(),
             tokens.clone(),
             realm.clone(),
             verifier.clone(),
