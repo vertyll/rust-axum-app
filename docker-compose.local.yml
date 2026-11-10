@@ -113,7 +113,7 @@ services:
       - "127.0.0.1:3909:8080"
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.1
+    image: quay.io/keycloak/keycloak:26.8.2
     restart: unless-stopped
     command: start-dev --import-realm
     environment:
