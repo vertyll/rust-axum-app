@@ -3,22 +3,32 @@ use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fred::prelude::{Expiration, KeysInterface, Pool, SetOptions};
+use fred::prelude::{Expiration, KeysInterface, LuaInterface, Pool, SetOptions};
 use sha2::{Digest, Sha256};
 
 use crate::identity::application::session::TokenPair;
 use crate::identity::domain::IdentityError;
 
-const LOCK_TTL_SECONDS: i64 = 10;
+/// Longer than the work the lock guards: a call to Keycloak, bounded at ten
+/// seconds, and the Redis commands around it, bounded at two each.
+const LOCK_TTL_SECONDS: i64 = 20;
 const RESULT_TTL_SECONDS: i64 = 30;
 const WAIT_INTERVAL: Duration = Duration::from_millis(100);
 const WAIT_ATTEMPTS: usize = 50;
 const SEPARATOR: char = '\n';
 
+/// Deletes the lock only while it still holds the caller's token, so a replica
+/// whose lock expired never releases the one another replica took since.
+const RELEASE_SCRIPT: &str = r#"if redis.call("GET", KEYS[1]) == ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+end
+return 0"#;
+
 /// One refresh per refresh token across replicas. The replica that claims
 /// `{prefix}:refresh-lock:{sha256}` calls Keycloak and leaves the new pair under
 /// `{prefix}:refresh-result:{sha256}` for thirty seconds; the others take it from
-/// there instead of presenting a rotated token twice. Without Redis it refreshes
+/// there instead of presenting a rotated token twice. The lock holds a random
+/// token of its owner, which alone releases it. Without Redis it refreshes
 /// directly, so Redis never becomes a reason a sign-in fails.
 #[derive(Clone)]
 pub struct SharedRefreshes {
@@ -28,7 +38,8 @@ pub struct SharedRefreshes {
 
 enum Claim {
     Done(TokenPair),
-    Leader,
+    /// Holds the lock, under the token that releases it.
+    Leader(String),
     Follower,
 }
 
@@ -66,11 +77,11 @@ impl SharedRefreshes {
                 keycloak().await
             }
             Ok(Claim::Done(pair)) => Ok(pair),
-            Ok(Claim::Leader) => {
+            Ok(Claim::Leader(token)) => {
                 let result = keycloak().await;
                 match &result {
                     Ok(pair) => share(redis, &result_key, pair).await,
-                    Err(_) => release(redis, &lock_key).await,
+                    Err(_) => release(redis, &lock_key, &token).await,
                 }
                 result
             }
@@ -86,17 +97,18 @@ async fn claim(redis: &Pool, lock_key: &str, result_key: &str) -> Result<Claim, 
     if let Some(pair) = read(redis, result_key).await? {
         return Ok(Claim::Done(pair));
     }
+    let token = uuid::Uuid::new_v4().to_string();
     let claimed: Option<String> = redis
         .set(
             lock_key,
-            "1",
+            token.as_str(),
             Some(Expiration::EX(LOCK_TTL_SECONDS)),
             Some(SetOptions::NX),
             false,
         )
         .await?;
     Ok(if claimed.is_some() {
-        Claim::Leader
+        Claim::Leader(token)
     } else {
         Claim::Follower
     })
@@ -141,8 +153,8 @@ async fn share(redis: &Pool, result_key: &str, pair: &TokenPair) {
     }
 }
 
-async fn release(redis: &Pool, lock_key: &str) {
-    if let Err(err) = redis.del::<i64, _>(lock_key).await {
+async fn release(redis: &Pool, lock_key: &str, token: &str) {
+    if let Err(err) = redis.eval::<i64, _, _, _>(RELEASE_SCRIPT, lock_key, token).await {
         tracing::warn!("Could not release the refresh lock, it expires on its own: {err}");
     }
 }
@@ -168,7 +180,9 @@ mod tests {
     use testcontainers_modules::testcontainers::{ContainerAsync, ImageExt};
     use tokio::sync::Notify;
 
-    use super::SharedRefreshes;
+    use fred::prelude::KeysInterface;
+
+    use super::{SharedRefreshes, release};
     use crate::identity::application::session::TokenPair;
     use crate::identity::domain::IdentityError;
 
@@ -296,5 +310,20 @@ mod tests {
             keys.iter()
                 .all(|key| key.starts_with("test:") && !key.contains("secret-refresh"))
         );
+    }
+
+    #[tokio::test]
+    async fn a_lock_is_released_only_by_the_token_that_took_it() {
+        let (_container, pool) = redis().await;
+        let _: () = pool
+            .set("test:refresh-lock:id", "mine", None, None, false)
+            .await
+            .unwrap();
+
+        release(&pool, "test:refresh-lock:id", "theirs").await;
+        assert_eq!(pool.exists::<i64, _>("test:refresh-lock:id").await.unwrap(), 1);
+
+        release(&pool, "test:refresh-lock:id", "mine").await;
+        assert_eq!(pool.exists::<i64, _>("test:refresh-lock:id").await.unwrap(), 0);
     }
 }

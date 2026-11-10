@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use secrecy::ExposeSecret;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::layer::SubscriberExt;
@@ -5,12 +7,20 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use rust_axum_app_backend::bootstrap::{self, config::AppConfig};
 
+/// How long a query may wait for a free connection, and a new connection may
+/// take to open, before it fails.
+const DB_POOL_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// How long a connection is reused before it is replaced, shorter than the
+/// idle timeouts of the network between here and the database.
+const DB_CONNECTION_LIFETIME: Duration = Duration::from_mins(30);
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,tower_http=debug".into()))
+        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .with(tracing_subscriber::fmt::layer())
         .init();
 
@@ -19,7 +29,10 @@ async fn main() -> anyhow::Result<()> {
 
     let db = toasty::Db::builder()
         .models(toasty::models!(rust_axum_app_backend::*))
-        .max_pool_size(config.database.max_connections as usize)
+        .max_pool_size(config.database.max_connections.get() as usize)
+        .pool_wait_timeout(Some(DB_POOL_TIMEOUT))
+        .pool_create_timeout(Some(DB_POOL_TIMEOUT))
+        .pool_max_connection_lifetime(Some(DB_CONNECTION_LIFETIME))
         .connect(config.database.url().expose_secret())
         .await?;
 

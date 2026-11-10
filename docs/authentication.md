@@ -51,8 +51,10 @@ sequenceDiagram
    When the account cannot be written it ends the Keycloak session again; any failure redirects with
    `?error=sign_in_failed`, and a `state` this browser was not given with `?error=state_mismatch`.
 
-The browser holds only the `RUST_AXUM_APP_SESSION` cookie: `HttpOnly`, `SameSite=Lax`, and `Secure` when
-`SESSION_COOKIE_SECURE=true`.
+The browser holds only the session cookie: `__Host-RUST_AXUM_APP_SESSION`, `HttpOnly`, `SameSite=Lax`, `Secure` and
+`Path=/`. A local machine without TLS (`APP_ENVIRONMENT=local`) is the one exception: there it is
+`RUST_AXUM_APP_SESSION`, without `Secure` and so without the `__Host-` prefix, which requires it. The back-end and the
+front-end derive the name from `APP_ENVIRONMENT` alike.
 
 ## Account actions
 

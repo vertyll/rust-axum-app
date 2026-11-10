@@ -1,4 +1,5 @@
-//! What every module's HTTP adapter shares: problem documents and paging.
+//! What every module's HTTP adapter shares: problem documents, paging and the
+//! time limit on a request.
 
 pub mod pagination;
 
@@ -8,3 +9,4 @@ pub const MESSAGES: crate::shared_kernel::messages::Messages = crate::shared_ker
     en: include_str!("messages/en.json"),
 };
 pub mod problem;
+pub mod timeout;

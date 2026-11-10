@@ -131,9 +131,12 @@ Configuration comes from environment variables; `.env.example` lists them, and a
 | Variable                  | Default                 | Purpose                                                         |
 |---------------------------|-------------------------|-----------------------------------------------------------------|
 | `HOST`, `PORT`            | `127.0.0.1`, `3000`     | where it listens                                                |
-| `APP_ENVIRONMENT`         | `local`                 | `production` also makes the `lang` cookie `Secure`              |
+| `APP_ENVIRONMENT`         | none, required          | `local` or `production`, which also makes the cookies `Secure`  |
 | `BACKEND_INTERNAL_URL`    | `http://localhost:8080` | the back-end, as this server reaches it                         |
 | `BACKEND_TIMEOUT_SECONDS` | `30`                    | how long an API call may take, and a proxied transfer may stall |
+
+`APP_ENVIRONMENT` also names the back-end's session cookie this server passes on: `__Host-RUST_AXUM_APP_SESSION` in
+`production`, `RUST_AXUM_APP_SESSION` in `local`, as the back-end names it. `BACKEND_TIMEOUT_SECONDS` is at least 1.
 
 ## Checks
 

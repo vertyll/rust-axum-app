@@ -5,6 +5,7 @@
 use std::time::Duration;
 
 use aws_sdk_s3::Client;
+use aws_sdk_s3::config::timeout::TimeoutConfig;
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region, RequestChecksumCalculation};
 use aws_sdk_s3::operation::head_object::HeadObjectError;
 use aws_sdk_s3::presigning::{PresignedRequest, PresigningConfig};
@@ -14,6 +15,11 @@ use secrecy::{ExposeSecret, SecretString};
 use super::{DOWNLOAD_LINK_TTL, UPLOAD_LINK_TTL, attachment};
 use crate::files::application::{ObjectDownload, ObjectUpload, SignedLink};
 use crate::files::domain::FilesError;
+
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// How long one call to the store may take, its retries included.
+const OPERATION_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Where the bucket is and the credentials to it.
 #[derive(Clone)]
@@ -99,7 +105,8 @@ impl S3FileStorage {
 
 /// A client for one address. Requests use path-style addressing, as a store such
 /// as Garage serves no bucket subdomains without wildcard DNS, and carry no
-/// checksum the SDK would add on its own, which a browser could not repeat.
+/// checksum the SDK would add on its own, which a browser could not repeat. No
+/// call to the store waits longer than `OPERATION_TIMEOUT`.
 fn client(settings: &S3Settings, endpoint: &str) -> Client {
     let credentials = Credentials::new(
         settings.access_key.clone(),
@@ -115,6 +122,12 @@ fn client(settings: &S3Settings, endpoint: &str) -> Client {
         .credentials_provider(credentials)
         .force_path_style(true)
         .request_checksum_calculation(RequestChecksumCalculation::WhenRequired)
+        .timeout_config(
+            TimeoutConfig::builder()
+                .connect_timeout(CONNECT_TIMEOUT)
+                .operation_timeout(OPERATION_TIMEOUT)
+                .build(),
+        )
         .build();
     Client::from_conf(config)
 }

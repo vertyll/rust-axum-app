@@ -17,3 +17,8 @@ The client translates: it loads the catalog from `GET /api/translations/{languag
 an ICU MessageFormat message, in its reader's language. A new error is therefore a new key in its module's
 `messages/en.json` and `pl.json`, never a sentence in the code. Each module maps its domain errors to keys
 in `infrastructure/http/error.rs`.
+
+Two refusals come from the router rather than a module. A request to the API that takes longer than 25 seconds is
+answered `503` with `errors.timeout`; the local disk's `/uploads` transfers have no such limit, as they last as long as
+the file takes. A handler that panics is answered `500` with `errors.internal`, and what the panic said goes to the log
+only.

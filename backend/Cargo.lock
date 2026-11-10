@@ -4178,6 +4178,7 @@ dependencies = [
  "toasty-cli",
  "tokio",
  "tokio-util",
+ "tower",
  "tower-http 0.7.1",
  "tower-sessions",
  "tracing",

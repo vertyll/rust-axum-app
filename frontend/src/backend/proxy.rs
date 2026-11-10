@@ -148,13 +148,13 @@ mod tests {
         headers.insert("connection", HeaderValue::from_static("keep-alive, x-trace"));
         headers.insert("keep-alive", HeaderValue::from_static("timeout=5"));
         headers.insert("x-trace", HeaderValue::from_static("1"));
-        headers.insert("cookie", HeaderValue::from_static("RUST_AXUM_APP_SESSION=abc"));
+        headers.insert("cookie", HeaderValue::from_static("__Host-RUST_AXUM_APP_SESSION=abc"));
         headers.insert("sec-fetch-site", HeaderValue::from_static("same-origin"));
 
         let passed = passed_on(&headers);
 
         assert_eq!(passed.len(), 2);
-        assert_eq!(passed["cookie"], "RUST_AXUM_APP_SESSION=abc");
+        assert_eq!(passed["cookie"], "__Host-RUST_AXUM_APP_SESSION=abc");
         assert_eq!(passed["sec-fetch-site"], "same-origin");
     }
 

@@ -12,7 +12,7 @@ flowchart LR
     pg[(PostgreSQL)]
     files[("Garage bucket<br/>or uploads folder")]
 
-    browser -- "RUST_AXUM_APP_SESSION cookie" --> front
+    browser -- "__Host-RUST_AXUM_APP_SESSION cookie" --> front
     front -- "pages call the API; /api, /uploads passed on" --> back
     back -- "sign-in, refresh, token keys, realm roles, account API" --> kc
     back --> redis

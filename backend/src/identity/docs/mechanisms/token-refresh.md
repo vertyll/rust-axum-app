@@ -16,6 +16,9 @@ A refresh therefore runs once per refresh token:
 - within one instance, `HttpTokenEndpoint` lets the first request refresh and hands its result to the others;
 - across instances, `SharedRefreshes` takes a lock in Redis; the instance holding it refreshes and leaves the new tokens
   in Redis for 30 seconds, where the others pick them up. When Redis is unreachable an instance refreshes on its own.
+  The lock lives 20 seconds, longer than the call to Keycloak it guards, and holds a random token of its owner: a
+  refused refresh releases it through a script that deletes it only while it still holds that token, so an instance
+  whose lock has expired never releases another's.
 
 When Keycloak refuses a refresh, the session is cleared and the request is answered `401`: a blocked account or a
 revoked session stops working within five minutes.

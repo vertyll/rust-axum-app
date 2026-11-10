@@ -1,6 +1,7 @@
 //! RFC 9457 problem documents, the one error body every module answers with;
 //! its fields are described in `docs/mechanisms/error-responses.md`.
 
+use std::any::Any;
 use std::collections::BTreeMap;
 
 use axum::extract::FromRequest;
@@ -18,6 +19,7 @@ pub const VALIDATION_FAILED: &str = "errors.validation";
 pub const BAD_REQUEST: &str = "errors.bad_request";
 pub const NOT_FOUND: &str = "errors.not_found";
 pub const INTERNAL: &str = "errors.internal";
+pub const TIMEOUT: &str = "errors.timeout";
 const INVALID_VALUE: &str = "validation.invalid";
 
 #[derive(Debug, Serialize)]
@@ -162,6 +164,24 @@ pub async fn not_found() -> Problem {
     Problem::new(StatusCode::NOT_FOUND, NOT_FOUND)
 }
 
+/// The answer to a handler that panicked, for `CatchPanicLayer`: a panic is a
+/// bug, so the client gets a `500` problem document rather than a dropped
+/// connection, and what the panic said goes to the log only.
+#[must_use]
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "`CatchPanicLayer` hands the panic over by value"
+)]
+pub fn panicked(panic: Box<dyn Any + Send + 'static>) -> Response {
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("no message");
+    tracing::error!("a handler panicked: {message}");
+    Problem::new(StatusCode::INTERNAL_SERVER_ERROR, INTERNAL).into_response()
+}
+
 #[cfg(test)]
 mod tests {
     use std::borrow::Cow;
@@ -170,7 +190,7 @@ mod tests {
     use serde_json::json;
     use validator::{ValidationError, ValidationErrors};
 
-    use super::Problem;
+    use super::{Problem, panicked};
 
     #[test]
     fn validation_lists_keys_and_never_echoes_the_submitted_value() {
@@ -207,5 +227,16 @@ mod tests {
                 "code": "errors.not_found",
             })
         );
+    }
+
+    #[tokio::test]
+    async fn a_panic_is_answered_with_an_internal_error_document() {
+        let response = panicked(Box::new("handler bug"));
+
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["code"], "errors.internal");
+        assert!(!body.to_string().contains("handler bug"));
     }
 }

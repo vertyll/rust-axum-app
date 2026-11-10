@@ -39,7 +39,7 @@ axum = { version = "0.8.9", features = ["multipart", "macros"] }
 base64 = "0.23"
 bytes = "1"
 dotenvy = "0.15.7"
-fred = "10"
+fred = { version = "10", features = ["i-scripts"] }
 futures-util = "0.3"
 hmac = "0.13"
 jiff = { version = "0.2", features = ["serde"] }
@@ -65,7 +65,7 @@ tokio = { version = "1", features = [
 ] }
 tokio-util = { version = "0.7", features = ["io", "rt"] }
 tower-sessions = "0.15"
-tower-http = { version = "0.7.1", features = ["fs", "trace"] }
+tower-http = { version = "0.7.1", features = ["catch-panic", "fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2"
@@ -76,4 +76,5 @@ secrecy = "0.10"
 [dev-dependencies]
 serde_urlencoded = "0.7"
 tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
 testcontainers-modules = { version = "0.15.0", features = ["redis"] }

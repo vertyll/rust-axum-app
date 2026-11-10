@@ -5,14 +5,18 @@
 pub mod config;
 
 use std::sync::Arc;
+use std::time::Duration as StdDuration;
 
 use axum::Json;
 use axum::Router;
+use axum::http::Request;
 use axum::middleware::from_fn_with_state;
 use axum::routing::get;
-use fred::prelude::{ClientLike, Config as RedisConfig, Pool as RedisPool};
+use fred::prelude::{ClientLike, Config as RedisConfig, PerformanceConfig, Pool as RedisPool, ReconnectPolicy};
 use jiff::{SignedDuration, Timestamp};
+use secrecy::ExposeSecret;
 use tokio_util::sync::CancellationToken;
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::trace::TraceLayer;
 use tower_sessions::cookie::SameSite;
 use tower_sessions::cookie::time::Duration;
@@ -38,7 +42,7 @@ use crate::identity::infrastructure::session_store::RedisSessionStore;
 use crate::keycloak_account::application::KeycloakAccountService;
 use crate::keycloak_account::infrastructure::http as keycloak_account_http;
 use crate::keycloak_account::infrastructure::keycloak::HttpAccountApi;
-use crate::shared_http::problem;
+use crate::shared_http::{problem, timeout};
 use crate::shared_kernel::messages::Messages;
 use crate::translations::application::TranslationsService;
 use crate::translations::application::permissions::CATALOGUE as TRANSLATIONS_CATALOGUE;
@@ -160,10 +164,36 @@ pub fn build_services(db: &toasty::Db, config: &AppConfig, redis: RedisPool) -> 
     })
 }
 
+/// How long one Redis command may take, including the wait for a connection
+/// that is being re-established, before it fails.
+const REDIS_COMMAND_TIMEOUT: StdDuration = StdDuration::from_secs(2);
+
+/// The first and the longest wait between two attempts to reconnect to Redis,
+/// in milliseconds; each wait doubles the one before.
+const REDIS_RECONNECT_DELAY_MS: (u32, u32) = (100, 30_000);
+
+/// How long an API request may take before it is answered `503`: longer than
+/// two calls to Keycloak one after another, shorter than the front-end's wait.
+const REQUEST_TIMEOUT: StdDuration = StdDuration::from_secs(25);
+
 /// Connects to Redis, which holds the browser sessions and coordinates token
 /// refreshes, so the application holds no state of its own between requests.
+/// A lost connection is re-established for as long as it takes, and no
+/// command waits for it longer than `REDIS_COMMAND_TIMEOUT`.
 pub async fn redis(config: &AppConfig) -> anyhow::Result<RedisPool> {
-    let pool = RedisPool::new(RedisConfig::from_url(&config.sessions.redis_url)?, None, None, None, 1)?;
+    let performance = PerformanceConfig {
+        default_command_timeout: REDIS_COMMAND_TIMEOUT,
+        ..PerformanceConfig::default()
+    };
+    let (min_delay, max_delay) = REDIS_RECONNECT_DELAY_MS;
+    let reconnect = ReconnectPolicy::new_exponential(0, min_delay, max_delay, 2);
+    let pool = RedisPool::new(
+        RedisConfig::from_url(config.sessions.redis_url.expose_secret())?,
+        Some(performance),
+        None,
+        Some(reconnect),
+        1,
+    )?;
     pool.init().await?;
     Ok(pool)
 }
@@ -182,7 +212,7 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
     };
 
     let sessions = SessionManagerLayer::new(RedisSessionStore::new(redis, &config.sessions.redis_key_prefix))
-        .with_name("RUST_AXUM_APP_SESSION")
+        .with_name(config.sessions.cookie_name())
         .with_http_only(true)
         .with_same_site(SameSite::Lax)
         .with_secure(config.sessions.cookie_secure)
@@ -205,7 +235,8 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
 
     let roles_routes = identity_http::roles_router(services.identity.clone()).layer(auth_layer);
 
-    Router::new()
+    // Every route but the local disk's, whose transfers last as long as the file takes.
+    let api_routes = Router::new()
         .nest(
             "/api/auth",
             identity_http::auth_router(services.identity.clone(), sign_in),
@@ -218,11 +249,21 @@ pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Rout
         )
         .nest("/api/admin/translations", translations_admin_routes)
         .nest("/api/admin", roles_routes)
-        .nest("/uploads", uploads_routes)
         .route("/health", get(health))
+        .layer(from_fn_with_state(REQUEST_TIMEOUT, timeout::within));
+
+    Router::new()
+        .merge(api_routes)
+        .nest("/uploads", uploads_routes)
         .fallback(problem::not_found)
         .layer(sessions)
-        .layer(TraceLayer::new_for_http())
+        .layer(CatchPanicLayer::custom(problem::panicked))
+        .layer(
+            // The span names the path only: a query may carry an authorization code or a link's signature.
+            TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
+                tracing::debug_span!("request", method = %request.method(), path = %request.uri().path())
+            }),
+        )
 }
 
 /// How long an allowed upload may stay pending before it counts as abandoned.

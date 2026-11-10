@@ -46,7 +46,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .cookies()
         .assets(AssetBundle::load()?)
         .runtime()
-        .app_context(Backend::new(&config.backend_url, config.backend_timeout)?)
+        .app_context(Backend::new(
+            &config.backend_url,
+            config.backend_timeout,
+            config.session_cookie(),
+        )?)
         .app_context(config)
         .build();
 

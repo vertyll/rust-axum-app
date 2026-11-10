@@ -12,7 +12,10 @@
 docker compose -f docker-compose.local.yml up -d
 ```
 
-Every `docker compose` command here works verbatim as `podman compose`.
+Every `docker compose` command here works verbatim as `podman compose`. Compose reads its variables from a `.env` at
+the repository's root, not from `backend/.env`; the root [`.env.example`](../.env.example) lists them with the
+defaults it falls back to: the database's credentials, the bucket and its key, and `FRONTEND_ORIGIN`, the origin the
+bucket accepts uploads from.
 
 | Service      | Address                                     | Purpose                                         |
 |--------------|---------------------------------------------|-------------------------------------------------|
@@ -57,8 +60,10 @@ From `backend/`:
 cargo run
 ```
 
-Configuration comes only from environment variables. Every one has a local default matching the containers above, so
-nothing has to be set; `.env.example` lists them all, and a `.env` next to it is read when present.
+Configuration comes only from environment variables. `.env.example` lists them all, and a `.env` next to it is read
+when present; copy it once with `cp .env.example .env`. `APP_ENVIRONMENT` has to be set, `local` here, so a deployment
+that forgets it fails at start rather than running with local defaults; every other variable has a local default
+matching the containers above.
 
 On start, in the `local` environment, the application pushes the schema to the database, registers every module's
 permissions with the stock roles `admin` and `user`, and fills the translation catalog from the modules' `messages/` and
@@ -72,6 +77,8 @@ From `frontend/`, after building the Topcoat CLI into `.tools/` once:
 cargo install topcoat-cli --version 0.11.0 --locked --root .tools
 .tools/bin/topcoat dev
 ```
+
+As for the back-end, `APP_ENVIRONMENT` has to be set: `cp .env.example .env` in `frontend/` once.
 
 Open `http://localhost:3000` and sign in with one of the accounts above. The front-end passes `/api` on to the back-end,
 so Keycloak returns to `http://localhost:3000/api/auth/callback`, and the sign-in lands on the front-end's home page.
@@ -112,17 +119,15 @@ README](../architecture/README.md).
 ## Production
 
 The image runs with `APP_ENVIRONMENT=production`. Outside `local` the application refuses to start while any of these is
-unset, instead of falling back to a local default:
+unset, instead of falling back to a local default, and makes the session cookie `Secure` with the `__Host-` prefix, so
+it is served over HTTPS:
 
 | Variable                                           | Purpose                                   |
 |----------------------------------------------------|-------------------------------------------|
-| `APP_URL`                                          | the public address                        |
 | `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | PostgreSQL                                |
 | `REDIS_URL`                                        | Redis                                     |
-| `SESSION_COOKIE_SECURE`                            | `true` behind HTTPS                       |
 | `KEYCLOAK_REALM_URL`, `KEYCLOAK_CLIENT_SECRET`     | the realm and the confidential client     |
 | `AUTH_CALLBACK_URL`, `AUTH_POST_LOGIN_URL`         | where Keycloak returns and where it lands |
-| `SMTP_HOST`, `EMAIL_FROM`                          | mail                                      |
 | `FILES_SIGNING_KEY`                                | signs the local disk's links              |
 | `S3_ENDPOINT`, `S3_BUCKET`                         | the bucket, with `FILES_STORAGE=s3`       |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY`                   | its credentials, with `FILES_STORAGE=s3`  |

@@ -2,6 +2,7 @@
   "errors.bad_request": "Nieprawidłowe żądanie",
   "errors.internal": "Wewnętrzny błąd serwera",
   "errors.not_found": "Nie znaleziono zasobu",
+  "errors.timeout": "Serwer nie odpowiedział na czas",
   "errors.validation": "Błąd walidacji",
   "pagination.validators.size.range": "Strona mieści od {min} do {max} elementów.",
   "validation.invalid": "Nieprawidłowa wartość"

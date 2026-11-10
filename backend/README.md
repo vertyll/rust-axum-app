@@ -74,7 +74,8 @@ Start the infrastructure first ([Development Setup](../docs/development-setup.md
 cargo run
 ```
 
-The `local` environment is the default and points at the local containers; it listens on `http://localhost:8080`, which
+`APP_ENVIRONMENT` has to be set: `cp .env.example .env` once, or `APP_ENVIRONMENT=local cargo run`. The `local`
+environment points at the local containers; it listens on `http://localhost:8080`, which
 only the front-end calls. Uploaded files go to the Garage bucket of the local containers, or to `uploads/` with
 `FILES_STORAGE=local`.
 
@@ -106,14 +107,19 @@ rather than fall back to a local value:
 
 | Variable                                           | Purpose                                               |
 |----------------------------------------------------|-------------------------------------------------------|
-| `APP_URL`                                          | the back-end's own address                            |
 | `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | PostgreSQL                                            |
 | `REDIS_URL`                                        | the sessions and the shared token refreshes           |
 | `KEYCLOAK_REALM_URL`, `KEYCLOAK_CLIENT_SECRET`     | the realm and the confidential client                 |
 | `AUTH_CALLBACK_URL`, `AUTH_POST_LOGIN_URL`         | the front-end's public address, where sign-in returns |
-| `SESSION_COOKIE_SECURE`                            | `true` behind TLS                                     |
-| `SMTP_HOST`, `EMAIL_FROM`                          | mail                                                  |
+| `FILES_SIGNING_KEY`                                | signs the local disk's links                          |
+| `S3_ENDPOINT`, `S3_BUCKET`                         | the bucket, with `FILES_STORAGE=s3`                   |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY`                   | its credentials, with `FILES_STORAGE=s3`              |
 
-`.env.example` lists every variable with its local default. Passwords and the client secret are held as secrets, which
+Outside `local` the session cookie is `__Host-RUST_AXUM_APP_SESSION` and `Secure`, so the application must be served
+over TLS; locally it is `RUST_AXUM_APP_SESSION` without `Secure`. `SESSION_INACTIVITY_TIMEOUT` (60 seconds to a week)
+and `DB_MAX_CONNECTIONS` (at least 1) are checked at start-up.
+
+`.env.example` lists every variable with its local default. Passwords, the client secret and the Redis URL are held as
+secrets, which
 are never printed, also not in a debug dump of the configuration. The image runs the binary on port `8080`, and its
 health check reads `/health`.

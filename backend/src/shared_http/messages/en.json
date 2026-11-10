@@ -2,6 +2,7 @@
   "errors.bad_request": "Bad request",
   "errors.internal": "Internal server error",
   "errors.not_found": "Resource not found",
+  "errors.timeout": "The server did not answer in time",
   "errors.validation": "Validation error",
   "pagination.validators.size.range": "A page holds {min} to {max} items.",
   "validation.invalid": "Invalid value"

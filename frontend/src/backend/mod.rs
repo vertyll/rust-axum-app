@@ -23,8 +23,6 @@ use topcoat::router::error::{forbidden, internal_server_error, not_found, unauth
 
 pub use problem::Problem;
 
-const SESSION_COOKIE: &str = "RUST_AXUM_APP_SESSION";
-
 #[derive(Debug, thiserror::Error)]
 pub enum BackendError {
     #[error("the back-end could not be reached: {0}")]
@@ -82,10 +80,12 @@ pub struct Backend {
     /// For the proxy: a transfer may take long, but must not stall.
     proxy: reqwest::Client,
     base_url: String,
+    /// The name of the back-end's session cookie, which every call carries.
+    session_cookie: &'static str,
 }
 
 impl Backend {
-    pub fn new(base_url: &str, timeout: Duration) -> Result<Self, reqwest::Error> {
+    pub fn new(base_url: &str, timeout: Duration, session_cookie: &'static str) -> Result<Self, reqwest::Error> {
         let api = reqwest::Client::builder()
             .timeout(timeout)
             .redirect(redirect::Policy::none())
@@ -99,6 +99,7 @@ impl Backend {
             api,
             proxy,
             base_url: base_url.trim_end_matches('/').to_owned(),
+            session_cookie,
         })
     }
 
@@ -113,8 +114,9 @@ fn backend(cx: &Cx) -> &Backend {
 
 pub fn request(cx: &Cx, method: Method, path: &str) -> RequestBuilder {
     let builder = public_request(cx, method, path);
-    match cookies(cx).get(SESSION_COOKIE) {
-        Some(session) => builder.header(COOKIE, format!("{SESSION_COOKIE}={}", session.value())),
+    let name = backend(cx).session_cookie;
+    match cookies(cx).get(name) {
+        Some(session) => builder.header(COOKIE, format!("{name}={}", session.value())),
         None => builder,
     }
 }
