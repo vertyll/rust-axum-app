@@ -9,25 +9,26 @@ and every page calls the back-end's API with the browser's session cookie.
 The code is grouped by feature. A feature's module holds its pages, its form routes and, in `api.rs`, its calls to the
 back-end; its URL is its module's path, so `app/files/file_id` serves `/files/{file_id}`.
 
-| Path                         | Holds                                                                                                   |
-|------------------------------|---------------------------------------------------------------------------------------------------------|
-| `src/app`                    | the layout, the home page, the security headers and every feature below                                 |
-| `src/app/navigation`         | the top bar with the modules, the account, theme and language menus, and the side bar with the sections |
-| `src/app/files`              | the files: list, upload (`upload.js`), details, download, changes; `api.rs` calls `/api/files`          |
-| `src/app/account`            | the reader's account, what their roles grant, password and second factor                                |
-| `src/app/admin/users`        | the accounts and their roles; `api.rs` calls `/api/users` and `/api/admin/users`                        |
-| `src/app/admin/roles`        | the roles and what each grants; `api.rs` calls `/api/admin/roles` and `/api/admin/permissions`          |
-| `src/app/admin/translations` | the message catalog; `api.rs` calls `/api/admin/translations`                                           |
-| `src/app/legal`              | the terms of use and the privacy policy, written in the catalog                                         |
-| `src/auth`                   | who is signed in and what their roles grant; `api.rs` calls `/api/users/me` and `/api/auth/logout`      |
-| `src/i18n`                   | the reader's language and the catalog; `api.rs` calls `/api/translations/{language}`                    |
-| `src/theme.rs`               | the reader's color theme, from the cookie shared with Keycloak's pages, else the `theme` cookie         |
-| `src/keycloak`               | Keycloak's pages: the sign-in in the reader's theme and language, account actions, the second factor    |
-| `src/keycloak_cookies.rs`    | the theme and language shared with Keycloak's pages, which the theme and the language read              |
-| `src/backend`                | what the features' calls share: the HTTP client, problem documents, and the proxy                       |
-| `src/forms.rs`               | how a form answers: `303 See Other` when accepted, the same page with the refusal when not              |
-| `src/components`             | the Topcoat UI components, installed with `topcoat ui add`, and the application's own                   |
-| `styles.css`                 | the Tailwind input and the tokens, each a light and a dark color                                        |
+| Path                             | Holds                                                                                                   |
+|----------------------------------|---------------------------------------------------------------------------------------------------------|
+| `src/app`                        | the layout, the home page, the security headers and every feature below                                 |
+| `src/app/navigation`             | the top bar with the modules, the account, theme and language menus, and the side bar with the sections |
+| `src/app/files`                  | the files: list, upload (`upload.js`), details, download, changes; `api.rs` calls `/api/files`          |
+| `src/app/account`                | the reader's account, what their roles grant, password and second factor                                |
+| `src/app/admin/users`            | the accounts and their roles; `api.rs` calls `/api/users` and `/api/admin/users`                        |
+| `src/app/admin/roles`            | the roles and what each grants; `api.rs` calls `/api/admin/roles` and `/api/admin/permissions`          |
+| `src/app/admin/translations`     | the message catalog; `api.rs` calls `/api/admin/translations`                                           |
+| `src/app/legal`                  | the terms of use and the privacy policy, written in the catalog                                         |
+| `src/auth`                       | who is signed in and what their roles grant; `api.rs` calls `/api/users/me` and `/api/auth/logout`      |
+| `src/i18n`                       | the reader's language and the catalog; `api.rs` calls `/api/translations/{language}`                    |
+| `src/theme.rs`                   | the reader's color theme, from the cookie shared with Keycloak's pages, else the `theme` cookie         |
+| `src/keycloak`                   | Keycloak's pages: the sign-in in the reader's theme and language, account actions, the second factor    |
+| `src/keycloak_cookies.rs`        | the theme and language shared with Keycloak's pages, which the theme and the language read              |
+| `src/backend`                    | what the features' calls share: the HTTP client, problem documents, and the proxy                       |
+| `src/content_security_policy.rs` | the `Content-Security-Policy` of every response                                                         |
+| `src/forms.rs`                   | how a form answers: `303 See Other` when accepted, the same page with the refusal when not              |
+| `src/components`                 | the Topcoat UI components, installed with `topcoat ui add`, and the application's own                   |
+| `styles.css`                     | the Tailwind input and the tokens, each a light and a dark color                                        |
 
 `src/components` stays flat, as `topcoat ui` installs and updates its components there; a component one feature alone
 uses lives in that feature's module.
@@ -99,6 +100,22 @@ another site before the route runs; the back-end sees the call from this server 
 check. Every response forbids being framed by another site (`X-Frame-Options: DENY`, `frame-ancestors 'none'`), so a
 page cannot be laid under another site's clicks.
 
+## Content-Security-Policy
+
+Every response also carries the rest of a `Content-Security-Policy` (`src/content_security_policy.rs`), built once from
+the configuration:
+
+- scripts come only from this origin, as files; no inline script or event handler runs, so a component's script is an
+  asset, as `components/dropdown.js` and `app/files/upload.js` are;
+- `'unsafe-eval'` stays, as Topcoat's browser runtime compiles the expressions of its shards with `new Function`;
+- styles come only from the stylesheet. The one `style` attribute allowed is the one `topcoat-icon` writes on every
+  icon, by its hash (`'unsafe-hashes'`), since the crate cannot leave it out; a component styles itself by a class;
+- the browser connects only to this origin and to the object storage it uploads to (`S3_PUBLIC_ENDPOINT`);
+- no plugin, no other `<base>` and no form sent elsewhere.
+
+Topcoat sets no nonce on the scripts it writes, so the policy allows this origin's scripts rather than a nonce and
+`'strict-dynamic'`.
+
 ## Text
 
 Every label and every error is a key of the back-end's catalog: `texts.t(key)`, `texts.t_with(key, args)`, and
@@ -128,12 +145,13 @@ pinned Tailwind CLI and checks it against the release's SHA-256; `build.rs` hold
 
 Configuration comes from environment variables; `.env.example` lists them, and a `.env` next to it is read when present.
 
-| Variable                  | Default                 | Purpose                                                         |
-|---------------------------|-------------------------|-----------------------------------------------------------------|
-| `HOST`, `PORT`            | `127.0.0.1`, `3000`     | where it listens                                                |
-| `APP_ENVIRONMENT`         | none, required          | `local` or `production`, which also makes the cookies `Secure`  |
-| `BACKEND_INTERNAL_URL`    | `http://localhost:8080` | the back-end, as this server reaches it                         |
-| `BACKEND_TIMEOUT_SECONDS` | `30`                    | how long an API call may take, and a proxied transfer may stall |
+| Variable                  | Default                 | Purpose                                                                           |
+|---------------------------|-------------------------|-----------------------------------------------------------------------------------|
+| `HOST`, `PORT`            | `127.0.0.1`, `3000`     | where it listens                                                                  |
+| `APP_ENVIRONMENT`         | none, required          | `local` or `production`, which also makes the cookies `Secure`                    |
+| `BACKEND_INTERNAL_URL`    | `http://localhost:8080` | the back-end, as this server reaches it                                           |
+| `BACKEND_TIMEOUT_SECONDS` | `30`                    | how long an API call may take, and a proxied transfer may stall                   |
+| `S3_PUBLIC_ENDPOINT`      | `http://localhost:3900` | the object storage, as the browser reaches it to upload; required outside `local` |
 
 `APP_ENVIRONMENT` also names the back-end's session cookie this server passes on: `__Host-RUST_AXUM_APP_SESSION` in
 `production`, `RUST_AXUM_APP_SESSION` in `local`, as the back-end names it. `BACKEND_TIMEOUT_SECONDS` is at least 1.

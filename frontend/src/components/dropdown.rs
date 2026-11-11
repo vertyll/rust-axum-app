@@ -1,22 +1,11 @@
 use topcoat::Result;
+use topcoat::asset::{Asset, asset};
 use topcoat::view::{Child, View, class, component, view};
 
 use super::icon::{Icon, IconSize, icon};
 
-/// Opening one dropdown closes the others, as each is a `<details>` of its own,
-/// and opens its panel upwards when it does not fit below its trigger on the
-/// screen but does above, as near the end of a page.
-const ON_TOGGLE: &str = "if (!this.open) return; \
-    document.querySelectorAll('details[data-dropdown]').forEach(menu => menu === this || (menu.open = false)); \
-    const panel = this.lastElementChild; \
-    panel.classList.remove('bottom-full', 'mb-2'); \
-    panel.classList.add('mt-2'); \
-    const trigger = this.getBoundingClientRect(); \
-    const below = window.innerHeight - trigger.bottom; \
-    if (panel.offsetHeight > below && trigger.top > below) { \
-        panel.classList.remove('mt-2'); \
-        panel.classList.add('bottom-full', 'mb-2'); \
-    }";
+/// Closes the other dropdowns when one opens, and places its panel.
+const DROPDOWN_SCRIPT: Asset = asset!("./dropdown.js");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DropdownAlign {
@@ -38,11 +27,8 @@ pub async fn dropdown(
     #[default] child: Child<'_>,
 ) -> Result<impl View> {
     Ok(view! {
-        <details
-            class=(class!("relative", class))
-            data-dropdown=""
-            ontoggle=(ON_TOGGLE)
-        >
+        <script type="module" src=(DROPDOWN_SCRIPT)></script>
+        <details class=(class!("relative", class)) data-dropdown="">
             <summary
                 class="flex cursor-pointer list-none items-center gap-1 rounded-md px-2 py-2 text-sm font-medium transition-colors hover:bg-foreground/5 md:gap-2 md:px-3"
                 aria-label=(label)

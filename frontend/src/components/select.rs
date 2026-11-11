@@ -1,11 +1,10 @@
 use topcoat::{
     Result,
-    context::Cx,
-    icon::{IconData, icon},
+    icon::icon,
     view::{Attributes, Child, StaticClass, View, attributes, class, component, view},
 };
 
-use crate::components::icons::{CHECK, CHEVRON_DOWN};
+use crate::components::icons::CHEVRON_DOWN;
 
 const SELECT: StaticClass = class!(
     "h-9 w-full appearance-none items-center rounded-lg border border-border \
@@ -39,31 +38,6 @@ const PICKER: StaticClass = class!(
      [&_option::checkmark]:[mask-image:var(--select-checkmark)]",
 );
 
-const CHECKMARK: IconData = CHECK;
-
-/// Supplies the checkmark icon as a data URI in `--select-checkmark` so CSS can use it
-/// as a mask.
-fn checkmark_style(cx: &Cx) -> String {
-    let svg = format!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="{}">{}</svg>"#,
-        CHECKMARK.view_box(),
-        CHECKMARK.into_body().render(cx),
-    );
-    let mut style = String::from(r#"--select-checkmark: url("data:image/svg+xml,"#);
-    // Percent-encode the characters that cannot appear in a double-quoted
-    // CSS url().
-    for char in svg.chars() {
-        match char {
-            '%' => style.push_str("%25"),
-            '"' => style.push_str("%22"),
-            '#' => style.push_str("%23"),
-            _ => style.push(char),
-        }
-    }
-    style.push_str(r#"")"#);
-    style
-}
-
 /// A styled native select control.
 ///
 /// Pass `<option>` or `<optgroup>` elements as children. Classes in `attrs` apply to the wrapper,
@@ -74,7 +48,7 @@ fn checkmark_style(cx: &Cx) -> String {
 /// place a `<legend>` first inside an `<optgroup>` and keep its `label` attribute for browsers that
 /// use the native picker.
 #[component]
-pub async fn select(cx: &Cx, #[default] mut attrs: Attributes, #[default] child: Child<'_>) -> Result<impl View> {
+pub async fn select(#[default] mut attrs: Attributes, #[default] child: Child<'_>) -> Result<impl View> {
     // `appearance: base-select` opts into the customizable picker. It is set
     // from the wrapper because the descendant selector outranks the
     // `appearance-none` fallback in specificity, making the outcome
@@ -88,7 +62,6 @@ pub async fn select(cx: &Cx, #[default] mut attrs: Attributes, #[default] child:
                  [&:has(select:open)>svg]:rotate-180",
                 attrs.remove("class"),
             ))
-            style=(checkmark_style(cx))
         >
             <select class=(class!(SELECT, PICKER)) (attrs)>(child)</select>
             icon(

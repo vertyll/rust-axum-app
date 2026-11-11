@@ -9,7 +9,7 @@ mod sign_out;
 mod theme;
 
 use topcoat::Result;
-use topcoat::context::Cx;
+use topcoat::context::{Cx, app_context};
 use topcoat::router::error::{ForbiddenError, NotFoundError, UnauthorizedError, see_other};
 use topcoat::router::header::{
     CONTENT_SECURITY_POLICY, HeaderValue, REFERRER_POLICY, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS,
@@ -26,6 +26,7 @@ use self::navigation::{navbar, section_cards, sidebar};
 use crate::auth::fetch_current_user;
 use crate::components::button::{ButtonSize, ButtonVariant, button_variants};
 use crate::components::card::{card, card_content, card_description, card_header, card_title};
+use crate::content_security_policy::ContentSecurityPolicy;
 use crate::i18n::texts;
 use crate::keycloak;
 
@@ -40,7 +41,8 @@ pub fn router() -> RouterBuilder {
 }
 
 /// No other site may frame these pages, where a reader could be tricked into
-/// clicking a form that acts with their session.
+/// clicking a form that acts with their session, and the page runs only the
+/// scripts and styles its [`ContentSecurityPolicy`] allows.
 #[layer]
 async fn security_headers(cx: &Cx, body: Body, next: Next<'_>) -> Result<Response> {
     let mut response = next.run(cx, body).await?;
@@ -48,7 +50,7 @@ async fn security_headers(cx: &Cx, body: Body, next: Next<'_>) -> Result<Respons
     headers.insert(X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
     headers
         .entry(CONTENT_SECURITY_POLICY)
-        .or_insert(HeaderValue::from_static("frame-ancestors 'none'"));
+        .or_insert_with(|| app_context::<ContentSecurityPolicy>(cx).header().clone());
     headers.insert(X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
     headers.insert(REFERRER_POLICY, HeaderValue::from_static("same-origin"));
     Ok(response)

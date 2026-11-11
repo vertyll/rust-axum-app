@@ -132,3 +132,9 @@
     cursor: pointer;
   }
 }
+
+html {
+  /* The checkmark of a picker's selected option, the CHECK icon of
+     src/components/icons.rs, which a select masks with it. */
+  --select-checkmark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='currentColor' stroke-width='1.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m4.5 12.75 6 6 9-13.5'/%3E%3C/g%3E%3C/svg%3E");
+}

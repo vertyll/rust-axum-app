@@ -8,6 +8,7 @@ mod auth;
 mod backend;
 mod components;
 mod config;
+mod content_security_policy;
 mod forms;
 mod i18n;
 mod keycloak;
@@ -22,6 +23,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::backend::Backend;
 use crate::config::AppConfig;
+use crate::content_security_policy::ContentSecurityPolicy;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -51,6 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             config.backend_timeout,
             config.session_cookie(),
         )?)
+        .app_context(ContentSecurityPolicy::new(&config.storage_url)?)
         .app_context(config)
         .build();
 

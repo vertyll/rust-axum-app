@@ -58,6 +58,7 @@ pub struct AppConfig {
     pub environment: Environment,
     pub backend_url: String,
     pub backend_timeout: Duration,
+    pub storage_url: String,
 }
 
 impl AppConfig {
@@ -83,10 +84,22 @@ impl AppConfig {
                 })?
                 .get(),
         };
+        let storage_url = match (get("S3_PUBLIC_ENDPOINT"), environment) {
+            (Some(url), _) if is_origin(&url) => url,
+            (Some(url), _) => {
+                return Err(ConfigError::Invalid {
+                    key: "S3_PUBLIC_ENDPOINT",
+                    value: url,
+                });
+            }
+            (None, Environment::Local) => "http://localhost:3900".to_owned(),
+            (None, Environment::Production) => return Err(ConfigError::Missing("S3_PUBLIC_ENDPOINT")),
+        };
         Ok(Self {
             environment,
             backend_url,
             backend_timeout: Duration::from_secs(backend_timeout),
+            storage_url,
         })
     }
 
@@ -106,6 +119,15 @@ impl AppConfig {
             LOCAL_SESSION_COOKIE
         }
     }
+}
+
+/// Whether a value is an `http` or `https` origin that a policy can name as it
+/// is, with nothing that would end its directive or start another.
+fn is_origin(value: &str) -> bool {
+    let rest = value.strip_prefix("https://").or_else(|| value.strip_prefix("http://"));
+    rest.is_some_and(|host| {
+        !host.is_empty() && !host.contains(['/', ';', ',', '\'', '"']) && !host.chars().any(char::is_whitespace)
+    })
 }
 
 #[cfg(test)]
@@ -135,6 +157,37 @@ mod tests {
         assert_eq!(config.backend_url, "http://localhost:8080");
         assert_eq!(config.backend_timeout, Duration::from_secs(30));
         assert_eq!(config.session_cookie(), "RUST_AXUM_APP_SESSION");
+        assert_eq!(config.storage_url, "http://localhost:3900");
+    }
+
+    #[test]
+    fn production_requires_the_storage_the_browser_uploads_to() {
+        assert!(matches!(
+            load(&[
+                ("APP_ENVIRONMENT", "production"),
+                ("BACKEND_INTERNAL_URL", "http://backend:8080"),
+            ]),
+            Err(ConfigError::Missing("S3_PUBLIC_ENDPOINT"))
+        ));
+    }
+
+    #[test]
+    fn a_storage_address_that_is_not_an_origin_is_refused() {
+        for value in [
+            "files.example.com",
+            "https://",
+            "https://files.example.com/bucket",
+            "https://files.example.com; script-src *",
+            "https://files.example.com https://elsewhere.example.com",
+        ] {
+            assert!(matches!(
+                load(&[("APP_ENVIRONMENT", "local"), ("S3_PUBLIC_ENDPOINT", value)]),
+                Err(ConfigError::Invalid {
+                    key: "S3_PUBLIC_ENDPOINT",
+                    ..
+                })
+            ));
+        }
     }
 
     #[test]
@@ -152,6 +205,7 @@ mod tests {
         let config = load(&[
             ("APP_ENVIRONMENT", "production"),
             ("BACKEND_INTERNAL_URL", "http://backend:8080"),
+            ("S3_PUBLIC_ENDPOINT", "https://files.example.com"),
         ])
         .unwrap();
         assert!(config.secure_cookies());
