@@ -28,9 +28,7 @@ pub async fn problem_alert(cx: &Cx) -> Result<impl View> {
 #[component]
 pub async fn field_errors(cx: &Cx, name: &'static str) -> Result<impl View> {
     let texts = texts(cx).await?;
-    let messages = form_failure(cx)
-        .map(|failure| texts.field_errors(&failure.problem, name))
-        .unwrap_or_default();
+    let messages = form_failure(cx).map_or_default(|failure| texts.field_errors(&failure.problem, name));
     Ok(view! {
         for message in messages {
             field_error((message))

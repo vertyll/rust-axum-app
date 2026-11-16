@@ -106,8 +106,7 @@ impl Claims {
             Email::parse(self.email.ok_or(IdentityError::InvalidToken)?).map_err(|_| IdentityError::InvalidToken)?;
         let mut roles: Vec<RoleName> = self
             .realm_access
-            .map(|access| access.roles.iter().filter_map(|role| role.parse().ok()).collect())
-            .unwrap_or_default();
+            .map_or_default(|access| access.roles.iter().filter_map(|role| role.parse().ok()).collect());
         roles.sort();
         roles.dedup();
         Ok(VerifiedToken {

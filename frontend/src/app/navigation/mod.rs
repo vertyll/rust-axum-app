@@ -160,7 +160,7 @@ const ITEM_ACTIVE: &str = "flex items-center gap-2 rounded-md bg-foreground/5 px
 pub async fn navbar(cx: &Cx) -> Result<impl View> {
     let texts = texts(cx).await?;
     let current = fetch_current_user(cx).await?;
-    let modules = current.map(modules).unwrap_or_default();
+    let modules = current.map_or_default(modules);
     let open = current_module(cx, &modules).map(|(module, _)| module);
 
     Ok(view! {
@@ -379,8 +379,7 @@ pub async fn sidebar(cx: &Cx) -> Result<impl View> {
     let sections = fetch_current_user(cx)
         .await?
         .and_then(|current| current_module(cx, &modules(current)))
-        .map(|(_, sections)| sections)
-        .unwrap_or_default();
+        .map_or_default(|(_, sections)| sections);
     Ok(view! {
         if !sections.is_empty() {
             <nav
@@ -436,15 +435,12 @@ pub async fn sidebar(cx: &Cx) -> Result<impl View> {
 #[component]
 pub async fn section_cards(cx: &Cx) -> Result<impl View> {
     let texts = texts(cx).await?;
-    let sections: Vec<Section> = fetch_current_user(cx)
-        .await?
-        .map(|current| {
-            modules(current)
-                .into_iter()
-                .flat_map(|(_, sections)| sections)
-                .collect()
-        })
-        .unwrap_or_default();
+    let sections: Vec<Section> = fetch_current_user(cx).await?.map_or_default(|current| {
+        modules(current)
+            .into_iter()
+            .flat_map(|(_, sections)| sections)
+            .collect()
+    });
     let card_class =
         "flex h-full items-start gap-4 rounded-xl border border-border p-5 transition-colors hover:bg-foreground/5";
     Ok(view! {

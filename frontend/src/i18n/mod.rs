@@ -138,7 +138,7 @@ impl Texts {
 
     #[must_use]
     pub fn field_errors(&self, problem: &Problem, field: &str) -> Vec<String> {
-        let values = problem.field_args(field).map(values_of).unwrap_or_default();
+        let values = problem.field_args(field).map_or_default(values_of);
         problem
             .errors
             .get(field)
@@ -151,7 +151,7 @@ impl Texts {
     /// A moment, as a date and a time in UTC.
     #[must_use]
     pub fn datetime(&self, at: Timestamp) -> String {
-        let at = at.to_zoned(TimeZone::UTC);
+        let at = at.to_zoned_datetime(TimeZone::UTC);
         let value = DateTimeValue::try_new(
             i32::from(at.year()),
             u8::try_from(at.month()).expect("a month is 1 to 12"),

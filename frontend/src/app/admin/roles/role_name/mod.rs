@@ -201,8 +201,7 @@ pub(crate) async fn update_role(cx: &Cx, RawForm(body): RawForm) -> Result<()> {
     let description = fields
         .iter()
         .find(|(field_name, _)| field_name == "description")
-        .map(|(_, value)| value.clone())
-        .unwrap_or_default();
+        .map_or_default(|(_, value)| value.clone());
     let unrestricted = fields.iter().any(|(field_name, _)| field_name == "unrestricted");
     let permissions: BTreeSet<String> = fields
         .iter()

@@ -2,7 +2,7 @@
 name = "rust-axum-app-architecture"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.99"
+rust-version = "1.100"
 authors = ["Mikołaj Gawron <gawrmiko@gmail.com>"]
 description = "Architecture tests for the Rust Axum App crates: the rules their modules keep, checked on their source"
 publish = false
@@ -17,5 +17,5 @@ self_named_module_files = "warn"
 
 [dependencies]
 proc-macro2 = { version = "1.0.107", features = ["span-locations"] }
-syn = { version = "3.0.9", features = ["full", "visit"] }
+syn = { version = "3.0.10", features = ["full", "visit"] }
 thiserror = "2.0"
