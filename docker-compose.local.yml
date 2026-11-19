@@ -2,7 +2,7 @@ name: rust-axum-app
 
 services:
   db:
-    image: docker.io/library/postgres:18-alpine
+    image: docker.io/library/postgres:18.7-alpine
     restart: unless-stopped
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
@@ -31,7 +31,7 @@ services:
       retries: 5
 
   redis:
-    image: docker.io/library/redis:8-alpine
+    image: docker.io/library/redis:8.10.3-alpine
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
@@ -42,7 +42,7 @@ services:
       retries: 5
 
   redisinsight:
-    image: docker.io/redis/redisinsight:3.8.0
+    image: docker.io/redis/redisinsight:3.10.1
     restart: unless-stopped
     environment:
       RI_ACCEPT_TERMS_AND_CONDITIONS: "true"
@@ -113,7 +113,7 @@ services:
       - "127.0.0.1:3909:8080"
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.2
+    image: quay.io/keycloak/keycloak:26.8.2-3
     restart: unless-stopped
     command: start-dev --import-realm
     environment:
