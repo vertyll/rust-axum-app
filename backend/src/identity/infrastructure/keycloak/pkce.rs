@@ -5,6 +5,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 
 pub const CHALLENGE_METHOD: &str = "S256";
 
@@ -42,12 +43,7 @@ pub fn challenge_of(code_verifier: &str) -> String {
 /// Compares in time independent of where the values first differ.
 #[must_use]
 pub fn same_state(expected: &str, received: &str) -> bool {
-    expected.len() == received.len()
-        && expected
-            .bytes()
-            .zip(received.bytes())
-            .fold(0u8, |difference, (a, b)| difference | (a ^ b))
-            == 0
+    expected.as_bytes().ct_eq(received.as_bytes()).into()
 }
 
 fn random(bytes: usize) -> String {
@@ -78,5 +74,15 @@ mod tests {
         assert!(same_state("abc", "abc"));
         assert!(!same_state("abc", "abd"));
         assert!(!same_state("abc", "abcd"));
+        assert!(!same_state("abcd", "abc"));
+        assert!(!same_state("abc", ""));
+        assert!(!same_state("", "abc"));
+    }
+
+    #[test]
+    fn a_transactions_own_state_matches_and_another_does_not() {
+        let transaction = SignInTransaction::new();
+        assert!(same_state(&transaction.state, &transaction.state.clone()));
+        assert!(!same_state(&transaction.state, &SignInTransaction::new().state));
     }
 }
