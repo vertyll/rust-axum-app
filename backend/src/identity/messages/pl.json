@@ -1,5 +1,7 @@
 {
   "auth.errors.authentication_required": "Wymagane uwierzytelnienie",
+  "auth.errors.cross_site_request": "Żądanie przyszło z innej witryny i zostało odrzucone.",
+  "auth.errors.csrf_token_invalid": "Żądanie nie zostało wysłane z tej aplikacji. Odśwież stronę i spróbuj ponownie.",
   "auth.errors.identity_provider_unavailable": "Usługa logowania jest niedostępna. Spróbuj za chwilę.",
   "auth.errors.invalid_token": "Nieprawidłowy token",
   "auth.errors.permission_denied": "Brak uprawnienia {permission}.",

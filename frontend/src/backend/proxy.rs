@@ -3,9 +3,10 @@
 //! here, every API call is same-origin, and Keycloak returns to
 //! `/api/auth/callback` on this address.
 //!
-//! The request goes on as the browser sent it, its `Sec-Fetch-Site` included,
-//! so the back-end's own cross-site check still applies; only the hop-by-hop
-//! headers are dropped. Redirects come back to the browser unfollowed.
+//! The request goes on as the browser sent it, its `Sec-Fetch-Site` and
+//! `X-XSRF-TOKEN` included and no token added, so the back-end's own
+//! cross-site checks still apply; only the hop-by-hop headers are dropped.
+//! Redirects come back to the browser unfollowed.
 
 use reqwest::header::{CONTENT_DISPOSITION, CONTENT_SECURITY_POLICY, HOST, X_CONTENT_TYPE_OPTIONS};
 use topcoat::Result;

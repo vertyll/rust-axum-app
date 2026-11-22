@@ -1,5 +1,7 @@
 {
   "auth.errors.authentication_required": "Authentication required",
+  "auth.errors.cross_site_request": "The request came from another site and was refused.",
+  "auth.errors.csrf_token_invalid": "The request was not sent from this application. Reload the page and try again.",
   "auth.errors.identity_provider_unavailable": "The sign-in service is unavailable. Try again shortly.",
   "auth.errors.invalid_token": "Invalid token",
   "auth.errors.permission_denied": "You lack the permission {permission}.",

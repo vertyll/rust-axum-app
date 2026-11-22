@@ -11,6 +11,11 @@ use crate::shared_http::problem::{self, Problem};
 pub enum ApiError {
     Identity(IdentityError),
     Validation(validator::ValidationErrors),
+    /// An unsafe request the session authenticates came without the session's
+    /// CSRF token in `X-XSRF-TOKEN`.
+    CsrfTokenRejected,
+    /// A sign-out came from another site, as its `Sec-Fetch-Site` says.
+    CrossSiteRequest,
 }
 
 impl From<IdentityError> for ApiError {
@@ -30,6 +35,8 @@ impl IntoResponse for ApiError {
         match self {
             ApiError::Identity(err) => identity_problem(err),
             ApiError::Validation(errors) => Problem::validation(&errors),
+            ApiError::CsrfTokenRejected => Problem::new(StatusCode::FORBIDDEN, "auth.errors.csrf_token_invalid"),
+            ApiError::CrossSiteRequest => Problem::new(StatusCode::FORBIDDEN, "auth.errors.cross_site_request"),
         }
         .into_response()
     }
@@ -117,5 +124,13 @@ mod tests {
         for (err, status) in cases {
             assert_eq!(ApiError::from(err).into_response().status(), status);
         }
+        assert_eq!(
+            ApiError::CsrfTokenRejected.into_response().status(),
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            ApiError::CrossSiteRequest.into_response().status(),
+            StatusCode::FORBIDDEN
+        );
     }
 }

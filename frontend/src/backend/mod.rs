@@ -2,11 +2,13 @@
 //! Each feature keeps its own calls in its `api` module; this one holds what
 //! they share.
 //!
-//! Every call carries the browser's session cookie, so the back-end authorizes
-//! it exactly as it would a call from the browser, and every `Set-Cookie` the
-//! back-end answers with is passed on to the browser. The back-end never sees
-//! a `Sec-Fetch-Site` header from here; the origin of the browser's own
-//! request was already checked by the router's origin policy.
+//! Every call carries the browser's session cookie and its CSRF token cookie,
+//! so the back-end authorizes it exactly as it would a call from the browser,
+//! and every `Set-Cookie` the back-end answers with is passed on to the
+//! browser. A change also sends the token back in `X-XSRF-TOKEN`, as a script
+//! of the browser would. The back-end never sees a `Sec-Fetch-Site` header
+//! from here; the origin of the browser's own request was already checked by
+//! the router's origin policy, before any route could echo the token.
 
 mod problem;
 pub mod proxy;
@@ -22,6 +24,9 @@ use topcoat::cookie::{Cookie, Cookies, cookies};
 use topcoat::router::error::{forbidden, internal_server_error, not_found, unauthorized};
 
 pub use problem::Problem;
+
+const CSRF_COOKIE: &str = "XSRF-TOKEN";
+const CSRF_HEADER: &str = "x-xsrf-token";
 
 #[derive(Debug, thiserror::Error)]
 pub enum BackendError {
@@ -113,12 +118,25 @@ fn backend(cx: &Cx) -> &Backend {
 }
 
 pub fn request(cx: &Cx, method: Method, path: &str) -> RequestBuilder {
-    let builder = public_request(cx, method, path);
-    let name = backend(cx).session_cookie;
-    match cookies(cx).get(name) {
-        Some(session) => builder.header(COOKIE, format!("{name}={}", session.value())),
+    let jar = cookies(cx);
+    let session = jar.get(backend(cx).session_cookie);
+    let csrf_token = jar.get(CSRF_COOKIE);
+    let builder = match csrf_token.as_ref().filter(|_| !method.is_safe()) {
+        Some(token) => public_request(cx, method, path).header(CSRF_HEADER, token.value()),
+        None => public_request(cx, method, path),
+    };
+    match cookie_header(session.iter().chain(csrf_token.iter())) {
+        Some(sent) => builder.header(COOKIE, sent),
         None => builder,
     }
+}
+
+fn cookie_header<'a>(sent: impl Iterator<Item = &'a Cookie<'static>>) -> Option<String> {
+    let header = sent
+        .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
+        .collect::<Vec<_>>()
+        .join("; ");
+    (!header.is_empty()).then_some(header)
 }
 
 pub fn public_request(cx: &Cx, method: Method, path: &str) -> RequestBuilder {
@@ -168,7 +186,20 @@ fn relay_cookies(cx: &Cx, response: &Response) {
 
 #[cfg(test)]
 mod tests {
-    use super::segment;
+    use topcoat::cookie::Cookie;
+
+    use super::{cookie_header, segment};
+
+    #[test]
+    fn passes_on_the_session_and_its_csrf_token_in_one_header() {
+        let session = Cookie::new("RUST_AXUM_APP_SESSION", "abc");
+        let token = Cookie::new("XSRF-TOKEN", "t0k3n");
+        assert_eq!(
+            cookie_header([&session, &token].into_iter()).as_deref(),
+            Some("RUST_AXUM_APP_SESSION=abc; XSRF-TOKEN=t0k3n")
+        );
+        assert_eq!(cookie_header(std::iter::empty()), None);
+    }
 
     #[test]
     fn a_segment_cannot_reach_another_path() {

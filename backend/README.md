@@ -59,7 +59,7 @@ paged by the database ([Collections are paged](../docs/architecture.md#collectio
 - [Token refresh](src/identity/docs/mechanisms/token-refresh.md) – How the session keeps a valid access token without
   signing the user out when requests race.
 - [Cross-site requests](src/identity/docs/mechanisms/cross-site-requests.md) – Why a forged request from another site
-  cannot act with the user's session.
+  cannot act with the user's session, and the CSRF token that stops it.
 - [File storage](src/files/docs/mechanisms/file-storage.md) – How a file's bytes reach a storage and come back, with
   signed links, and what happens on soft delete and delete.
 - [Translation catalog](src/translations/docs/mechanisms/translation-catalog.md) – Where the text behind every message

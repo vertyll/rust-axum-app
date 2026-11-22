@@ -1,8 +1,9 @@
 //! HTTP authentication. [`authenticate`] is a generic middleware layered by
 //! the composition root onto protected routers (also of other modules); it
 //! takes the access token from `Authorization: Bearer` or, for a browser,
-//! from its session, refreshing it when it is about to expire. [`Auth`] and
-//! [`Permitted`] read the [`Caller`] it stores in the request extensions.
+//! from its session, refreshing it when it is about to expire, after the
+//! session's CSRF token was checked. [`Auth`] and [`Permitted`] read the
+//! [`Caller`] it stores in the request extensions.
 
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -13,8 +14,10 @@ use axum::http::{HeaderMap, Method, header};
 use axum::middleware::Next;
 use axum::response::Response;
 use jiff::{SignedDuration, Timestamp};
+use tower_cookies::Cookies;
 use tower_sessions::Session;
 
+use super::csrf::{self, CsrfCookie};
 use super::error::ApiError;
 use crate::identity::application::ports::IdentityPorts;
 use crate::identity::application::service::IdentityService;
@@ -24,21 +27,56 @@ use crate::identity::domain::{IdentityError, Permission};
 pub(crate) const SESSION_KEY: &str = "identity.session";
 const REFRESH_SKEW: SignedDuration = SignedDuration::from_secs(30);
 const FETCH_SITE: &str = "sec-fetch-site";
+const BEARER: &str = "Bearer";
 
+/// What the [`authenticate`] layer needs: the service that verifies tokens,
+/// and how the session's CSRF token reaches the browser.
+pub struct Authentication<P: IdentityPorts> {
+    identity: Arc<IdentityService<P>>,
+    csrf_cookie: CsrfCookie,
+}
+
+impl<P: IdentityPorts> Authentication<P> {
+    #[must_use]
+    pub fn new(identity: Arc<IdentityService<P>>, csrf_cookie: CsrfCookie) -> Self {
+        Self { identity, csrf_cookie }
+    }
+}
+
+impl<P: IdentityPorts> Clone for Authentication<P> {
+    fn clone(&self) -> Self {
+        Self {
+            identity: self.identity.clone(),
+            csrf_cookie: self.csrf_cookie,
+        }
+    }
+}
+
+/// A request with `Authorization: Bearer` is authenticated by its token alone,
+/// which no other site can make a browser send. A request authenticated by the
+/// session must also come from this origin and, when unsafe, carry the
+/// session's CSRF token.
 pub async fn authenticate<P: IdentityPorts>(
-    State(identity): State<Arc<IdentityService<P>>>,
+    State(authentication): State<Authentication<P>>,
     session: Session,
+    cookies: Cookies,
     mut request: Request,
     next: Next,
 ) -> Result<Response, ApiError> {
     let token = match bearer_token(request.headers()) {
-        Some(token) => token,
-        None if sent_from_this_origin(request.method(), request.headers()) => session_token(&identity, &session)
-            .await?
-            .ok_or(IdentityError::Unauthenticated)?,
+        Some(token) => token.to_owned(),
+        None if sent_from_this_origin(request.method(), request.headers()) => {
+            let current = signed_in(&session).await?.ok_or(IdentityError::Unauthenticated)?;
+            csrf::verify(request.method(), request.headers(), &session).await?;
+            let token = session_token(&authentication.identity, &session, current)
+                .await?
+                .ok_or(IdentityError::Unauthenticated)?;
+            authentication.csrf_cookie.issue(&session, &cookies).await?;
+            token
+        }
         None => return Err(IdentityError::Unauthenticated.into()),
     };
-    let caller = identity.authenticate(&token).await?;
+    let caller = authentication.identity.authenticate(&token).await?;
     request.extensions_mut().insert(caller);
     request.extensions_mut().insert(CallerToken(token));
     Ok(next.run(request).await)
@@ -61,13 +99,15 @@ impl<S: Send + Sync> FromRequestParts<S> for CallerToken {
     }
 }
 
+pub(crate) async fn signed_in(session: &Session) -> Result<Option<AuthSession>, IdentityError> {
+    session.get::<AuthSession>(SESSION_KEY).await.map_err(store)
+}
+
 async fn session_token<P: IdentityPorts>(
     identity: &IdentityService<P>,
     session: &Session,
+    current: AuthSession,
 ) -> Result<Option<String>, IdentityError> {
-    let Some(current) = session.get::<AuthSession>(SESSION_KEY).await.map_err(store)? else {
-        return Ok(None);
-    };
     if !current.needs_refresh_at(Timestamp::now(), REFRESH_SKEW) {
         return Ok(Some(current.access_token));
     }
@@ -100,13 +140,23 @@ pub(crate) fn sent_from_this_origin(method: &Method, headers: &HeaderMap) -> boo
         .is_none_or(|site| site == "same-origin" || site == "none")
 }
 
-fn bearer_token(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get(header::AUTHORIZATION)?
-        .to_str()
-        .ok()?
-        .strip_prefix("Bearer ")
-        .map(str::to_owned)
+/// The access token of `Authorization: Bearer <token>`, the one test of
+/// whether a request is authenticated by a token rather than the session. The
+/// scheme is matched without regard to case (RFC 9110, 11.1); a header of
+/// another scheme, or whose token is not a `b64token` (RFC 6750, 2.1), is none.
+pub(crate) fn bearer_token(headers: &HeaderMap) -> Option<&str> {
+    let (scheme, token) = headers.get(header::AUTHORIZATION)?.to_str().ok()?.split_once(' ')?;
+    let token = token.trim_start_matches(' ');
+    (scheme.eq_ignore_ascii_case(BEARER) && is_b64token(token)).then_some(token)
+}
+
+/// `1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="`
+fn is_b64token(token: &str) -> bool {
+    let value = token.trim_end_matches('=');
+    !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"-._~+/".contains(&byte))
 }
 
 #[expect(
@@ -155,19 +205,43 @@ mod tests {
 
     use super::{bearer_token, sent_from_this_origin};
 
-    #[test]
-    fn extracts_bearer_value() {
+    fn authorization(value: &'static str) -> HeaderMap {
         let mut headers = HeaderMap::new();
-        headers.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer abc.def"));
-        assert_eq!(bearer_token(&headers).as_deref(), Some("abc.def"));
+        headers.insert(header::AUTHORIZATION, HeaderValue::from_static(value));
+        headers
+    }
+
+    #[test]
+    fn extracts_the_token_whatever_the_case_of_the_scheme() {
+        for value in ["Bearer abc.def", "BEARER abc.def", "bEaReR abc.def", "bearer  abc.def"] {
+            assert_eq!(bearer_token(&authorization(value)), Some("abc.def"), "{value:?}");
+        }
+        assert_eq!(
+            bearer_token(&authorization("Bearer a-b_c~d+e/f==")),
+            Some("a-b_c~d+e/f==")
+        );
     }
 
     #[test]
     fn ignores_absence_and_other_schemes() {
-        let mut headers = HeaderMap::new();
-        assert!(bearer_token(&headers).is_none());
-        headers.insert(header::AUTHORIZATION, HeaderValue::from_static("Basic abc"));
-        assert!(bearer_token(&headers).is_none());
+        assert_eq!(bearer_token(&HeaderMap::new()), None);
+        assert_eq!(bearer_token(&authorization("Basic YWRhOnNlY3JldA==")), None);
+        assert_eq!(bearer_token(&authorization("BearerX abc")), None);
+    }
+
+    #[test]
+    fn ignores_a_malformed_bearer_header() {
+        for value in [
+            "Bearer",
+            "Bearer ",
+            "Bearerabc",
+            "Bearer abc def",
+            "Bearer ==",
+            "Bearer a=b",
+            " Bearer abc",
+        ] {
+            assert_eq!(bearer_token(&authorization(value)), None, "{value:?}");
+        }
     }
 
     #[test]

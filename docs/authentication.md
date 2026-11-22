@@ -46,15 +46,17 @@ sequenceDiagram
 2. Keycloak returns to `GET /api/auth/callback`. The application checks that the `state` is the one it issued to this
    browser, exchanges the code with the confidential client `rust-axum-app` and its secret, verifies the access token
    and mirrors the account into PostgreSQL.
-3. It then issues a new session identifier, stores the tokens in the session and redirects to the `return_to` page, on
-   the address of `AUTH_POST_LOGIN_URL`, or to `AUTH_POST_LOGIN_URL` itself when none was given.
+3. It then issues a new session identifier, stores the tokens and a new CSRF token in the session and redirects to the
+   `return_to` page, on the address of `AUTH_POST_LOGIN_URL`, or to `AUTH_POST_LOGIN_URL` itself when none was given.
    When the account cannot be written it ends the Keycloak session again; any failure redirects with
    `?error=sign_in_failed`, and a `state` this browser was not given with `?error=state_mismatch`.
 
 The browser holds only the session cookie: `__Host-RUST_AXUM_APP_SESSION`, `HttpOnly`, `SameSite=Lax`, `Secure` and
 `Path=/`. A local machine without TLS (`APP_ENVIRONMENT=local`) is the one exception: there it is
 `RUST_AXUM_APP_SESSION`, without `Secure` and so without the `__Host-` prefix, which requires it. The back-end and the
-front-end derive the name from `APP_ENVIRONMENT` alike.
+front-end derive the name from `APP_ENVIRONMENT` alike. Beside it the browser holds `XSRF-TOKEN`, the session's CSRF
+token, which scripts may read and which carries nothing but that token: [Cross-site
+requests](../backend/src/identity/docs/mechanisms/cross-site-requests.md#the-csrf-token).
 
 ## Account actions
 
@@ -70,10 +72,12 @@ credential only when it is theirs, and returns through the usual sign-in.
 ## Every request is authorized by a token
 
 `authenticate`, the middleware `bootstrap` layers onto the protected routers, takes the access token from
-`Authorization: Bearer` or, for a browser, from its session. `JwksTokenVerifier` checks the signature against
-Keycloak's published keys (cached by key id), the issuer, the expiry and the audience (`KEYCLOAK_AUDIENCE`), and the
-roles come from `realm_access.roles`. The resulting `Caller`, with what its roles grant, is what `Auth` and
-`Permitted` read: [Authorization](authorization.md).
+`Authorization: Bearer` or, for a browser, from its session. The scheme is matched in any case, `bearer` as well as
+`Bearer`, and a header whose token is not a `b64token` counts as none, so the request falls to its session; one
+function, `bearer_token`, makes that decision for authentication and for the CSRF check alike. `JwksTokenVerifier`
+checks the signature against Keycloak's published keys (cached by key id), the issuer, the expiry and the audience
+(`KEYCLOAK_AUDIENCE`), and the roles come from `realm_access.roles`. The resulting `Caller`, with what its roles
+grant, is what `Auth` and `Permitted` read: [Authorization](authorization.md).
 
 Either way the decision rests on the token alone, so any instance can serve any request.
 
@@ -85,12 +89,14 @@ refresh](../backend/src/identity/docs/mechanisms/token-refresh.md).
 ## Signing out
 
 `POST /api/auth/logout` revokes the refresh token at Keycloak, which ends the Keycloak session, and clears the local
-one. The front-end's sign-out button posts to its own `/sign-out`, which calls it with the session cookie, passes the
-cookie's removal on to the browser and returns home.
+one. It needs the session's CSRF token while someone is signed in, and removes its cookie. The front-end's sign-out
+button posts to its own `/sign-out`, which calls it with the session cookie and the token, passes the removal of both
+cookies on to the browser and returns home.
 
 ## Cross-site requests
 
-An unsafe request from another site gets no token: [Cross-site
+An unsafe request from another site gets no token, and an unsafe request the session authenticates must send the
+session's CSRF token back in `X-XSRF-TOKEN`; one authenticated by `Authorization: Bearer` needs none: [Cross-site
 requests](../backend/src/identity/docs/mechanisms/cross-site-requests.md).
 
 ## The sign-in pages

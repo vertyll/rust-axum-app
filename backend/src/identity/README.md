@@ -40,6 +40,6 @@ account.
 ## Mechanisms
 
 - [Cross-site requests](docs/mechanisms/cross-site-requests.md) – Why a forged request from another site cannot act with
-  the user's session. CSRF tokens are not needed.
+  the user's session: the `SameSite=Lax` cookie, the `Sec-Fetch-Site` check and a CSRF token bound to the session.
 - [Token refresh](docs/mechanisms/token-refresh.md) – How the session keeps a valid access token without signing the
   user out when requests race.

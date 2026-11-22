@@ -40,9 +40,13 @@ async function upload(form) {
 }
 
 async function api(url, body) {
+  const headers = { "X-XSRF-TOKEN": csrfToken() };
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
   const response = await fetch(url, {
     method: "POST",
-    headers: body ? { "Content-Type": "application/json" } : {},
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   const answer = await response.json().catch(() => ({}));
@@ -50,6 +54,13 @@ async function api(url, body) {
     throw answer;
   }
   return answer;
+}
+
+// The back-end refuses a change its session authenticates unless the session's
+// CSRF token, which it keeps in the XSRF-TOKEN cookie, comes back in a header.
+function csrfToken() {
+  const cookie = document.cookie.split("; ").find((entry) => entry.startsWith("XSRF-TOKEN="));
+  return cookie ? decodeURIComponent(cookie.slice("XSRF-TOKEN=".length)) : "";
 }
 
 function send(link, file, progress) {

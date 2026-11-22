@@ -10,14 +10,15 @@ use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
+use tower_cookies::Cookies;
 use tower_sessions::Session;
 
 use super::SignInSettings;
-use crate::identity::application::AuthSession;
 use crate::identity::application::ports::IdentityPorts;
 use crate::identity::application::service::IdentityService;
+use crate::identity::infrastructure::http::csrf;
 use crate::identity::infrastructure::http::error::ApiError;
-use crate::identity::infrastructure::http::extract::{SESSION_KEY, sent_from_this_origin, store};
+use crate::identity::infrastructure::http::extract::{SESSION_KEY, sent_from_this_origin, signed_in, store};
 use crate::identity::infrastructure::http::requests::UI_LOCALES;
 use crate::identity::infrastructure::http::responses::SessionResponse;
 use crate::identity::infrastructure::keycloak::pkce::{self, SignInTransaction};
@@ -121,6 +122,7 @@ struct CallbackQuery {
 async fn callback<P: IdentityPorts>(
     State(state): State<AuthState<P>>,
     session: Session,
+    cookies: Cookies,
     Query(query): Query<CallbackQuery>,
 ) -> Result<Redirect, ApiError> {
     let transaction = session
@@ -147,6 +149,7 @@ async fn callback<P: IdentityPorts>(
         Ok(signed_in) => {
             session.cycle_id().await.map_err(store)?;
             session.insert(SESSION_KEY, &signed_in).await.map_err(store)?;
+            state.settings.csrf_cookie.rotate(&session, &cookies).await?;
             Ok(Redirect::to(&landing(post_login, return_to.as_deref())))
         }
         Err(err) => {
@@ -157,7 +160,7 @@ async fn callback<P: IdentityPorts>(
 }
 
 async fn current_session(session: Session) -> Result<Response, ApiError> {
-    Ok(match session.get::<AuthSession>(SESSION_KEY).await.map_err(store)? {
+    Ok(match signed_in(&session).await? {
         Some(signed_in) => Json(SessionResponse::from(&signed_in)).into_response(),
         None => StatusCode::NO_CONTENT.into_response(),
     })
@@ -168,14 +171,17 @@ async fn logout<P: IdentityPorts>(
     method: Method,
     headers: HeaderMap,
     session: Session,
+    cookies: Cookies,
 ) -> Result<StatusCode, ApiError> {
     if !sent_from_this_origin(&method, &headers) {
-        return Ok(StatusCode::FORBIDDEN);
+        return Err(ApiError::CrossSiteRequest);
     }
-    if let Some(signed_in) = session.get::<AuthSession>(SESSION_KEY).await.map_err(store)? {
-        state.identity.sign_out(&signed_in).await;
+    if let Some(current) = signed_in(&session).await? {
+        csrf::verify(&method, &headers, &session).await?;
+        state.identity.sign_out(&current).await;
     }
     session.flush().await.map_err(store)?;
+    state.settings.csrf_cookie.clear(&cookies);
     Ok(StatusCode::NO_CONTENT)
 }
 

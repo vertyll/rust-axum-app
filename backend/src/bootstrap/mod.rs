@@ -201,14 +201,16 @@ pub async fn redis(config: &AppConfig) -> anyhow::Result<RedisPool> {
 /// Assembles the HTTP router. The composition root decides which routers
 /// sit behind the auth guard; the modules only provide their routes.
 pub fn router(services: &Services, config: &AppConfig, redis: RedisPool) -> Router {
+    let csrf_cookie = identity_http::CsrfCookie::new(config.sessions.cookie_secure);
     let auth_layer = from_fn_with_state(
-        services.identity.clone(),
+        identity_http::Authentication::new(services.identity.clone(), csrf_cookie),
         identity_http::authenticate::<ProductionPorts>,
     );
 
     let sign_in = identity_http::SignInSettings {
         keycloak: keycloak_settings(config),
         post_login_url: config.keycloak.post_login_url.clone(),
+        csrf_cookie,
     };
 
     let sessions = SessionManagerLayer::new(RedisSessionStore::new(redis, &config.sessions.redis_key_prefix))

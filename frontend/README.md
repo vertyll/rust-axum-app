@@ -83,22 +83,27 @@ The browser talks only to this application. `/api/*` and `/uploads/*` are passed
 them, without the hop-by-hop headers and refusing any `.` or `..` segment, and redirects come back unfollowed. So the
 session cookie is set on this address, Keycloak returns to `/api/auth/callback` here, and every call is same-origin.
 A file is uploaded by `src/app/files/upload.js`, which asks `/api/files/upload-ticket` for a signed link, sends the
-bytes there with a progress bar, and confirms the upload; `/files/{id}/download` asks for a fresh download link at each
+bytes there with a progress bar, and confirms the upload, sending the session's CSRF token from the `XSRF-TOKEN` cookie
+in `X-XSRF-TOKEN` with both calls to the API; `/files/{id}/download` asks for a fresh download link at each
 click and redirects to it ([File storage](../backend/src/files/docs/mechanisms/file-storage.md)). A link to a bucket
 leaves this address; a link to the local disk is under `/uploads`, and what it returns is always sent as a download
 that cannot run as a page (`Content-Disposition: attachment`, `nosniff`, a sandboxing `Content-Security-Policy`), so
 a script in it never acts with the reader's session.
 
-When a page calls the back-end itself, it sends only the session cookie and passes every `Set-Cookie` of the answer on
-to the browser, such as the cookie's renewed expiry. These calls are made before the page renders, as cookies cannot
+When a page calls the back-end itself, it sends only the session cookie and the `XSRF-TOKEN` cookie, adds the token in
+`X-XSRF-TOKEN` to a change, and passes every `Set-Cookie` of the answer on to the browser, such as the cookie's renewed
+expiry. These calls are made before the page renders, as cookies cannot
 be written once the response has started.
 
 ## Changes and cross-site requests
 
 A change is a form posted to a route here, never to the API. Topcoat's origin policy refuses a change sent from
 another site before the route runs; the back-end sees the call from this server as same-origin, so that policy is the
-check. Every response forbids being framed by another site (`X-Frame-Options: DENY`, `frame-ancestors 'none'`), so a
-page cannot be laid under another site's clicks.
+check of where the change came from. The call to the back-end then carries the session's CSRF token, read from the
+browser's `XSRF-TOKEN` cookie, which the back-end compares with the one it keeps in the session ([Cross-site
+requests](../backend/src/identity/docs/mechanisms/cross-site-requests.md)); the forms need no hidden field.
+Every response forbids being framed by another site (`X-Frame-Options: DENY`, `frame-ancestors 'none'`), so a page
+cannot be laid under another site's clicks.
 
 ## Content-Security-Policy
 
